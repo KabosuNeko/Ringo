@@ -158,14 +158,15 @@ RowLayout {
       anchors.centerIn: parent
       spacing: 5 * root.dpi
       Text {
-        text: ppBtn.currentProfile === "performance" ? String.fromCodePoint(0xf0241) // nf-md-flash
+        text: ppBtn.currentProfile === "performance" ? String.fromCodePoint(0xf135) // nf-fa-rocket
             : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a) // nf-md-leaf
             : String.fromCodePoint(0xf029a) // nf-md-gauge
         color: ppBtn.currentProfile === "performance" ? "#e9c46a" : root.buttonFgOff
         font { family: Theme.nerdFontFamily; pixelSize: 14 }
       }
       Text {
-        text: ppBtn.currentProfile === "" ? "Pwr" : ppBtn.currentProfile
+        text: ppBtn.currentProfile === "" ? "Pwr"
+            : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
         color: root.buttonFgOff
         font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
       }

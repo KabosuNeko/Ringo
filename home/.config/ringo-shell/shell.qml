@@ -599,8 +599,16 @@ ShellRoot {
 
       // control center opens on left click
       Item {
+        id: controlCenterPanel
         anchors.centerIn: parent
         width: box.implicitWidth - 24
+        Keys.onEscapePressed: box.controlCenter = false
+        Connections {
+          target: box
+          function onControlCenterChanged() {
+            if (box.controlCenter) controlCenterPanel.forceActiveFocus()
+          }
+        }
         opacity: box.controlCenter && box.activeOsd === "" && !notificationModule.active ? 1 : 0
         visible: opacity > 0
         height: box.controlCenter && box.activeOsd === "" ? box.implicitHeight - 25 : 0
@@ -1061,8 +1069,16 @@ ShellRoot {
 
       // mini dashboard opens on right click
       Item {
+        id: miniDashboardPanel
         anchors.centerIn: parent
         width: box.implicitWidth - 30
+        Keys.onEscapePressed: box.miniDashboard = false
+        Connections {
+          target: box
+          function onMiniDashboardChanged() {
+            if (box.miniDashboard) miniDashboardPanel.forceActiveFocus()
+          }
+        }
         height: box.miniDashboard ? box.implicitHeight - 30 : 0  // don't fight the animation
         opacity: box.miniDashboard
                  && !notificationModule.active
