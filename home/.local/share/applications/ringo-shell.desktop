@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Ringo Shell
+GenericName=Ringo Shell
+Comment=Feature rich dynamic pill bar for niri
+Exec=ringo-shell
+Terminal=false
+Categories=System;Utility;

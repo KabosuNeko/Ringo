@@ -1,0 +1,23 @@
+{
+  "displayPicture": "~/.pfp.png",
+  "clockFormat": "hh:mm",
+  "pillTopMargin": 9,
+  "pillBottomMargin": 26,
+  "textFontFamily": "JetBrainsMono Nerd Font",
+  "nerdFontFamily": "JetBrainsMono Nerd Font Propo",
+  "timerPresets": [1, 5, 10, 15, 30],
+  "mediaPopupDuration": 2000,
+  "maxWorkspaces": 5,
+  "notificationDisplayTime": 3000,
+  "maxNotificationsInStack": 20,
+  "bandwidthRefreshInterval": 300000,
+  "osdDuration": 800,
+  "weatherLocation": "Ho Chi Minh City",
+  "weatherUnits": "metric",
+  "weatherRefreshInterval": 3600000,
+  "avoidDuplicateNotifications": true,
+  "defaultTerminal": "foot",
+  "pillScale": 1.0,
+  "dpiScale": 1.0,
+  "wallpapersDir": "~/Pictures/Wallpapers"
+}

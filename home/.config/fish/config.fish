@@ -1,28 +1,98 @@
-## Source from conf.d before our fish config
 source ~/.config/fish/conf.d/done.fish
+
+if test -f ~/.cache/wal/colors.fish
+    source ~/.cache/wal/colors.fish
+end
+
+if set -q foreground
+    set fish_color_normal $foreground
+    set fish_color_command $color4
+    set fish_color_keyword $color5
+    set fish_color_quote $color3
+    set fish_color_redirection $color6
+    set fish_color_end $color3
+    set fish_color_error $color1
+    set fish_color_param $color2
+    set fish_color_comment $color8
+    set fish_color_match --background=$color4
+    set fish_color_selection --background=$color8
+    set fish_color_search_match --background=$color8
+    set fish_color_history_current --bold
+    set fish_color_operator $color6
+    set fish_color_escape $color5
+    set fish_color_cwd $color4
+    set fish_color_cwd_root $color1
+    set fish_color_valid_path --underline
+    set fish_color_autosuggestion $color8
+    set fish_color_user $color2
+    set fish_color_host $color4
+    set fish_color_cancel $color1 '--reverse'
+    set fish_color_option $color3
+
+    set fish_pager_color_background $background
+    set fish_pager_color_completion $foreground
+    set fish_pager_color_description $color8
+    set fish_pager_color_prefix $color4
+    set fish_pager_color_progress $color8
+
+    set fish_pager_color_secondary_background $background
+    set fish_pager_color_secondary_completion $foreground
+    set fish_pager_color_secondary_description $color8
+    set fish_pager_color_secondary_prefix $color4
+
+    set fish_pager_color_selected_background --background=$color8
+    set fish_pager_color_selected_completion $foreground
+    set fish_pager_color_selected_description $color8
+    set fish_pager_color_selected_prefix $color4
+end
+# =============================================================================
 
 
 ## Set values
-#Greeting
+
 function fish_greeting
+    echo
     set -l current_time (date +"%-I:%M%P")
     set -l uptime_text (uptime -p | string replace -r '^up ' '')
     set -l kernel (uname -r)
 
-    set -l info "It's $current_time $uptime_text $kernel"
+    set_color -b black
+    printf " "
 
-    if not set -q __kumin_accent
-        set -g __kumin_accent (grep -oP 'accent_color\s+\K#[0-9a-fA-F]{6}' ~/.local/state/kumin_theme/colors.css 2>/dev/null || echo "ffffff")
-    end
+    set_color brblack
+    printf "it's  "
+    set_color blue
+    printf "%s  " $current_time
+    set_color green
+    printf "%s  " "$uptime_text"
+    set_color magenta
+    printf "%s " $kernel
 
-    if test "$__kumin_accent" != "ffffff"
-        set_color $__kumin_accent
-    else
-        set_color brwhite
-    end
-    printf " %s " "$info"
     set_color normal
-    printf "\n"
+    echo
+end
+
+function fish_prompt
+    echo
+
+    set -l shell_path "/bin/fish"
+    set -l user_name "$USER"
+    set -l cwd (prompt_pwd)
+
+    set_color -b black brwhite
+    printf " %s " $shell_path
+
+    set_color -b brblack brwhite
+    printf " %s " $user_name
+
+    set_color -b blue black
+    printf " %s " $cwd
+
+    set_color normal
+    set_color blue
+    printf " ❯ "
+
+    set_color normal
 end
 
 
@@ -105,6 +175,7 @@ function copy
     end
 end
 
+
 ## Useful aliases
 # Replace ls with eza
 alias ls='eza -al --color=always --group-directories-first --icons' # preferred listing
@@ -161,7 +232,6 @@ end
 
 ssh-add -l > /dev/null 2>&1
 or ssh-add ~/.ssh/id_ed25519 > /dev/null 2>&1
-
 
 # Bạn có thể tạo alias trong shell (như .bashrc hoặc .zshrc)
 alias sudachi='bash -c "$(curl -sL https://raw.githubusercontent.com/KabosuNeko/sudachi/main/sudachi.sh)"'

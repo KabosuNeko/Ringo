@@ -11,24 +11,20 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Custom Script Launchers
-    Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "~/.local/bin/clip_menu.sh"; }
-    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "sh" "-c" "~/.local/bin/clip_menu.sh --wipe"; }
-    Mod+F11 hotkey-overlay-title="Record Screen" { spawn "sh" "-c" "~/.local/bin/record.sh"; }
-    Mod+Tab hotkey-overlay-title="Kumin Menu" { spawn "sh" "-c" "~/.local/bin/kuminmenu.sh"; }
-    Alt+W hotkey-overlay-title="Wallpaper Select" { spawn "sh" "-c" "~/.local/bin/wallselect.sh"; }
-    Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn "sh" "-c" "~/.local/bin/shutdown.sh"; }
-    Alt+P hotkey-overlay-title="Repos" { spawn "sh" "-c" "~/.local/bin/repos-rofi.sh"; }
-    Alt+T hotkey-overlay-title="Tmux" { spawn "sh" "-c" "~/.local/bin/tmux-rofi.sh"; }
-    Mod+X hotkey-overlay-title="PowerProfiles" { spawn "sh" "-c" "~/.local/bin/powerprofiles.sh"; }
+    Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call cliphist toggle"; }
+    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "cliphist" "wipe"; }
 
     // Application Launchers
     Mod+Return hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
-    Mod+D hotkey-overlay-title="Run Application Menu: rofi" { spawn "rofi" "-show" "drun"; }
+    Mod+D hotkey-overlay-title="Run Application Menu: ringo-shell" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call appLauncher toggle"; }
     Mod+E hotkey-overlay-title="Open File Manager: thunar" { spawn "thunar"; }
     Mod+B hotkey-overlay-title="Open Browser: firefox" { spawn "firefox"; }
-    Mod+Slash hotkey-overlay-title="Open Emoji Menu" { spawn "rofi" "-modi" "emoji" "-show" "emoji"; }
-    Mod+N hotkey-overlay-title="Dismiss All Notifications" { spawn "makoctl" "dismiss" "-a"; }
-    Mod+Shift+N hotkey-overlay-title="Restore Last Notification" { spawn "makoctl" "restore"; }
+
+    Mod+Ctrl+C hotkey-overlay-title="Control Center" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call controlCenter toggle"; }
+    Mod+Ctrl+V hotkey-overlay-title="Clipboard History" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call cliphist toggle"; }
+    Mod+Ctrl+B hotkey-overlay-title="Mini Dashboard" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call miniDashboard toggle"; }
+    Mod+Ctrl+W hotkey-overlay-title="Wallpaper Switcher" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call wallpaperSwitcher toggle"; }
+    Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call powerMenu toggle"; }
 
     // Screenshots
     Print { screenshot; }
@@ -82,7 +78,7 @@ binds {
     Mod+Ctrl+R { reset-window-height; }
 
     Mod+C hotkey-overlay-title="Center Column (Remapped)" { center-column; }
-    Mod+Ctrl+C { center-visible-columns; }
+    Mod+Alt+C { center-visible-columns; }
 
     Mod+Minus { set-column-width "-10%"; }
     Mod+Equal { set-column-width "+10%"; }
@@ -139,10 +135,10 @@ binds {
     Mod+Shift+E { quit; }
 
     // Audio - Media Controls
-    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 2%+ && notify-send -h string:x-canonical-private-synchronous:vol -t 1500 'Volume' \"$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}')%\""; }
-    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%- && notify-send -h string:x-canonical-private-synchronous:vol -t 1500 'Volume' \"$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}')%\""; }
-    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && notify-send -h string:x-canonical-private-synchronous:vol -t 1500 'Mute Toggled' \"$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}')%\""; }
-    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle && notify-send -h string:x-canonical-private-synchronous:vol -t 1500 'Mic Muted Toggled' \"$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{print $2 * 100}')%\""; }
+    XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 2%+"; }
+    XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"; }
+    XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
+    XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
     XF86AudioPlay        allow-when-locked=true { spawn-sh "playerctl play-pause"; }
     XF86AudioPause       allow-when-locked=true { spawn-sh "playerctl play-pause"; }
@@ -150,6 +146,6 @@ binds {
     XF86AudioPrev        allow-when-locked=true { spawn-sh "playerctl previous"; }
     XF86AudioNext        allow-when-locked=true { spawn-sh "playerctl next"; }
 
-    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%+ && notify-send -h string:x-canonical-private-synchronous:bright -t 1500 'Brightness' \"$(brightnessctl -m | cut -d, -f4)\""; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%- && notify-send -h string:x-canonical-private-synchronous:bright -t 1500 'Brightness' \"$(brightnessctl -m | cut -d, -f4)\""; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%+"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%-"; }
 }

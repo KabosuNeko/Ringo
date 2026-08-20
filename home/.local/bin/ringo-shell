@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Ringo Shell launcher (user-level)
+# QML config lives in ~/.config/ringo-shell, backend module in
+# ~/.config/ringo-shell/IslandBackend (built by Ringo install.sh).
+
+RINGO_DIR="$HOME/.config/ringo-shell"
+
+# Handle IPC forwarding: `ringo-shell call <target> <action>`
+# resolves to `qs ipc -p <RINGO_DIR> call <target> <action>`.
+if [ "$1" = "call" ] || [ "$1" = "ipc" ]; then
+    shift
+    exec qs ipc -p "$RINGO_DIR" "$@"
+fi
+
+export LD_LIBRARY_PATH="$RINGO_DIR/IslandBackend:$LD_LIBRARY_PATH"
+export QML_IMPORT_PATH="$RINGO_DIR:$QML_IMPORT_PATH"
+exec qs -p "$RINGO_DIR"

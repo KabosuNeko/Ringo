@@ -1,0 +1,41 @@
+cmake_minimum_required(VERSION 3.16)
+project(IslandBackend VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+
+find_package(Qt6 REQUIRED COMPONENTS Core DBus Qml)
+
+qt_add_qml_module(IslandBackend
+    URI IslandBackend
+    VERSION 1.0
+    PLUGIN_TARGET IslandBackendPlugin
+    SOURCES
+        backend/WifiController.h
+        backend/WifiController.cpp
+        backend/WifiNetworkModel.h
+        backend/WifiNetworkModel.cpp
+        backend/BluetoothPairingAgent.h
+        backend/BluetoothPairingAgent.cpp
+        backend/BluetoothController.h
+        backend/BluetoothController.cpp
+        backend/BluetoothDeviceModel.h
+        backend/BluetoothDeviceModel.cpp
+        backend/LockController.h
+        backend/LockController.cpp
+)
+
+target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend)
+
+target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::DBus Qt6::Qml pam)
+
+set_target_properties(IslandBackend IslandBackendPlugin PROPERTIES
+    BUILD_WITH_INSTALL_RPATH TRUE
+    INSTALL_RPATH "$ORIGIN"
+)
+
+add_custom_command(TARGET IslandBackendPlugin POST_BUILD
+    COMMAND sed -i "/^prefer/d" ${CMAKE_CURRENT_BINARY_DIR}/qmldir
+    COMMENT "Stripping prefer line from generated qmldir"
+)

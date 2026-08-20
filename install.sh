@@ -1,13 +1,13 @@
 #!/bin/sh
 set -eu
 
-KUMIN_DIR="$(cd "$(dirname "$0")" && pwd)"
-PKG_FILE="$KUMIN_DIR/pkg.txt"
+RINGO_DIR="$(cd "$(dirname "$0")" && pwd)"
+PKG_FILE="$RINGO_DIR/pkg.txt"
 
 sudo -v
 
 echo "=========================================="
-echo "  Kumin Dotfiles Installer"
+echo "  Ringo Dotfiles Installer"
 echo "  Stow-based deployment to \$HOME"
 echo "=========================================="
 
@@ -58,7 +58,6 @@ else
 fi
 
 for folder in \
-    "$HOME/.local/state/kumin_theme" \
     "$HOME/.icons" \
     "$HOME/.themes" \
     "$HOME/Pictures/Screenshots"
@@ -75,12 +74,13 @@ printf "===> Deploy dotfiles via GNU Stow (symlinks)? (y/n): "
 read -r confirm
 if [ "$confirm" = y ] || [ "$confirm" = Y ]; then
     echo ":: Deploying configs and scripts to \$HOME..."
-    cd "$KUMIN_DIR"
+    cd "$RINGO_DIR"
     if stow --restow --no-folding -t "$HOME" home; then
         echo ":: Stow deployment complete."
         for f in "$HOME/.local/bin"/*.sh; do
             [ -f "$f" ] && chmod +x "$f"
         done
+        [ -f "$HOME/.local/bin/ringo-shell" ] && chmod +x "$HOME/.local/bin/ringo-shell"
     else
         echo "XXX [ERROR] Stow deployment failed." >&2
         exit 1
@@ -126,6 +126,8 @@ if command -v gsettings > /dev/null 2>&1; then
         gsettings set org.gnome.desktop.interface gtk-theme "Gruvbox-Orange-Dark"
         gsettings set org.gnome.desktop.interface icon-theme "Gruvbox-Plus-Dark"
         gsettings set org.gnome.desktop.interface cursor-theme "Bibata-Modern-Amber"
+        gsettings set org.gnome.desktop.interface font-name "JetBrainsMono Nerd Font 16"
+        gsettings set org.gnome.desktop.interface monospace-font-name "JetBrainsMono Nerd Font 16"
         echo ":: GTK settings applied."
     fi
 fi
@@ -164,14 +166,49 @@ if command -v xdg-mime > /dev/null 2>&1 && command -v thunar > /dev/null 2>&1; t
     echo ":: Default file manager: thunar"
 fi
 
-if [ -x "$HOME/.local/bin/kumin-style.sh" ]; then
-    echo ":: Generating initial theme state..."
-    "$HOME/.local/bin/kumin-style.sh"
+if [ -d "$RINGO_DIR/ringo-shell" ]; then
+    printf "===> Build & install ringo-shell C++ backend? (y/n): "
+    read -r confirm
+    if [ "$confirm" = y ] || [ "$confirm" = Y ]; then
+        echo ":: Checking ringo-shell build dependencies..."
+        missing=""
+        command -v cmake > /dev/null 2>&1 || missing="${missing}cmake "
+        command -v inotifywait > /dev/null 2>&1 || missing="${missing}inotify-tools "
+        if [ -n "$missing" ]; then
+            echo "XXX [MISSING] $missing"
+            yay -S --noconfirm $missing
+        fi
+
+        echo ":: Building ringo-shell C++ backend..."
+        cd "$RINGO_DIR/ringo-shell"
+        if ! cmake -S . -B build -DCMAKE_BUILD_TYPE=Release; then
+            echo "XXX [ERROR] ringo-shell cmake configure failed." >&2
+            exit 1
+        fi
+        if ! cmake --build build -j"$(nproc)"; then
+            echo "XXX [ERROR] ringo-shell build failed." >&2
+            exit 1
+        fi
+
+        echo ":: Installing ringo-shell backend to ~/.config/ringo-shell/IslandBackend..."
+        mkdir -p "$HOME/.config/ringo-shell/IslandBackend"
+        cp build/libIslandBackend.so build/libIslandBackendPlugin.so build/qmldir build/IslandBackend.qmltypes "$HOME/.config/ringo-shell/IslandBackend/"
+        chmod +x "$HOME/.local/bin/ringo-shell"
+
+        echo ":: Cleaning up ringo-shell build files..."
+        rm -rf build
+        cd "$RINGO_DIR"
+        echo ":: ringo-shell installed. Launch with 'ringo-shell'."
+    else
+        echo ":: Skipping ringo-shell installation."
+    fi
+else
+    echo ":: ringo-shell/ directory not found. Skipping ringo-shell installation."
 fi
 
 echo ""
 echo "=========================================="
 echo "  Installation complete!"
-echo "  To uninstall:  cd ~/Kumin && stow -D -t ~ home"
-echo "  To update:     cd ~/Kumin && stow --restow -t ~ home"
+echo "  To uninstall:  cd ~/Ringo && stow -D -t ~ home"
+echo "  To update:     cd ~/Ringo && stow --restow -t ~ home"
 echo "=========================================="

@@ -57,10 +57,18 @@ window-rule {
 }
 
 layer-rule {
-    match namespace="^waybar$"
-    match namespace="^rofi$"
-    match namespace="^mako$"
+    match namespace="^ringo-shell$"
     geometry-corner-radius 12
+    background-effect {
+        xray true
+        blur true
+        noise 0.05
+        saturation 1
+    }
+}
+
+layer-rule {
+    match namespace="^ringo-lock$"
     background-effect {
         xray true
         blur true
