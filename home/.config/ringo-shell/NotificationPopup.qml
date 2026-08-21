@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 
 Item {
   id: root
@@ -28,16 +29,21 @@ Item {
       height: 23 * box.dpi
       fillMode: Image.PreserveAspectCrop
       source: {
-        if (root.notif && root.notif.image) return root.notif.image
+        // Only show the app icon. Attached images (e.g. screenshots) are
+        // hidden: a dark 16:9 image cropped to a tiny square renders as a
+        // broken-looking black box instead of a useful preview.
         if (root.notif && root.notif.appIcon) {
-          return root.notif.appIcon.startsWith("/") 
-            ? "file://" + root.notif.appIcon 
-            : "image://icon/" + root.notif.appIcon
+          if (root.notif.appIcon.startsWith("/")) return "file://" + root.notif.appIcon
+          // iconPath(icon, true) returns "" if the icon is missing from the
+          // theme, so we never see the black/purple "missing texture" block.
+          return Quickshell.iconPath(root.notif.appIcon, true)
         }
         return ""
       }
-      sourceSize: Qt.size(23 * box.dpi, 23 * box.dpi)
+      // cap decode size so big icons don't burn VRAM at thumbnail size
+      sourceSize: Qt.size(64, 64)
       visible: status === Image.Ready
+      onStatusChanged: if (status === Image.Error) visible = false
     }
 
     ColumnLayout {

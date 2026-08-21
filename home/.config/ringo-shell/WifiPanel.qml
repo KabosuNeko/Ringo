@@ -3,9 +3,17 @@ import Quickshell.Wayland
 import QtQuick
 import QtQuick.Layouts
 import IslandBackend
+import Quickshell.Io
 
 PanelWindow {
   id: wifiListWindow
+
+  // TEMP DEBUG
+  Process {
+    id: dbgLog
+    command: ["true"]
+    running: false
+  }
 
   readonly property real dpi: Config.dpiScale
 
@@ -32,6 +40,9 @@ PanelWindow {
 
   // auto hide if control center close
   onVisibleChanged: {
+    dbgLog.command = ["sh", "-c", "echo 'WifiPanel visible='$([ \"$1\" = true ] && echo yes || echo no) anchorX=" + anchorX + " >> /tmp/wifi_dbg.log", visible ? "true" : "false"]
+    dbgLog.running = false
+    dbgLog.running = true
     if (visible && WifiController.enabled) WifiController.refreshNetworks(true)
   }
 

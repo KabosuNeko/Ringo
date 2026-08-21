@@ -47,7 +47,15 @@ Item {
             return
         }
         polledPosition = Number(activePlayer.position) || 0
-        polledLength = Number(activePlayer.length) || 0
+        let len = Number(activePlayer.length) || 0
+        // noctalia-qs fork bug: when a player doesn't advertise mpris:length,
+        // length() returns the CURRENT position -> start/end labels tick together
+        // and the bar is always full. Fall back to the metadata length (µs -> s).
+        if (len <= polledPosition && activePlayer.metadata && activePlayer.metadata["mpris:length"]) {
+            const metaLen = Number(activePlayer.metadata["mpris:length"]) / 1e6
+            if (metaLen > 0) len = metaLen
+        }
+        polledLength = len
     }
 
     Timer {

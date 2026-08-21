@@ -40,6 +40,19 @@ RowLayout {
     }
   }
 
+  // TEMP DEBUG
+  Process {
+    id: dbgLog
+    command: ["true"]
+    running: false
+  }
+  function dbg(msg) {
+    dbgLog.command = ["sh", "-c", "echo '" + msg + "' >> /tmp/wifi_dbg.log"]
+    dbgLog.running = false
+    dbgLog.running = true
+  }
+  onWifiPanelOpenedChanged: dbg("wifiPanelOpened=" + root.wifiPanelOpened + " rightEdge=" + root.mapToGlobal(root.width, 0).x)
+
   // wifi
   Rectangle {
     id: wifiBtn
@@ -81,6 +94,7 @@ RowLayout {
       onClicked: (mouse) => {
         if (mouse.button === Qt.RightButton) {
           root.wifiPanelOpened = !root.wifiPanelOpened
+          dbg("wifi RC fired -> " + root.wifiPanelOpened)
           if (root.wifiPanelOpened && WifiController.enabled) WifiController.refreshNetworks(true)
           return
         }
@@ -91,7 +105,10 @@ RowLayout {
 
   WifiPanel {
     visible: root.wifiPanelOpened
-    anchorX: root.mapToGlobal(root.width, 0).x - (600 * root.dpi) - (30 * root.dpi)
+    // Open right next to the control center's right edge (same spot the
+    // bluetooth panel used to take); clamp to the screen edge so the panel
+    // never lands off-screen.
+    anchorX: Math.max(8, root.mapToGlobal(root.width, 0).x + (29 * root.dpi))
     anchorY: wifiBtn.mapToGlobal(0, 0).y
   }
 
@@ -256,7 +273,14 @@ RowLayout {
 
   BluetoothPanel {
     visible: root.btPanelOpened
-    anchorX: root.mapToGlobal(root.width, 0).x + (29 * root.dpi)
+    // Mirror of the wifi panel position across the screen center (the bar
+    // is centered, so this lands the panel symmetrically on the right
+    // side of the bar instead of glued to the screen edge).
+    anchorX: Quickshell.screens[0]
+             ? Quickshell.screens[0].x + Quickshell.screens[0].width
+               - (root.mapToGlobal(root.width, 0).x + (29 * root.dpi))
+               - (270 * root.dpi)
+             : 0
     anchorY: btBtn.mapToGlobal(0, 0).y
   }
 }

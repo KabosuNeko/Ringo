@@ -66,6 +66,7 @@ ShellRoot {
   }
 
   property string bg: Theme.bg
+  property real barSurfaceOpacity: 0.5
   property string fg: Theme.fg
   property string fontFamily: Theme.fontFamily
   property int avatarSize: 48
@@ -303,7 +304,9 @@ ShellRoot {
           NumberAnimation { duration: 225; easing.type: Easing.OutExpo }
       }
 
-      color: controlCenter ? Theme.bgD1 : bg
+      color: controlCenter
+             ? Qt.rgba(Theme.bgD1.r, Theme.bgD1.g, Theme.bgD1.b, root.barSurfaceOpacity)
+             : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, root.barSurfaceOpacity)
 
       onMiniDashboardChanged: {
           if (!box.miniDashboard) {
@@ -951,19 +954,24 @@ ShellRoot {
               fillMode: Image.PreserveAspectFit
               asynchronous: true
               source: {
-                if (modelData.image) return modelData.image
+                // Only show the app icon. Attached images (e.g. screenshots)
+                // are hidden: a dark 16:9 image in a 22x22 box renders as a
+                // broken-looking black square.
                 if (modelData.appIcon) {
-                  return modelData.appIcon.startsWith("/")
-                    ? "file://" + modelData.appIcon
-                    : "image://icon/" + modelData.appIcon
+                  if (modelData.appIcon.startsWith("/")) return "file://" + modelData.appIcon
+                  // iconPath(icon, true) returns "" if the icon is missing
+                  // from the theme, so we never see the black/purple
+                  // "missing texture" block.
+                  return Quickshell.iconPath(modelData.appIcon, true)
                 }
                 return ""
               }
               enabled: true
               smooth: true
-              mipmap: true
-              sourceSize: Qt.size(22 * box.dpi, 22 * box.dpi)
+              // cap decode size so big icons don't burn VRAM at thumbnail size
+              sourceSize: Qt.size(64, 64)
               visible: status === Image.Ready
+              onStatusChanged: if (status === Image.Error) visible = false
               anchors.top: parent.top
               anchors.left: parent.left
               anchors.topMargin: 10
@@ -1236,7 +1244,7 @@ ShellRoot {
           anchors.top: parent.top
           anchors.left: parent.left
           anchors.right: parent.right
-          anchors.topMargin: 97
+          anchors.topMargin: 95
 
           RowLayout {
             anchors.left: parent.left
@@ -1446,9 +1454,12 @@ Connections {
         source: {
           if (fsNotif.displayNotif && fsNotif.displayNotif.image) return fsNotif.displayNotif.image
           if (fsNotif.displayNotif && fsNotif.displayNotif.appIcon) {
-            return fsNotif.displayNotif.appIcon.startsWith("/")
-              ? "file://" + fsNotif.displayNotif.appIcon
-              : "image://icon/" + fsNotif.displayNotif.appIcon
+            if (fsNotif.displayNotif.appIcon.startsWith("/")) {
+              return "file://" + fsNotif.displayNotif.appIcon
+            }
+            // iconPath(icon, true) returns "" if the icon is missing from the
+            // theme, so we never see the black/purple "missing texture" block.
+            return Quickshell.iconPath(fsNotif.displayNotif.appIcon, true)
           }
           return ""
         }
