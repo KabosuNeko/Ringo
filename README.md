@@ -2,19 +2,17 @@
 
 <p><br/></p>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/45a8450f-2c36-46b7-a130-9d6132b87d3e" alt="Ringo Logo" style="width: 192px" />
+  <img src="https://github.com/user-attachments/assets/ac1d9feb-5fda-4bac-ae40-bacb5d0beb46" alt="Ringo Logo" style="width: 192px" />
 </p>
 <p><br/></p>
 
-**A niri dotfile setup that doesn't suck.**
-
-Ringo is a Niri configuration for Arch-based distros. It is highly optimized (~900MB/16GB RAM on boot), super clean, simple, and just works.
+Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 
 ## Preview
 
-| <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/7cbe867f-f2a7-446d-b5ba-3d47307dfebb" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/bbd942b4-3582-4a15-a6e3-9727f965456a" /> |
+| <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7" /> |
 |---|---|
-| <img width="1920" height="1080" alt="screenshot_3" src="https://github.com/user-attachments/assets/1472d4a5-90df-47b2-b860-808c65e74fa0" /> | <img width="1920" height="1080" alt="screenshot_4" src="https://github.com/user-attachments/assets/b3a943df-f381-4d4c-9552-97f2358b94e5" /> |
+| <img width="1920" height="1080" alt="screenshot_3" src="https://github.com/user-attachments/assets/bf5fb964-78ee-4985-b227-f2e4bb78b2af" /> | <img width="1920" height="1080" alt="screenshot_4" src="https://github.com/user-attachments/assets/48dc4ba1-277a-4523-a57c-6d3d8731fe35" /> |
 
 
 ## Core Components
@@ -48,12 +46,6 @@ Ringo is a Niri configuration for Arch-based distros. It is highly optimized (~9
 - **Progressive idle** — 300s dim → 330s lock → 360s monitor off → 600s suspend
 
 ## Installation
-
-### Prerequisites
-
-- Arch Linux (or Arch-based like CachyOS, EndeavourOS)
-- Git
-- An active internet connection
 
 ### Fresh Install
 
