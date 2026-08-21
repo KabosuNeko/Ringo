@@ -436,7 +436,19 @@ ShellRoot {
 
         Item { Layout.fillWidth: true }
 
-        RamUsage {}
+        RowLayout {
+          spacing: 4 * Config.paddingScale
+          Text {
+            text: brightnessModule.icon
+            color: Theme.fg
+            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+          }
+          Text {
+            text: Math.round(brightnessModule.percent * 100) + "%"
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
+          }
+        }
         TrayModule { parentWindow: panelWindow }
       }
 
@@ -1401,15 +1413,15 @@ ShellRoot {
     }
 
     // open weather when click on weather in mini dashboard
-Connections {
+    Connections {
         target: weatherIndicatorItem
         function onToggleWeather() {
           if (!weatherPopupLoader.active)
-          weatherPopupLoader.active = true
-        else
-          weatherPopupLoader.item.shown = !weatherPopupLoader.item.shown
-        calendarPopup.shown = false
-      }
+            weatherPopupLoader.active = true
+          else
+            weatherPopupLoader.item.shown = !weatherPopupLoader.item.shown
+          calendarPopup.shown = false
+        }
     }
 
     }
