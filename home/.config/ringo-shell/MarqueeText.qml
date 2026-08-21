@@ -24,7 +24,7 @@ RowLayout {
 
     HoverHandler {
         id: textHover
-        hoverEnabled: true
+        // enabled by default; only `hovered` is read below
     }
 
     Item {

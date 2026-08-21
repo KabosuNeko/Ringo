@@ -21,7 +21,6 @@ RowLayout {
       IconImage {
         anchors.fill: parent
         source: modelData.icon
-        sourceSize: Qt.size(24, 24)
       }
 
       MouseArea {
