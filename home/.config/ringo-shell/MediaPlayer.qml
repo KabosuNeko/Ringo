@@ -115,7 +115,6 @@ Rectangle {
                 }
             }
 
-            // controls
             Row {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: 14

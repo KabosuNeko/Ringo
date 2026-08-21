@@ -40,7 +40,6 @@ RowLayout {
     }
   }
 
-  // wifi
   Rectangle {
     id: wifiBtn
     implicitWidth: root.buttonWidth
@@ -102,7 +101,6 @@ RowLayout {
     if (root.notificationPopup) root.wifiPanelOpened = false; root.btPanelOpened = false
   }
 
-  // silent notifications
   Rectangle {
     id: dndBtn
     implicitWidth: root.buttonWidth
@@ -133,7 +131,6 @@ RowLayout {
     }
   }
 
-  // power profiles
   Rectangle {
     id: ppBtn
     implicitWidth: root.buttonWidth
@@ -208,7 +205,6 @@ RowLayout {
     }
   }
 
-  // bluetooth
   Rectangle {
     id: btBtn
     implicitWidth: root.buttonWidth

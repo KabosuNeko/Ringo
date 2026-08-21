@@ -54,7 +54,6 @@ RowLayout {
     return String.fromCodePoint(0xf057e)
   }
 
-  // icon
   Text {
     text: root.icon
 
@@ -76,7 +75,6 @@ RowLayout {
     hoverEnabled: true
   }
 
-  // percentage
   Text {
     text: {
       if (!root.ready) return "-"

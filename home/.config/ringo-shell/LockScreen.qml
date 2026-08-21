@@ -41,7 +41,6 @@ PanelWindow {
         style: Text.Sunken
       }
 
-      // Date
       Text {
         Layout.alignment: Qt.AlignHCenter
         text: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy")

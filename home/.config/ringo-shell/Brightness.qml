@@ -84,14 +84,12 @@ RowLayout {
         }
     }
 
-    // icon
     Text {
         text: root.icon
         color: Theme.fg
         font { family: Theme.nerdFontFamily; pixelSize: 10 }
     }
 
-    // percentage
     Text {
         text: Math.round(root.percent * 100) + "%"
         color: Theme.fg

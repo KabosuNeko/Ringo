@@ -440,7 +440,6 @@ ShellRoot {
         TrayModule { parentWindow: panelWindow }
       }
 
-      // volume
       OsdBar {
           active: box.activeOsd === "volume"
           icon: volumeModule.icon
@@ -451,7 +450,6 @@ ShellRoot {
           valueText: volumeModule.muted ? "muted" : volumeModule.vol + "%"
       }
 
-      // brightness
       OsdBar {
           active: box.activeOsd === "brightness"
           icon: brightnessModule.icon
@@ -460,7 +458,6 @@ ShellRoot {
           barWidth: 100
       }
 
-      // battery
       OsdBar {
         active: box.activeOsd === "battery"
         icon: box.batteryIcon
@@ -470,7 +467,6 @@ ShellRoot {
         spacing: 5 // gap between battery icon and text
       }
 
-      // notification
       NotificationPopup {
         active: notificationModule.active
                 && !notifFullscreenMode
@@ -675,7 +671,6 @@ ShellRoot {
           anchors.rightMargin: 2
           spacing: 5
 
-          // volume
           RowLayout {
             width: parent.width
             spacing: 14
@@ -749,7 +744,6 @@ ShellRoot {
             }
           }
 
-          // brightness
           RowLayout {
             width: parent.width
             spacing: 14
@@ -1084,7 +1078,6 @@ ShellRoot {
               }
             }
 
-            // divider
             Rectangle {
               anchors.bottom: parent.bottom
               width: parent.width
@@ -1158,7 +1151,6 @@ ShellRoot {
             }
           }
 
-          // username
           Process {
             id: whoamiProc
             command: ["sh", "-c", 'whoami']
@@ -1168,7 +1160,6 @@ ShellRoot {
             }
           }
 
-          // hostname
           Process {
             id: hostnameProc
             command: ["sh", "-c", "cat /etc/hostname"]
@@ -1178,7 +1169,6 @@ ShellRoot {
             }
           }
 
-          // uptime
           Process {
             id: uptimeProc
             command: ["sh", "-c", 'uptime -p']
@@ -1276,7 +1266,6 @@ ShellRoot {
             anchors.rightMargin: 8
             spacing: 8
 
-            // lock
             Rectangle {
               width: buttonSize; height: buttonSize
               radius: buttonctlRadius; color: buttonBg
@@ -1298,7 +1287,6 @@ ShellRoot {
               }
             }
 
-            // sleep
             Rectangle {
               width: buttonSize; height: buttonSize
               radius: buttonctlRadius; color: buttonBg
@@ -1331,7 +1319,6 @@ ShellRoot {
 
             Item { Layout.fillWidth: true }
 
-            // reboot
             Rectangle {
               width: buttonSize; height: buttonSize
               radius: buttonctlRadius; color: buttonBg
@@ -1354,7 +1341,6 @@ ShellRoot {
               Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
             }
 
-            // shutdown
             Rectangle {
               width: buttonSize; height: buttonSize
               radius: buttonctlRadius; color: buttonBg

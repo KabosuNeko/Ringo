@@ -216,7 +216,6 @@ Rectangle {
 
     Rectangle { Layout.fillWidth: true; height: 1 * box.dpi; color: weatherPopup.dividerColor }
 
-    // forecast
     RowLayout {
       Layout.fillWidth: true
       spacing: weatherPopup.tileSpacing * box.dpi

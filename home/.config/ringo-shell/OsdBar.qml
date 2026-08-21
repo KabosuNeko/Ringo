@@ -4,7 +4,6 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    // inputs
     property string iconColor: ""
     property bool active: false
     property string icon: ""

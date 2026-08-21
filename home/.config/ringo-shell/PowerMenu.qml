@@ -53,7 +53,6 @@ Rectangle {
     anchors.margins: 10
     spacing: 8
 
-    // lock
     Rectangle {
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -89,7 +88,6 @@ Rectangle {
       }
     }
 
-    // sleep
     Rectangle {
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -126,7 +124,6 @@ Rectangle {
       Process { id: sleepProc; command: ["bash", "-c", "systemctl suspend"]; running: false }
     }
 
-    // reboot
     Rectangle {
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -163,7 +160,6 @@ Rectangle {
       Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
     }
 
-    // shutdown
     Rectangle {
       Layout.fillWidth: true
       Layout.fillHeight: true
