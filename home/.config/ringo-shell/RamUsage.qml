@@ -35,7 +35,8 @@ RowLayout {
   Timer {
     interval: 3000
     repeat: true
-    running: true
+    running: box.miniDashboard
+    triggeredOnStart: true
     onTriggered: {
       ramProc.running = false
       ramProc.running = true

@@ -40,19 +40,6 @@ RowLayout {
     }
   }
 
-  // TEMP DEBUG
-  Process {
-    id: dbgLog
-    command: ["true"]
-    running: false
-  }
-  function dbg(msg) {
-    dbgLog.command = ["sh", "-c", "echo '" + msg + "' >> /tmp/wifi_dbg.log"]
-    dbgLog.running = false
-    dbgLog.running = true
-  }
-  onWifiPanelOpenedChanged: dbg("wifiPanelOpened=" + root.wifiPanelOpened + " rightEdge=" + root.mapToGlobal(root.width, 0).x)
-
   // wifi
   Rectangle {
     id: wifiBtn
@@ -94,7 +81,6 @@ RowLayout {
       onClicked: (mouse) => {
         if (mouse.button === Qt.RightButton) {
           root.wifiPanelOpened = !root.wifiPanelOpened
-          dbg("wifi RC fired -> " + root.wifiPanelOpened)
           if (root.wifiPanelOpened && WifiController.enabled) WifiController.refreshNetworks(true)
           return
         }

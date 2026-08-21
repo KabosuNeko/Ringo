@@ -22,6 +22,11 @@ RowLayout {
         font { family: root.iconFontFamily; pixelSize: root.iconPixelSize }
     }
 
+    HoverHandler {
+        id: textHover
+        hoverEnabled: true
+    }
+
     Item {
         id: textBox
         property bool overflowing: label.width > root.maxWidth
@@ -45,7 +50,9 @@ RowLayout {
             }
 
             SequentialAnimation on x {
-                running: textBox.overflowing
+                // only scroll while hovered, so idle overflowing labels
+                // (wifi ssid, media title, ...) don't burn GPU repaints
+                running: textBox.overflowing && textHover.hovered
                 loops: Animation.Infinite
                 PauseAnimation { duration: root.pauseDuration }
                 NumberAnimation { to: -(label.width - root.maxWidth + 4); duration: Math.max(1500, label.width * 30); easing.type: Easing.InOutQuad }

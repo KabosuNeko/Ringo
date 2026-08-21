@@ -79,35 +79,52 @@ ShellRoot {
   property bool notifFullscreenMode: false
   property bool fullscreenActive: false
 
-  // Poll niri for fullscreen state
+  // Fullscreen state: initial snapshot + event-driven refresh. A persistent
+  // `niri msg events` listener re-queries windows only when something
+  // relevant changes, instead of forking `niri msg windows` every second.
   Process {
     id: fullscreenPoll
     running: true
     command: ["niri", "msg", "--json", "windows"]
     stdout: StdioCollector {
-      onStreamFinished: {
+      onStreamFinished: parseWindows(text)
+    }
+  }
+
+  Process {
+    id: fullscreenEvents
+    running: true
+    command: ["niri", "msg", "--json", "events"]
+    stdout: SplitParser {
+      onRead: data => {
         try {
-          var data = JSON.parse(text)
-          var found = false
-          for (var i = 0; i < data.length; i++) {
-            if (data[i].is_focused && data[i].is_fullscreen) {
-              found = true
-              break
-            }
-          }
-          root.fullscreenActive = found
+          var ev = JSON.parse(data)
+          if (!ev || typeof ev.event !== "string") return
+          if (ev.event !== "WindowOpened" && ev.event !== "WindowClosed"
+              && ev.event !== "WindowChanged" && ev.event !== "FocusChanged") return
+          fullscreenPoll.running = false
+          fullscreenPoll.running = true
         } catch (e) {
-          console.log("niri windows parse error:", e)
+          // ignore keepalive/partial lines
         }
       }
     }
   }
 
-  Timer {
-    interval: 1000
-    repeat: true
-    running: true
-    onTriggered: fullscreenPoll.running = true
+  function parseWindows(text: string): void {
+    try {
+      var data = JSON.parse(text)
+      var found = false
+      for (var i = 0; i < data.length; i++) {
+        if (data[i].is_focused && data[i].is_fullscreen) {
+          found = true
+          break
+        }
+      }
+      root.fullscreenActive = found
+    } catch (e) {
+      console.log("niri windows parse error:", e)
+    }
   }
 
   // osd ui
