@@ -80,7 +80,7 @@ ShellRoot {
   property bool fullscreenActive: false
 
   // Fullscreen state: initial snapshot + event-driven refresh. A persistent
-  // `niri msg events` listener re-queries windows only when something
+  // `niri msg event-stream` listener re-queries windows only when something
   // relevant changes, instead of forking `niri msg windows` every second.
   Process {
     id: fullscreenPoll
@@ -94,16 +94,21 @@ ShellRoot {
   Process {
     id: fullscreenEvents
     running: true
-    command: ["niri", "msg", "--json", "events"]
+    command: ["niri", "msg", "--json", "event-stream"]
     stdout: SplitParser {
       onRead: data => {
         try {
           var ev = JSON.parse(data)
-          if (!ev || typeof ev.event !== "string") return
-          if (ev.event !== "WindowOpened" && ev.event !== "WindowClosed"
-              && ev.event !== "WindowChanged" && ev.event !== "FocusChanged") return
-          fullscreenPoll.running = false
-          fullscreenPoll.running = true
+          if (!ev) return
+          // niri event-stream lines are { "<EventName>": {...} }
+          for (var key in ev) {
+            if (key === "WindowOpened" || key === "WindowClosed"
+                || key === "WindowChanged" || key === "FocusChanged") {
+              fullscreenPoll.running = false
+              fullscreenPoll.running = true
+              return
+            }
+          }
         } catch (e) {
           // ignore keepalive/partial lines
         }
