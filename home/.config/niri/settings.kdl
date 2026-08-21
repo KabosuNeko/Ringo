@@ -80,6 +80,10 @@ gestures {
         delay-ms 100
         max-speed 1500
     }
+
+    hot-corners {
+        off
+    }
 }
 
 input {
