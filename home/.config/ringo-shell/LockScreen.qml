@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import Quickshell.Wayland
 import IslandBackend
 import QtQuick
@@ -101,6 +102,84 @@ PanelWindow {
         visible: false // keyboard Enter is primary; keep UI minimal
         text: "Unlock"
         onClicked: passField.accepted()
+      }
+
+      RowLayout {
+        Layout.alignment: Qt.AlignHCenter
+        Layout.topMargin: 12
+        spacing: 12
+
+        Rectangle {
+          implicitWidth: 110
+          implicitHeight: 32
+          radius: 8
+          color: shutdownHover.containsMouse ? Theme.bg5 : Theme.bg2
+          border.width: 1
+          border.color: Theme.bg5
+
+          RowLayout {
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+              text: "󰐥" // same as PowerMenu shutdown
+              color: Theme.fg
+              font.family: Theme.nerdFontFamily
+              font.pixelSize: 12
+            }
+            Text {
+              text: "Shutdown"
+              color: Theme.fg
+              font.family: Theme.fontFamily
+              font.pixelSize: 12
+            }
+          }
+
+          MouseArea {
+            id: shutdownHover
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
+            onClicked: shutdownProc.startDetached()
+          }
+
+          Process { id: shutdownProc; command: ["bash", "-c", "systemctl poweroff"]; running: false }
+        }
+
+        Rectangle {
+          implicitWidth: 110
+          implicitHeight: 32
+          radius: 8
+          color: rebootHover.containsMouse ? Theme.bg5 : Theme.bg2
+          border.width: 1
+          border.color: Theme.bg5
+
+          RowLayout {
+            anchors.centerIn: parent
+            spacing: 6
+            Text {
+              text: "󰜉" // same as PowerMenu reboot
+              color: Theme.fg
+              font.family: Theme.nerdFontFamily
+              font.pixelSize: 12
+            }
+            Text {
+              text: "Restart"
+              color: Theme.fg
+              font.family: Theme.fontFamily
+              font.pixelSize: 12
+            }
+          }
+
+          MouseArea {
+            id: rebootHover
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            hoverEnabled: true
+            onClicked: rebootProc.startDetached()
+          }
+
+          Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
+        }
       }
     }
   }
