@@ -5,6 +5,7 @@ import Quickshell.Wayland
 import IslandBackend
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import Quickshell.Widgets
 import Quickshell.Services.UPower
 import Quickshell.Services.Notifications
