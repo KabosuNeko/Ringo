@@ -13,20 +13,22 @@ Item {
 
     Process {
         id: bwProc
-        command: ["nusgmon", "--today", "--json"]
+        command: ["sh", "-c", "awk 'NR>2 {gsub(/:/,\" \"); if($1==\"lo\") next; rx+=$2; tx+=$10} END {printf \"%.1f %.1f\", rx/1048576, tx/1048576}' /proc/net/dev"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    let data = JSON.parse(this.text.trim())
-                    let today = data.today || data
-                    let unit = data.unit || "MB"
-                    let up   = data.total[0].up
-                    let down = data.total[0].down
-                    root.rx = down.toFixed(1) + " " + unit
-                    root.tx = up.toFixed(1) + " " + unit
+                    const parts = this.text.trim().split(/\s+/)
+                    const rxMb = parseFloat(parts[0])
+                    const txMb = parseFloat(parts[1])
+                    function fmt(v) {
+                        if (!isFinite(v)) return "..."
+                        return v >= 1024 ? (v / 1024).toFixed(1) + " GB" : v.toFixed(1) + " MB"
+                    }
+                    root.rx = fmt(rxMb)
+                    root.tx = fmt(txMb)
                 } catch (e) {
-                    console.log("nusgmon parse error:", e)
+                    console.log("bandwidth parse error:", e)
                 }
             }
         }
