@@ -29,13 +29,11 @@ Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 | Wallpaper       | [Swaybg](https://github.com/swaywm/swaybg) |
 | Power Profiles  | [power-profiles-daemon](https://gitlab.freedesktop.org/upower/power-profiles-daemon)  |
 | Display Manager | [Ly](https://github.com/fairyglade/ly)                                                |
-| Browser         | [Firefox-pure](https://packages.cachyos.org/package/cachyos/x86_64/firefox-pure)      |
+| Browser         | [Firefox](https://www.firefox.com/)      |
 
 - **Theme**: [Gruvbox-BL-LB-dark](https://www.gnome-look.org/p/1681313)
 - **Icons**: [Gruvbox-Plus-Icon](https://www.gnome-look.org/p/1961046)
 - **Cursor**: [Bibata-Modern-Amber](https://www.gnome-look.org/p/1914819)
-
-> **Note**: Firefox-pure is a pre-hardened Firefox build by the CachyOS team, optimized for Wayland with privacy/security defaults. It's not recommended to layer additional `user.js` configs (Betterfox, Arkenfox, etc.) on top. For standard Firefox, uninstall `firefox-pure` and install the regular package instead.
 
 ## Features
 
