@@ -708,7 +708,7 @@ ShellRoot {
 
             Rectangle {
               Layout.fillWidth: true
-              height: box.sliderHeight
+              Layout.preferredHeight: box.sliderHeight
               radius: box.sliderRadius
               color: Theme.bg5
 
@@ -780,7 +780,7 @@ ShellRoot {
 
             Rectangle {
               Layout.fillWidth: true
-              height: box.sliderHeight
+              Layout.preferredHeight: box.sliderHeight
               radius: box.sliderRadius
               color: Theme.bg5
 
@@ -1142,8 +1142,8 @@ ShellRoot {
          // profile picture (display picture)
            ClippingRectangle {
             id: avatarClip
-            width: avatarSize
-            height: avatarSize
+            Layout.preferredWidth: avatarSize
+            Layout.preferredHeight: avatarSize
             radius: avatarSize / 2
             property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
             color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.bg5 : "transparent"
@@ -1280,7 +1280,7 @@ ShellRoot {
             spacing: 8
 
             Rectangle {
-              width: buttonSize; height: buttonSize
+              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
               radius: buttonctlRadius; color: buttonBg
               Layout.alignment: Qt.AlignVCenter
               Text {
@@ -1301,7 +1301,7 @@ ShellRoot {
             }
 
             Rectangle {
-              width: buttonSize; height: buttonSize
+              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
               radius: buttonctlRadius; color: buttonBg
               Layout.alignment: Qt.AlignVCenter
               Text {
@@ -1333,7 +1333,7 @@ ShellRoot {
             Item { Layout.fillWidth: true }
 
             Rectangle {
-              width: buttonSize; height: buttonSize
+              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
               radius: buttonctlRadius; color: buttonBg
               Layout.alignment: Qt.AlignVCenter
               Text {
@@ -1355,7 +1355,7 @@ ShellRoot {
             }
 
             Rectangle {
-              width: buttonSize; height: buttonSize
+              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
               radius: buttonctlRadius; color: buttonBg
               Layout.alignment: Qt.AlignVCenter
               Text {
@@ -1470,7 +1470,7 @@ ShellRoot {
 
       Image {
         id: cardIcon
-        width: 23; height: 23
+        Layout.preferredWidth: 23; Layout.preferredHeight: 23
         fillMode: Image.PreserveAspectCrop
         source: {
           if (fsNotif.displayNotif && fsNotif.displayNotif.image) return fsNotif.displayNotif.image

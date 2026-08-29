@@ -19,7 +19,7 @@ Singleton {
       property int pillBottomMargin: 26
       property string textFontFamily: "JetBrainsMono Nerd Font"
       property string nerdFontFamily: "JetBrainsMono Nerd Font Propo"
-      property list<int> timerPresets: [1, 5, 10, 15, 30]
+      property var timerPresets: [1, 5, 10, 15, 30]
       property int mediaPopupDuration: 3000
       property int maxWorkspaces: 5
       property int notificationDisplayTime: 3000

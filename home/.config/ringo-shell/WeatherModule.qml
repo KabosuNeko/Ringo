@@ -41,6 +41,11 @@ Singleton {
 
     const url = "https://wttr.in/" + encodeURIComponent(Config.weatherLocation) + "?format=j1"
     const xhr = new XMLHttpRequest()
+    xhr.onerror = () => {
+      root.loading = false
+      root.errorMessage = "Weather fetch failed."
+    }
+    xhr.ontimeout = xhr.onerror
     xhr.onreadystatechange = () => {
       if (xhr.readyState !== XMLHttpRequest.DONE) return
       root.loading = false
