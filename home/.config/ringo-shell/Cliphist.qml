@@ -225,7 +225,6 @@ Item {
           }
         }
 
-        // search box
         Rectangle {
             width: parent.width
             height: 26
@@ -305,7 +304,6 @@ Item {
             }
         }
 
-        // image wrapped in item to align in center
         Item {
             width: parent.width
             height: parent.height
@@ -428,7 +426,6 @@ Item {
                 Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
-                // image preview
                 Image {
                     anchors.fill: parent
                     anchors.margins: 4
@@ -439,7 +436,6 @@ Item {
                     sourceSize: Qt.size(80, 50)
                 }
 
-                // text label
                 Text {
                     anchors.left: parent.left
                     anchors.right: parent.right

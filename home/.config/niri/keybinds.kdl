@@ -12,7 +12,7 @@ binds {
 
     // Custom Script Launchers
     Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call cliphist toggle"; }
-    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "sh" "-c" "cliphist wipe && notify-send -i edit-clear 'Clipboard' 'Đã xóa clipboard' -t 2000"; }
+    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "sh" "-c" "cliphist wipe && notify-send -i edit-clear 'Clipboard' 'Clipboard cleared' -t 2000"; }
 
     // Application Launchers
     Mod+Return hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }

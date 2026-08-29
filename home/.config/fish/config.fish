@@ -233,7 +233,7 @@ end
 ssh-add -l > /dev/null 2>&1
 or ssh-add ~/.ssh/id_ed25519 > /dev/null 2>&1
 
-# Bạn có thể tạo alias trong shell (như .bashrc hoặc .zshrc)
+# You can create aliases in your shell (like .bashrc or .zshrc)
 alias sudachi='bash -c "$(curl -sL https://raw.githubusercontent.com/KabosuNeko/sudachi/main/sudachi.sh)"'
 
 if status is-login

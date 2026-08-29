@@ -5,7 +5,6 @@ import Quickshell.Wayland
 import IslandBackend
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Controls
 import Quickshell.Widgets
 import Quickshell.Services.UPower
 import Quickshell.Services.Notifications
@@ -132,7 +131,6 @@ ShellRoot {
     }
   }
 
-  // osd ui
   property int osdInWidth: 120
   property real osdInHeight: 3.7
   property int osdBarRadius: 2
