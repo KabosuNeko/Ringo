@@ -275,6 +275,8 @@ ShellRoot {
 
       property bool cliphistPreviewing: false
 
+      // keep Clock truly centered even when systray appears (left/right groups anchored, center independent)
+      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen ? 1 : 0
       readonly property real baseWidth: activeOsd === "battery" ? osdWidth
                      : activeOsd === "volume" ? osdWidth
                      : activeOsd === "brightness" ? osdWidth
@@ -286,7 +288,7 @@ ShellRoot {
                      : miniDashboard ? 420
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                      : row.implicitWidth + (12 * Config.paddingScale) + (hovered ? 68 : 56) * Config.paddingScale
+                      : (leftGroup.implicitWidth + centerClock.implicitWidth + rightGroup.implicitWidth + 26 * Config.paddingScale) + (12 * Config.paddingScale) + (hovered ? 68 : 56) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd === "battery" ? osdHeight
                   : activeOsd === "volume" ? osdHeight
@@ -302,7 +304,7 @@ ShellRoot {
                    : appLauncher ? 410
                    : wallpaperSwitcherOpen ? 308
                    : powerMenuOpen ? 90
-                   : (row.implicitHeight * Config.pillScale) + 10
+                   : (Math.max(leftGroup.implicitHeight, centerClock.implicitHeight, rightGroup.implicitHeight) * Config.pillScale) + 10
 
       readonly property real baseRadius: notificationModule.active ? 99
         : cliphistOpen && cliphistPreviewing ? 35
@@ -400,26 +402,16 @@ ShellRoot {
           }
       }
 
-      // modules in bar
+      // modules in bar - split to keep Clock centered when systray appears
       RowLayout {
-        id: row
+        id: leftGroup
         anchors.left: parent.left
-        anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
         anchors.leftMargin: 28
-        anchors.rightMargin: 28
         spacing: 13 * Config.paddingScale
-        opacity: !box.cliphistOpen
-                 && !notificationModule.active
-                 && !box.controlCenter
-                 && !box.miniDashboard
-                 && box.activeOsd === ""
-                 && !box.appLauncher
-                 && !box.powerMenuOpen ? 1 : 0
+        opacity: box.barContentOpacity
         visible: opacity > 0
-
         Behavior on opacity { NumberAnimation { duration: 100 } }
-
         Battery {}
         Volume {
           id: volumeModule
@@ -429,13 +421,23 @@ ShellRoot {
             osdHideTimer.restart()
             }
         }
-
-        Item { Layout.fillWidth: true }
-
-        Clock {}
-
-        Item { Layout.fillWidth: true }
-
+      }
+      Clock {
+        id: centerClock
+        anchors.centerIn: parent
+        opacity: box.barContentOpacity
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 100 } }
+      }
+      RowLayout {
+        id: rightGroup
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.rightMargin: 28
+        spacing: 13 * Config.paddingScale
+        opacity: box.barContentOpacity
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 100 } }
         RowLayout {
           spacing: 4 * Config.paddingScale
           Text {
