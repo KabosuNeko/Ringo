@@ -132,6 +132,18 @@ ShellRoot {
     }
   }
 
+  // Ricelin-inspired: filter spurious hover at boot (Hyprland/niri map sends hover at cursor)
+  property bool bootSettled: false
+  Timer {
+      id: bootSettledTimer
+      interval: 3000
+      running: true
+      onTriggered: root.bootSettled = true
+  }
+  property bool hoverLatch: false
+  // Ricelin lazy-load helper: flip active before reading loader item to avoid binding loop
+  function surfaceItem(ld): var { ld.active = true; return ld.item }
+
   // osd ui
   property int osdInWidth: 120
   property real osdInHeight: 3.7
@@ -142,10 +154,26 @@ ShellRoot {
 
   readonly property int notifMaxHeight: 97
 
+  // Ricelin-style reserve strip: claims exclusiveZone for the rest pill height so
+  // tiled windows always sit below the pill even while the overlay expands.
+  PanelWindow {
+      id: reserveWindow
+      visible: !LockController.locked && !root.fullscreenActive && !root.notifFullscreenMode
+      WlrLayershell.layer: WlrLayershell.Top
+      WlrLayershell.namespace: "ringo-reserve"
+      WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+      anchors { top: true; left: true; right: true }
+      // rest pill height ~= row height + padding; approximate with 38*pillScale + margins
+      implicitHeight: Math.ceil(38 * Config.pillScale * Config.dpiScale + Config.pillTopMargin + Config.pillBottomMargin)
+      implicitWidth: 1
+      exclusiveZone: implicitHeight
+      color: "transparent"
+  }
+
   PanelWindow {
     id: panelWindow
     visible: !LockController.locked
-    WlrLayershell.layer: WlrLayershell.Top
+    WlrLayershell.layer: WlrLayershell.Overlay
     WlrLayershell.namespace: "ringo-shell"
     WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.controlCenter || box.miniDashboard) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     // Height follows the actual content: pill box + any open popup below it.
@@ -168,13 +196,23 @@ ShellRoot {
       top: true
     }
 
-    // fixed gap of the active window for the top bar
+    // overlay never moves windows; reserveWindow above owns the exclusiveZone
     margins.top: Config.pillTopMargin
-    exclusiveZone: Config.pillBottomMargin
+    exclusiveZone: 0
+    exclusionMode: ExclusionMode.Ignore
     color: "transparent"
 
-    // Mask input to only the capsule
+    // Ricelin-style input mask: pill rect only when collapsed, full layer when expanded/pinned
+    // so backdrop clicks dismiss and surfaces get pointer events.
     mask: Region {
+      // when any surface is expanded the overlay covers the whole window;
+      // mask must include the full window so backdrop clicks are delivered
+      Region {
+        intersection: Intersection.Combine
+        x: 0; y: 0
+        width: (box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen) ? panelWindow.implicitWidth : 0
+        height: (box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen) ? panelWindow.implicitHeight : 0
+      }
       Region {
         intersection: Intersection.Combine
         x: Math.floor(box.x - box.width * (box.dpi - 1) / 2); y: Math.floor(box.y)
@@ -192,6 +230,24 @@ ShellRoot {
           y: weatherPopupLoader.item ? Math.floor(weatherPopupLoader.item.y) : 0
           width: weatherPopupLoader.item && weatherPopupLoader.item.shown ? Math.ceil(weatherPopupLoader.item.width) : 0
           height: weatherPopupLoader.item && weatherPopupLoader.item.shown ? Math.ceil(weatherPopupLoader.item.height) : 0
+      }
+    }
+
+    // backdrop: click outside pill dismisses any expanded surface (only when overlay is expanded)
+    Item {
+      id: backdrop
+      anchors.fill: parent
+      visible: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen
+      MouseArea {
+        anchors.fill: parent
+        onClicked: {
+          box.controlCenter = false
+          box.miniDashboard = false
+          box.cliphistOpen = false
+          box.appLauncher = false
+          box.wallpaperSwitcherOpen = false
+          box.powerMenuOpen = false
+        }
       }
     }
 
@@ -323,12 +379,15 @@ ShellRoot {
       transformOrigin: Item.Top
 
       Behavior on radius {
-          NumberAnimation { duration: 225; easing.type: Easing.OutExpo }
+          NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard }
       }
 
       color: controlCenter
              ? Qt.rgba(Theme.bgD1.r, Theme.bgD1.g, Theme.bgD1.b, root.barSurfaceOpacity)
              : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, root.barSurfaceOpacity)
+      // subtle hair border like Ricelin
+      border.width: 1
+      border.color: Theme.hair
 
       onMiniDashboardChanged: {
           if (!box.miniDashboard) {
@@ -337,15 +396,15 @@ ShellRoot {
           }
       }
 
-      Behavior on implicitWidth { NumberAnimation { duration: 225; easing.type: Easing.OutExpo } }
-      NumberAnimation { id: heightAnim; target: box; property: "height"; easing.type: Easing.OutExpo }
+      Behavior on implicitWidth { NumberAnimation { duration: Motion.standard; easing.type: Motion.easeStandard } }
+      NumberAnimation { id: heightAnim; target: box; property: "height"; easing.type: Motion.easeMorph; easing.bezierCurve: Motion.morphCurve }
 
       MouseArea {
         anchors.fill: parent
         hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
 
-        onEntered: box.hovered = true
+        onEntered: { if (root.bootSettled) box.hovered = true; else root.hoverLatch = false }
         onExited: box.hovered = false
 
         onClicked: (mouse) => {
@@ -550,8 +609,10 @@ ShellRoot {
         Connections {
           target: box
           function onWallpaperSwitcherOpenChanged() {
-            if (box.wallpaperSwitcherOpen && wallpaperLoader.item)
-              wallpaperLoader.item.forceActiveFocus()
+            if (box.wallpaperSwitcherOpen) {
+              var it = root.surfaceItem(wallpaperLoader)
+              if (it) it.forceActiveFocus()
+            }
           }
         }
       }
@@ -592,8 +653,10 @@ ShellRoot {
         Connections {
           target: box
           function onPowerMenuOpenChanged() {
-            if (box.powerMenuOpen && powerMenuLoader.item)
-              powerMenuLoader.item.forceActiveFocus()
+            if (box.powerMenuOpen) {
+              var it = root.surfaceItem(powerMenuLoader)
+              if (it) it.forceActiveFocus()
+            }
           }
         }
       }
@@ -630,11 +693,15 @@ ShellRoot {
           }
       }
 
-      // control center opens on left click
+      // control center opens on left click — Ricelin-settled gate avoids 1-frame flicker on height relayout
       Item {
         id: controlCenterPanel
         anchors.centerIn: parent
         width: box.implicitWidth - 24
+        property bool settled: false
+        property real morphCloseness: opacity
+        onMorphClosenessChanged: if (opacity > 0.92 && box.controlCenter) settled = true
+        onVisibleChanged: if (!visible) settled = false
         Keys.onEscapePressed: box.controlCenter = false
         Connections {
           target: box
@@ -649,9 +716,16 @@ ShellRoot {
         Behavior on opacity {
           SequentialAnimation {
             PauseAnimation { duration: box.controlCenter ? 15 : 0 }
-            NumberAnimation { duration: 150; easing.type: Easing.OutExpo }
+            NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard }
           }
         }
+
+        // Ricelin settled gate: hide inner content until morph is 92% settled (avoids 1-frame clipped flicker)
+        Item {
+          id: ccInner
+          anchors.fill: parent
+          opacity: controlCenterPanel.settled ? 1 : 0
+          Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
         // media player
         MediaPlayer {}
@@ -1100,13 +1174,18 @@ ShellRoot {
           }
         }
       }
+        } // ccInner
       }
 
-      // mini dashboard opens on right click
+      // mini dashboard opens on right click — settled gate like controlCenter
       Item {
         id: miniDashboardPanel
         anchors.centerIn: parent
         width: box.implicitWidth - 30
+        property bool settled: false
+        property real morphCloseness: opacity
+        onMorphClosenessChanged: if (opacity > 0.92 && box.miniDashboard) settled = true
+        onVisibleChanged: if (!visible) settled = false
         Keys.onEscapePressed: box.miniDashboard = false
         Connections {
           target: box
@@ -1124,7 +1203,7 @@ ShellRoot {
         Behavior on opacity {
           SequentialAnimation {
             PauseAnimation { duration: box.miniDashboard ? 1 : 0 }
-            NumberAnimation { duration: 300; easing.type: Easing.OutExpo }
+            NumberAnimation { duration: Motion.fast; easing.type: Motion.easeStandard }
           }
         }
 
@@ -1136,6 +1215,13 @@ ShellRoot {
                     box.miniDashboard = !box.miniDashboard
             }
         }
+
+        // settled gate inner content (avoids 1-frame clipped flicker like CC)
+        Item {
+          id: dashInner
+          anchors.fill: parent
+          opacity: miniDashboardPanel.settled ? 1 : 0
+          Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
         RowLayout {
          // profile picture (display picture)
@@ -1376,6 +1462,7 @@ ShellRoot {
             }
           }
         }
+        } // dashInner
       }
       SystemClock {
         id: clock

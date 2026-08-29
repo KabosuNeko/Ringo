@@ -128,6 +128,15 @@ Singleton {
 
     property string coverArtGlowShadow: "#80aae6" // hardcored for now
 
+    // Ricelin-inspired surface tokens (compositor-agnostic, niri-safe)
+    property color shadow: Qt.rgba(0, 0, 0, 0.55)
+    property real shadowOpacity: 0.5
+    property color hair: Qt.alpha(root.walFg, 0.13)
+    property color hairSoft: Qt.alpha(root.walFg, 0.08)
+    property color sheen: Qt.alpha(root.walFg, 0.07)
+    property color frameBg: Qt.alpha(root.walFg, 0.055)
+    property color frameBorder: Qt.alpha(root.walFg, 0.10)
+
     property int fontSizeBase: 13
     property int fontSize: Math.round(fontSizeBase * Config.pillScale)
 }
