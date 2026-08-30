@@ -43,3 +43,4 @@ niri
 wlsunset
 sway-audio-idle-inhibit-git
 nusgmon
+wl-screenrec-git

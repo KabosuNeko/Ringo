@@ -26,10 +26,15 @@ binds {
     Mod+Ctrl+W hotkey-overlay-title="Wallpaper Switcher" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call wallpaperSwitcher toggle"; }
     Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call powerMenu toggle"; }
 
+    Mod+Alt+B hotkey-overlay-title="Toggle Bar" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call bar toggle"; }
+
     // Screenshots
     Print { screenshot; }
     Ctrl+Print { screenshot-screen; }
     Alt+Print { screenshot-window; }
+
+    // Screen recording (like Kumin Mod+F11)
+    Mod+F11 hotkey-overlay-title="Record Screen" { spawn "sh" "-c" "$HOME/.local/bin/record.sh"; }
 
 
     // Window Management

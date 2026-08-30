@@ -19,49 +19,64 @@ ShellRoot {
       box.appLauncher = false
       box.wallpaperSwitcherOpen = false
       box.powerMenuOpen = false
+      box.recordMenuOpen = false
       box.activeOsd = ""
   }
 
   IpcHandler {
       target: "cliphist"
-      function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = !box.cliphistOpen; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
-      function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+      function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = !box.cliphistOpen; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
+      function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
       function hide(): void { box.cliphistOpen = false }
   }
 
   IpcHandler {
       target: "controlCenter"
-      function toggle(): void { box.controlCenter = !box.controlCenter; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
-      function show(): void { box.controlCenter = true; box.miniDashboard = false; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+      function toggle(): void { box.controlCenter = !box.controlCenter; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
+      function show(): void { box.controlCenter = true; box.miniDashboard = false; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
       function hide(): void { box.controlCenter = false }
   }
 
   IpcHandler {
       target: "miniDashboard"
-      function toggle(): void { box.controlCenter = false; box.miniDashboard = !box.miniDashboard; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
-      function show(): void { box.controlCenter = false; box.miniDashboard = true; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+      function toggle(): void { box.controlCenter = false; box.miniDashboard = !box.miniDashboard; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
+      function show(): void { box.controlCenter = false; box.miniDashboard = true; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
       function hide(): void { box.miniDashboard = false }
   }
 
   IpcHandler {
     target: "appLauncher"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = !box.appLauncher; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = !box.appLauncher; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
+    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
     function hide(): void { box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
   }
 
   IpcHandler {
     target: "wallpaperSwitcher"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = !box.wallpaperSwitcherOpen; box.powerMenuOpen = false }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = true; box.powerMenuOpen = false }
+    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = !box.wallpaperSwitcherOpen; box.powerMenuOpen = false; box.recordMenuOpen = false }
+    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = true; box.powerMenuOpen = false; box.recordMenuOpen = false }
     function hide(): void { box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
   }
 
   IpcHandler {
     target: "powerMenu"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = !box.powerMenuOpen }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = true }
+    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = !box.powerMenuOpen; box.recordMenuOpen = false }
+    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = true; box.recordMenuOpen = false }
     function hide(): void { box.powerMenuOpen = false }
+  }
+
+  IpcHandler {
+    target: "recordMenu"
+    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = !box.recordMenuOpen }
+    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = true }
+    function hide(): void { box.recordMenuOpen = false }
+  }
+
+  IpcHandler {
+    target: "bar"
+    function toggle(): void { root.barHidden = !root.barHidden }
+    function show(): void { root.barHidden = false }
+    function hide(): void { root.barHidden = true }
   }
 
   property string bg: Theme.bg
@@ -77,6 +92,7 @@ ShellRoot {
 
   property bool notifFullscreenMode: false
   property bool fullscreenActive: false
+  property bool barHidden: false
 
   // Fullscreen state: initial snapshot + event-driven refresh. A persistent
   // `niri msg event-stream` listener re-queries windows only when something
@@ -156,10 +172,10 @@ ShellRoot {
 
   PanelWindow {
     id: panelWindow
-    visible: !LockController.locked
+    visible: !LockController.locked && !root.barHidden
     WlrLayershell.layer: WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
-    WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.controlCenter || box.miniDashboard) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.controlCenter || box.miniDashboard) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     // Height follows the actual content: pill box + any open popup below it.
     // (Fixed 885px tall windows would cover most of the screen on niri.)
     implicitWidth: Math.max(
@@ -182,7 +198,7 @@ ShellRoot {
 
     // fixed gap of the active window for the top bar
     margins.top: Config.pillTopMargin
-    exclusiveZone: Config.pillBottomMargin
+    exclusiveZone: root.barHidden ? 0 : Config.pillBottomMargin
     color: "transparent"
 
     // Mask input to only the capsule
@@ -223,6 +239,7 @@ ShellRoot {
       property bool cliphistOpen: false
       property bool wallpaperSwitcherOpen: false
       property bool powerMenuOpen: false
+      property bool recordMenuOpen: false
 
       readonly property bool hasBattery: SystemMonitor.hasBattery
       readonly property bool charging: SystemMonitor.charging
@@ -280,7 +297,7 @@ ShellRoot {
       property bool cliphistPreviewing: false
 
       // keep Clock truly centered even when systray appears (left/right groups anchored, center independent)
-      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen ? 1 : 0
+      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
       readonly property real baseWidth: activeOsd === "battery" ? osdWidth
                      : activeOsd === "volume" ? osdWidth
                      : activeOsd === "brightness" ? osdWidth
@@ -289,6 +306,7 @@ ShellRoot {
                      : appLauncher ? 390
                      : wallpaperSwitcherOpen ? 600
                      : powerMenuOpen ? 400
+                     : recordMenuOpen ? 360
                      : miniDashboard ? 420
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
@@ -306,15 +324,17 @@ ShellRoot {
                    : cliphistOpen ? 270
                    : miniDashboard ? 155
                    : appLauncher ? 410
-                   : wallpaperSwitcherOpen ? 308
-                   : powerMenuOpen ? 90
-                   : (Math.max(leftGroup.implicitHeight, centerClock.implicitHeight, rightGroup.implicitHeight) * Config.pillScale) + 10
+                    : wallpaperSwitcherOpen ? 308
+                    : powerMenuOpen ? 90
+                    : recordMenuOpen ? 90
+                    : (Math.max(leftGroup.implicitHeight, centerClock.implicitHeight, rightGroup.implicitHeight) * Config.pillScale) + 10
 
       readonly property real baseRadius: notificationModule.active ? 99
         : cliphistOpen && cliphistPreviewing ? 35
         : cliphistOpen ? 28
         : wallpaperSwitcherOpen ? 30
         : powerMenuOpen ? 24
+        : recordMenuOpen ? 24
         : controlCenter ? (notificationModule.notifications.length > 0
           ? (MprisController.hasPlayer ? 27 : 25)
           : (MprisController.hasPlayer ? 26 : 22))
@@ -376,6 +396,23 @@ ShellRoot {
             if (mouse.button === Qt.RightButton) {
               box.miniDashboard = false
             }
+            return
+          }
+
+          if (box.powerMenuOpen) {
+            if (mouse.button === Qt.LeftButton) box.powerMenuOpen = false
+            return
+          }
+          if (box.recordMenuOpen) {
+            if (mouse.button === Qt.LeftButton) box.recordMenuOpen = false
+            return
+          }
+          if (box.wallpaperSwitcherOpen) {
+            if (mouse.button === Qt.LeftButton) box.wallpaperSwitcherOpen = false
+            return
+          }
+          if (box.appLauncher) {
+            box.appLauncher = false
             return
           }
 
@@ -600,6 +637,49 @@ ShellRoot {
           function onPowerMenuOpenChanged() {
             if (box.powerMenuOpen && powerMenuLoader.item)
               powerMenuLoader.item.forceActiveFocus()
+          }
+        }
+      }
+
+      // record menu opens through IPC (Mod+F11) — quickshell picker replaces rofi
+      Item {
+        anchors.centerIn: parent
+        width: box.implicitWidth - 28
+        height: box.recordMenuOpen ? 70 : 0
+        opacity: box.recordMenuOpen
+                 && !notificationModule.active
+                 && box.activeOsd === ""
+                 && !box.controlCenter
+                 && !box.miniDashboard
+                 && !box.cliphistOpen
+                 && !box.appLauncher
+                 && !box.wallpaperSwitcherOpen
+                 && !box.powerMenuOpen ? 1 : 0
+        visible: opacity > 0
+
+        Behavior on opacity {
+          SequentialAnimation {
+            PauseAnimation { duration: box.recordMenuOpen ? 15 : 0 }
+            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
+          }
+        }
+        Loader {
+          id: recordMenuLoader
+          anchors.fill: parent
+          active: box.recordMenuOpen
+
+          sourceComponent: RecordMenu {
+            shown: box.recordMenuOpen
+            onCloseRequested: box.recordMenuOpen = false
+          }
+          onLoaded: item.forceActiveFocus()
+        }
+
+        Connections {
+          target: box
+          function onRecordMenuOpenChanged() {
+            if (box.recordMenuOpen && recordMenuLoader.item)
+              recordMenuLoader.item.forceActiveFocus()
           }
         }
       }
