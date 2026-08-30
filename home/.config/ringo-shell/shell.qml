@@ -7,7 +7,6 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell.Widgets
-import Quickshell.Services.UPower
 import Quickshell.Services.Notifications
 
 ShellRoot {
@@ -132,6 +131,20 @@ ShellRoot {
     }
   }
 
+  Component.onCompleted: {
+    WeatherController.weatherLocation = Config.weatherLocation
+    WeatherController.weatherUnits = Config.weatherUnits
+    WeatherController.refreshInterval = Config.weatherRefreshInterval
+    WeatherController.refresh()
+  }
+
+  Connections {
+    target: Config
+    function onWeatherLocationChanged() { WeatherController.weatherLocation = Config.weatherLocation; WeatherController.refresh() }
+    function onWeatherUnitsChanged() { WeatherController.weatherUnits = Config.weatherUnits; WeatherController.refresh() }
+    function onWeatherRefreshIntervalChanged() { WeatherController.refreshInterval = Config.weatherRefreshInterval }
+  }
+
   property int osdInWidth: 120
   property real osdInHeight: 3.7
   property int osdBarRadius: 2
@@ -211,19 +224,11 @@ ShellRoot {
       property bool wallpaperSwitcherOpen: false
       property bool powerMenuOpen: false
 
-      property var battery: UPower.displayDevice
-      property bool hasBattery: battery.isLaptopBattery && battery.isPresent
-      property bool charging: hasBattery && battery.state === UPowerDeviceState.Charging
-      readonly property string batteryIconColor: box.charging || box.batteryLevel > 30 ? "#4bd25c" : box.batteryLevel <= 15 ? "#e22323" : "#eecc47"
-      readonly property int batteryLevel: hasBattery ? Math.round(battery.percentage * 100) : 0
-      // battery icon on laptops, plug icon on desktops
-      readonly property string batteryIcon: {
-        if (!hasBattery)
-          return String.fromCodePoint(0xf06a5) + " " // nf-md-power_plug
-        const icons = [0xf0083, 0xf007a, 0xf007d, 0xf007c, 0xf007d, 0xf007e, 0xf007f, 0xf0082, 0xf0081, 0xf0079]
-        const base = String.fromCodePoint(icons[Math.min(Math.floor(batteryLevel / 10), 9)])
-        return charging ? base + String.fromCodePoint(0xf140b) : base
-      }
+      readonly property bool hasBattery: SystemMonitor.hasBattery
+      readonly property bool charging: SystemMonitor.charging
+      readonly property string batteryIconColor: SystemMonitor.batteryIconColor
+      readonly property int batteryLevel: SystemMonitor.batteryPercentage
+      readonly property string batteryIcon: SystemMonitor.batteryIcon
 
       onChargingChanged: {
         if (!box.controlCenter) box.activeOsd = "battery"
@@ -293,7 +298,7 @@ ShellRoot {
                   : activeOsd === "volume" ? osdHeight
                   : activeOsd === "brightness" ? osdHeight
                   : (notificationModule.active && !notifFullscreenMode) ? 52
-                  : controlCenter && mprisModule.hasPlayer
+                  : controlCenter && MprisController.hasPlayer
                       ? (240 + notifBump)
                   : controlCenter
                       ? (118 + notifBump)
@@ -311,8 +316,8 @@ ShellRoot {
         : wallpaperSwitcherOpen ? 30
         : powerMenuOpen ? 24
         : controlCenter ? (notificationModule.notifications.length > 0
-          ? (mprisModule.hasPlayer ? 27 : 25)
-          : (mprisModule.hasPlayer ? 26 : 22))
+          ? (MprisController.hasPlayer ? 27 : 25)
+          : (MprisController.hasPlayer ? 26 : 22))
         : appLauncher ? 30
         : miniDashboard ? 20
         : 20 * Config.pillScale
@@ -668,7 +673,7 @@ ShellRoot {
           buttonBgOff: box.ccButtonBgOff
           buttonFgOff: box.ccButtonFgOff
           controlCenterOpen: box.controlCenter
-          hasPlayer: mprisModule.hasPlayer
+          hasPlayer: MprisController.hasPlayer
           playerHeight: box.ccButtonHeight
           notificationPopup: notificationModule.active
         } 
@@ -679,7 +684,7 @@ ShellRoot {
           anchors.top: parent.top
           anchors.left: parent.left
           anchors.right: parent.right
-          anchors.topMargin: mprisModule.hasPlayer ? box.ccButtonHeight + 137 : 50
+          anchors.topMargin: MprisController.hasPlayer ? box.ccButtonHeight + 137 : 50
           anchors.leftMargin: 15
           anchors.rightMargin: 2
           spacing: 5
@@ -1182,27 +1187,6 @@ ShellRoot {
             }
           }
 
-          Process {
-            id: uptimeProc
-            command: ["sh", "-c", 'uptime -p']
-            running: true
-            stdout: StdioCollector {
-              onStreamFinished: uptimeText.text = this.text
-            }
-          }
-
-          // uptime refresh every 60 sec
-          Timer {
-            interval: 60000
-            running: box.miniDashboard
-            repeat: true
-            triggeredOnStart: true
-            onTriggered: {
-              uptimeProc.running = false
-              uptimeProc.running = true
-            }
-          }
-
           // username + uptime stacked
           ColumnLayout {
             spacing: 2
@@ -1226,6 +1210,7 @@ ShellRoot {
 
             Text {
               id: uptimeText
+              text: SystemMonitor.uptime
               color: Theme.fg
               opacity: 0.6
               Layout.leftMargin: 10
@@ -1426,8 +1411,6 @@ ShellRoot {
     }
 
     }
-
-  MprisModule { id: mprisModule; visible: false }
 
   NotificationServer {
     id: notifServer

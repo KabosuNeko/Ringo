@@ -1,6 +1,7 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import IslandBackend
 
 Rectangle {
   id: weatherPopup
@@ -66,7 +67,7 @@ Rectangle {
           anchors.margins: -6 * box.dpi
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor
-          onClicked: WeatherModule.refresh()
+          onClicked: WeatherController.refresh()
         }
       }
     }
@@ -76,8 +77,8 @@ Rectangle {
       spacing: 16 * box.dpi
 
       Text {
-        text: WeatherModule.iconGlyph
-        color: WeatherModule.iconColor
+        text: WeatherController.iconGlyph
+        color: WeatherController.iconColor
         font.family: Config.nerdFontFamily
         font.pixelSize: 32 * box.dpi
         Layout.preferredWidth: 45 * box.dpi
@@ -88,21 +89,21 @@ Rectangle {
         spacing: 1 * box.dpi
         Layout.fillWidth: true
         Text {
-          text: WeatherModule.loading ? "..."
-              : WeatherModule.errorMessage.length > 0 ? "—"
-              : Math.round(WeatherModule.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
+          text: WeatherController.loading ? "..."
+              : WeatherController.errorMessage.length > 0 ? "—"
+              : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
           color: "#ecebeb"
           font.family: Theme.fontFamily
           font.pixelSize: 25 * box.dpi
           font.weight: 500
         }
         Text {
-          text: WeatherModule.condition
+          text: WeatherController.condition
           color: "#7e7e7e"
           font.family: Theme.fontFamily
           font.pixelSize: weatherPopup.fontSizeBody * box.dpi
           font.weight: 400
-          visible: !WeatherModule.loading && WeatherModule.errorMessage.length === 0
+          visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
           elide: Text.ElideRight
           Layout.fillWidth: true
         }
@@ -113,13 +114,13 @@ Rectangle {
     RowLayout {
       Layout.fillWidth: true
       spacing: weatherPopup.tileSpacing * box.dpi
-      visible: !WeatherModule.loading && WeatherModule.errorMessage.length === 0
+      visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
 
       Repeater {
         model: [
-          { icon: "\ue34e", color: "#f18d41", value: Math.round(WeatherModule.feelsLike) + "°", label: "Feels" },
-          { icon: "\ue373", color: "#5f99fa", value: WeatherModule.humidity + "%", label: "Humidity" },
-          { icon: "\ue34b", color: "#54e04b", value: Math.round(WeatherModule.windSpeed) + " km/h", label: "Wind" }
+          { icon: "\ue34e", color: "#f18d41", value: Math.round(WeatherController.feelsLike) + "°", label: "Feels" },
+          { icon: "\ue373", color: "#5f99fa", value: WeatherController.humidity + "%", label: "Humidity" },
+          { icon: "\ue34b", color: "#54e04b", value: Math.round(WeatherController.windSpeed) + " km/h", label: "Wind" }
         ]
         delegate: Rectangle {
           Layout.fillWidth: true
@@ -173,7 +174,7 @@ Rectangle {
     RowLayout {
       Layout.fillWidth: true
       spacing: 0
-      visible: !WeatherModule.loading && WeatherModule.errorMessage.length === 0
+      visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
 
       RowLayout {
         spacing: 5 * box.dpi
@@ -187,7 +188,7 @@ Rectangle {
         }
 
         Text {
-          text: WeatherModule.sunrise
+          text: WeatherController.sunrise
           color: weatherPopup.secondaryText
           font.family: Theme.fontFamily
           font.pixelSize: weatherPopup.fontSizeSmall * box.dpi
@@ -205,7 +206,7 @@ Rectangle {
         }
 
         Text {
-          text: WeatherModule.sunset
+          text: WeatherController.sunset
           color: weatherPopup.secondaryText
           font.family: Theme.fontFamily
           font.pixelSize: weatherPopup.fontSizeSmall * box.dpi
@@ -221,7 +222,7 @@ Rectangle {
       spacing: weatherPopup.tileSpacing * box.dpi
 
       Repeater {
-        model: WeatherModule.forecast
+        model: WeatherController.forecast
         delegate: ColumnLayout {
           Layout.fillWidth: true
           spacing: 5 * box.dpi
@@ -255,7 +256,7 @@ Rectangle {
 
     // last time weather updated
     Text {
-      text: "Updated at " + Qt.formatTime(WeatherModule.lastUpdated, "hh:mm")
+      text: "Updated at " + Qt.formatTime(WeatherController.lastUpdated, "hh:mm")
       color: "#8a8a8a"
       font.family: Theme.fontFamily
       font.pixelSize: weatherPopup.fontSizeTiny * box.dpi

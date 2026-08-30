@@ -1,17 +1,17 @@
 import Quickshell
 import Quickshell.Widgets
 import QtQuick
-import Quickshell.Services.Mpris
+import IslandBackend
 
 Rectangle {
     id: mediaCard
     anchors.top: parent.top
     anchors.left: parent.left
     anchors.right: parent.right
-    height: mprisModule.hasPlayer ? 118 : 0
+    height: MprisController.hasPlayer ? 118 : 0
     radius: 16
     color: Theme.bgD
-    visible: mprisModule.hasPlayer
+    visible: MprisController.hasPlayer
     clip: true
     border.color: Theme.borderBg3
     border.width: 1
@@ -23,9 +23,9 @@ Rectangle {
     property string artistFontColor: Theme.fg4
     property int artistFontWeight: 300
 
-    property real mprisProgress: 0
-    property string mprisTimePlayed: "0:00"
-    property string mprisTimeTotal: "0:00"
+    property real mprisProgress: MprisController.progress
+    property string mprisTimePlayed: formatMprisTime(MprisController.polledPosition)
+    property string mprisTimeTotal: formatMprisTime(MprisController.polledLength)
 
     function formatMprisTime(val) {
         let n = Number(val)
@@ -33,20 +33,6 @@ Rectangle {
         let m = Math.floor(n / 60)
         let s = Math.floor(n % 60)
         return m + ":" + (s < 10 ? "0" : "") + s
-    }
-
-    // interpolate every second
-    Timer {
-        id: progressPoller
-        interval: 1000
-        running: box.controlCenter && mprisModule.hasPlayer
-        repeat: true
-        triggeredOnStart: true
-        onTriggered: {
-            mediaCard.mprisProgress = mprisModule.progress
-            mediaCard.mprisTimePlayed = mediaCard.formatMprisTime(mprisModule.polledPosition)
-            mediaCard.mprisTimeTotal = mediaCard.formatMprisTime(mprisModule.polledLength)
-        }
     }
 
      Column {
@@ -70,9 +56,9 @@ Rectangle {
 
                 Image {
                     anchors.fill: parent
-                    source: mprisModule.artUrl
+                    source: MprisController.artUrl
                     fillMode: Image.PreserveAspectCrop
-                    visible: mprisModule.artUrl !== ""
+                    visible: MprisController.artUrl !== ""
                     layer.enabled: true
                     cache: false
                     sourceSize: Qt.size(94 * box.dpi, 94 * box.dpi)
@@ -80,7 +66,7 @@ Rectangle {
 
                 Text {
                     anchors.centerIn: parent
-                    visible: mprisModule.artUrl === ""
+                    visible: MprisController.artUrl === ""
                     text: "\uf001"
                     font.family: Theme.nerdFontFamily
                     font.pixelSize: 18
@@ -96,7 +82,7 @@ Rectangle {
 
                 Text {
                     width: parent.width
-                    text: mprisModule.track !== "" ? mprisModule.track : "Nothing playing"
+                    text: MprisController.track !== "" ? MprisController.track : "Nothing playing"
                     color: Theme.fgL
                     font.pixelSize: 12
                     font.weight: 600
@@ -106,7 +92,7 @@ Rectangle {
 
                 Text {
                     width: parent.width
-                    text: mprisModule.artist
+                    text: MprisController.artist
                     color: artistFontColor
                     font.pixelSize: artistFontSize
                     font.weight: artistFontWeight
@@ -131,12 +117,12 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { mprisModule.prev() }
+                        onClicked: { MprisController.prev() }
                     }
                 }
 
                 Text {
-                    text: mprisModule.playing ? "󰏤" : "󰐊"
+                    text: MprisController.playing ? "󰏤" : "󰐊"
                     font.family: Theme.nerdFontFamily
                     font.pixelSize: 23
                     color: playHover.containsMouse ? "white" : Theme.fg2
@@ -147,7 +133,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: mprisModule.playPause()
+                        onClicked: MprisController.playPause()
                     }
                 }
 
@@ -163,7 +149,7 @@ Rectangle {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: mprisModule.next()
+                        onClicked: MprisController.next()
                     }
                 }
             }
@@ -195,13 +181,10 @@ Rectangle {
                     anchors.fill: parent
                     hoverEnabled: true
                     onClicked: (mouse) => {
-                        let p = mprisModule.activePlayer
-                        if (!p || !p.length) return
+                        let len = MprisController.polledLength
+                        if (len <= 0) return
                         let ratio = mouse.x / width
-                        let len = Number(p.length) || 0
-                        if (len <= 0 && p.metadata && p.metadata["mpris:length"])
-                            len = Number(p.metadata["mpris:length"])
-                        if (len > 0) p.position = ratio * len
+                        MprisController.seek(ratio * len)
                     }
                 }
             }

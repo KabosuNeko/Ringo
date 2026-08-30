@@ -1,4 +1,5 @@
 import QtQuick
+import IslandBackend
 
 Item {
   id: root
@@ -15,13 +16,13 @@ Item {
     spacing: 5
 
     Text {
-      text: WeatherModule.iconGlyph
+      text: WeatherController.iconGlyph
       color: weatherFg
       font { family: Config.nerdFontFamily; pixelSize: 12 }
       anchors.verticalCenter: parent.verticalCenter
     }
     Text {
-      text: WeatherModule.loading ? "--" : Math.round(WeatherModule.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
+      text: WeatherController.loading ? "--" : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
       color: weatherFg
       font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
       anchors.verticalCenter: parent.verticalCenter
