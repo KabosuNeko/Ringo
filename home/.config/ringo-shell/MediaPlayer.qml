@@ -55,18 +55,19 @@ Rectangle {
                 clip: true
 
                 Image {
+                    id: artImg
                     anchors.fill: parent
                     source: MprisController.artUrl
                     fillMode: Image.PreserveAspectCrop
-                    visible: MprisController.artUrl !== ""
-                    layer.enabled: true
-                    cache: false
+                    visible: MprisController.artUrl !== "" && status !== Image.Error
+                    asynchronous: true
+                    cache: true
                     sourceSize: Qt.size(94 * box.dpi, 94 * box.dpi)
                 }
 
                 Text {
                     anchors.centerIn: parent
-                    visible: MprisController.artUrl === ""
+                    visible: MprisController.artUrl === "" || artImg.status === Image.Error || artImg.status === Image.Null
                     text: "\uf001"
                     font.family: Theme.nerdFontFamily
                     font.pixelSize: 18

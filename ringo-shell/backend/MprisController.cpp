@@ -182,7 +182,23 @@ QString MprisController::artUrlFromMetadata(const QVariantMap &md) {
         auto v2 = md.value(QStringLiteral("mpris:artUrl"));
         v = unwrapDVariant(v2);
     }
-    return v.toString();
+    QString art = v.toString();
+    if (!art.isEmpty()) return art;
+    // Firefox/YouTube often omits mpris:artUrl – derive YouTube thumbnail from xesam:url
+    QVariant uv = unwrapDVariant(md.value(QStringLiteral("xesam:url")));
+    QString url = uv.toString();
+    if (url.contains(QStringLiteral("youtube.com/watch")) || url.contains(QStringLiteral("youtu.be/"))) {
+        QString vid;
+        if (url.contains(QStringLiteral("youtu.be/"))) {
+            int p = url.indexOf(QStringLiteral("youtu.be/")) + 9;
+            vid = url.mid(p); int amp = vid.indexOf(QLatin1Char('&')); if (amp != -1) vid = vid.left(amp); int q = vid.indexOf(QLatin1Char('?')); if (q != -1) vid = vid.left(q); int h = vid.indexOf(QLatin1Char('#')); if (h != -1) vid = vid.left(h);
+        } else {
+            int p = url.indexOf(QStringLiteral("v="));
+            if (p != -1) { vid = url.mid(p + 2); int amp = vid.indexOf(QLatin1Char('&')); if (amp != -1) vid = vid.left(amp); int hash = vid.indexOf(QLatin1Char('#')); if (hash != -1) vid = vid.left(hash); }
+        }
+        if (!vid.isEmpty()) return QStringLiteral("https://i.ytimg.com/vi/") + vid + QStringLiteral("/hqdefault.jpg");
+    }
+    return {};
 }
 qint64 MprisController::lengthFromMetadata(const QVariantMap &md) {
     QVariant v = unwrapDVariant(md.value(QStringLiteral("mpris:length")));
