@@ -1,4 +1,3 @@
-import Quickshell
 import Quickshell.Widgets
 import QtQuick
 import IslandBackend
@@ -16,9 +15,6 @@ Rectangle {
     border.color: Theme.borderBg3
     border.width: 1
 
-    property int margin: 14
-
-    // artist name adjustments
     property int artistFontSize: 10
     property string artistFontColor: Theme.fg4
     property int artistFontWeight: 300
@@ -40,13 +36,11 @@ Rectangle {
         anchors.margins: 16
         spacing: 15
 
-        // top row -> art + info + controls
         Row {
             width: parent.width
             height: 48
             spacing: 15
 
-            // album art
             ClippingRectangle {
                 width: 47; height: 47
                 radius: 7
@@ -75,7 +69,6 @@ Rectangle {
                 }
             }
 
-            // track + artist
             Column {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width - 46 - 90 - 24
@@ -156,7 +149,6 @@ Rectangle {
             }
         }
 
-        // progress bar + time
         Column {
             width: parent.width
             spacing: 8

@@ -7,7 +7,6 @@
 #include <QVariantMap>
 #include <QDBusArgument>
 #include <QDBusVariant>
-#include <QDebug>
 
 static inline QVariant unwrapDVariant(const QVariant &v) {
     if (v.userType() == qMetaTypeId<QDBusVariant>())
@@ -148,13 +147,7 @@ void MprisController::fetchPlayerState(const QString &name) {
 }
 
 QString MprisController::trackFromMetadata(const QVariantMap &md) {
-    auto v = md.value(QStringLiteral("xesam:title"));
-    v = unwrapDVariant(v);
-    if (!v.isValid() || v.toString().isEmpty()) {
-        auto v2 = md.value(QStringLiteral("xesam:title"));
-        v = unwrapDVariant(v2);
-    }
-    return v.toString();
+    return unwrapDVariant(md.value(QStringLiteral("xesam:title"))).toString();
 }
 QString MprisController::artistFromMetadata(const QVariantMap &md) {
     QVariant v = unwrapDVariant(md.value(QStringLiteral("xesam:artist")));
@@ -177,12 +170,7 @@ QString MprisController::artistFromMetadata(const QVariantMap &md) {
     return v.toString();
 }
 QString MprisController::artUrlFromMetadata(const QVariantMap &md) {
-    QVariant v = unwrapDVariant(md.value(QStringLiteral("mpris:artUrl")));
-    if (!v.isValid() || v.toString().isEmpty()) {
-        auto v2 = md.value(QStringLiteral("mpris:artUrl"));
-        v = unwrapDVariant(v2);
-    }
-    QString art = v.toString();
+    QString art = unwrapDVariant(md.value(QStringLiteral("mpris:artUrl"))).toString();
     if (!art.isEmpty()) return art;
     // Firefox/YouTube often omits mpris:artUrl – derive YouTube thumbnail from xesam:url
     QVariant uv = unwrapDVariant(md.value(QStringLiteral("xesam:url")));

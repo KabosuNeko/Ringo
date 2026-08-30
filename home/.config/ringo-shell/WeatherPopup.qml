@@ -1,4 +1,3 @@
-import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import IslandBackend
@@ -32,7 +31,6 @@ Rectangle {
 
   Behavior on opacity { NumberAnimation { duration: 200; easing.type: Easing.OutExpo } }
 
-  // column containing city/location and refresh button
   ColumnLayout {
     id: contentCol
     anchors.top: parent.top
@@ -110,7 +108,6 @@ Rectangle {
       }
     }
 
-    // stat tiles
     RowLayout {
       Layout.fillWidth: true
       spacing: weatherPopup.tileSpacing * box.dpi
@@ -170,7 +167,6 @@ Rectangle {
 
     Rectangle { Layout.fillWidth: true; height: 1 * box.dpi; color: weatherPopup.dividerColor }
 
-    // sunrise and sunset
     RowLayout {
       Layout.fillWidth: true
       spacing: 0
@@ -254,7 +250,6 @@ Rectangle {
       }
     }
 
-    // last time weather updated
     Text {
       text: "Updated at " + Qt.formatTime(WeatherController.lastUpdated, "hh:mm")
       color: "#8a8a8a"
