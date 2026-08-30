@@ -5,7 +5,15 @@
 #include <QDBusReply>
 #include <QDBusMessage>
 #include <QVariantMap>
+#include <QDBusArgument>
+#include <QDBusVariant>
 #include <QDebug>
+
+static inline QVariant unwrapDVariant(const QVariant &v) {
+    if (v.userType() == qMetaTypeId<QDBusVariant>())
+        return qvariant_cast<QDBusVariant>(v).variant();
+    return v;
+}
 
 MprisController::MprisController(QObject *parent) : QObject(parent) {
     m_pollTimer.setInterval(500);
@@ -93,21 +101,25 @@ void MprisController::fetchPlayerState(const QString &name) {
     if (!iface.isValid()) return;
     auto get = [&](const QString &ifaceName, const QString &prop) -> QVariant {
         QDBusReply<QVariant> r = iface.call(QStringLiteral("Get"), ifaceName, prop);
-        if (r.isValid()) return r.value();
-        return {};
+        if (!r.isValid()) return {};
+        return unwrapDVariant(r.value());
     };
     // PlaybackStatus
     QVariant vStatus = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("PlaybackStatus"));
-    if (vStatus.isValid()) it->playbackStatus = vStatus.toString();
+    if (vStatus.isValid()) it->playbackStatus = unwrapDVariant(vStatus).toString();
     QVariant vMeta = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Metadata"));
     QVariantMap md;
     if (vMeta.isValid()) {
-        // QDBusVariant unwrapping
-        if (vMeta.canConvert<QDBusVariant>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusVariant>(vMeta).variant());
-        else if (vMeta.typeId() == qMetaTypeId<QDBusVariant>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusVariant>(vMeta).variant());
-        else md = vMeta.toMap();
-        // try generic
-        if (md.isEmpty() && vMeta.canConvert<QVariantMap>()) md = vMeta.toMap();
+        QVariant inner = unwrapDVariant(vMeta);
+        if (inner.canConvert<QVariantMap>()) {
+            // Metadata outer map may contain QDBusVariant values; qdbus_cast handles inner variants
+            if (inner.userType() == qMetaTypeId<QDBusArgument>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
+            else md = qdbus_cast<QVariantMap>(inner);
+            if (md.isEmpty()) md = inner.toMap();
+        } else {
+            md = qdbus_cast<QVariantMap>(inner);
+            if (md.isEmpty()) md = inner.toMap();
+        }
     }
     if (!md.isEmpty()) {
         it->track = trackFromMetadata(md);
@@ -118,47 +130,70 @@ void MprisController::fetchPlayerState(const QString &name) {
     }
     QVariant vPos = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Position"));
     if (vPos.isValid()) {
-        qint64 pos = vPos.toLongLong();
+        qint64 pos = unwrapDVariant(vPos).toLongLong();
         it->positionUs = pos;
         it->positionUpdatedUs = 0;
     }
     // Can* properties
     QVariant vCanPlay = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPlay"));
-    if (vCanPlay.isValid()) it->canPlay = vCanPlay.toBool();
+    if (vCanPlay.isValid()) it->canPlay = unwrapDVariant(vCanPlay).toBool();
     QVariant vCanPause = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPause"));
-    if (vCanPause.isValid()) it->canPause = vCanPause.toBool();
+    if (vCanPause.isValid()) it->canPause = unwrapDVariant(vCanPause).toBool();
     QVariant vCanNext = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanGoNext"));
-    if (vCanNext.isValid()) it->canGoNext = vCanNext.toBool();
+    if (vCanNext.isValid()) it->canGoNext = unwrapDVariant(vCanNext).toBool();
     QVariant vCanPrev = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanGoPrevious"));
-    if (vCanPrev.isValid()) it->canGoPrevious = vCanPrev.toBool();
+    if (vCanPrev.isValid()) it->canGoPrevious = unwrapDVariant(vCanPrev).toBool();
     QVariant vCanSeek = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanSeek"));
-    if (vCanSeek.isValid()) it->canSeek = vCanSeek.toBool();
+    if (vCanSeek.isValid()) it->canSeek = unwrapDVariant(vCanSeek).toBool();
 }
 
 QString MprisController::trackFromMetadata(const QVariantMap &md) {
     auto v = md.value(QStringLiteral("xesam:title"));
-    if (!v.isValid()) v = md.value(QStringLiteral("xesam:title"));
+    v = unwrapDVariant(v);
+    if (!v.isValid() || v.toString().isEmpty()) {
+        auto v2 = md.value(QStringLiteral("xesam:title"));
+        v = unwrapDVariant(v2);
+    }
     return v.toString();
 }
 QString MprisController::artistFromMetadata(const QVariantMap &md) {
-    QVariant v = md.value(QStringLiteral("xesam:artist"));
-    if (v.typeId() == QMetaType::QStringList) return v.toStringList().join(QStringLiteral(", "));
-    if (v.canConvert<QStringList>()) return v.toStringList().join(QStringLiteral(", "));
+    QVariant v = unwrapDVariant(md.value(QStringLiteral("xesam:artist")));
+    if (v.userType() == QMetaType::QStringList || v.typeId() == QMetaType::QStringList) return v.toStringList().join(QStringLiteral(", "));
+    if (v.canConvert<QStringList>()) {
+        QStringList sl = v.toStringList();
+        if (!sl.isEmpty()) return sl.join(QStringLiteral(", "));
+    }
+    if (v.userType() == qMetaTypeId<QDBusArgument>()) {
+        QVariantList l = qdbus_cast<QVariantList>(qvariant_cast<QDBusArgument>(v));
+        QStringList sl; for (auto &x : l) sl << unwrapDVariant(x).toString(); if (!sl.isEmpty()) return sl.join(QStringLiteral(", "));
+    }
     if (v.typeId() == QMetaType::QVariantList) {
-        QStringList l; for (auto &x : v.toList()) l << x.toString(); return l.join(QStringLiteral(", "));
+        QStringList l; for (auto &x : v.toList()) l << unwrapDVariant(x).toString(); return l.join(QStringLiteral(", "));
+    }
+    QVariantList vl = v.toList();
+    if (!vl.isEmpty()) {
+        QStringList sl; for (auto &x : vl) sl << unwrapDVariant(x).toString(); return sl.join(QStringLiteral(", "));
     }
     return v.toString();
 }
 QString MprisController::artUrlFromMetadata(const QVariantMap &md) {
-    QVariant v = md.value(QStringLiteral("mpris:artUrl"));
-    if (!v.isValid()) v = md.value(QStringLiteral("mpris:artUrl"));
+    QVariant v = unwrapDVariant(md.value(QStringLiteral("mpris:artUrl")));
+    if (!v.isValid() || v.toString().isEmpty()) {
+        auto v2 = md.value(QStringLiteral("mpris:artUrl"));
+        v = unwrapDVariant(v2);
+    }
     return v.toString();
 }
 qint64 MprisController::lengthFromMetadata(const QVariantMap &md) {
-    QVariant v = md.value(QStringLiteral("mpris:length"));
+    QVariant v = unwrapDVariant(md.value(QStringLiteral("mpris:length")));
     if (!v.isValid()) return 0;
     bool ok=false; qint64 val = v.toLongLong(&ok);
     if (ok) return val;
+    // try via QDBusArgument cast
+    if (v.userType() == qMetaTypeId<QDBusArgument>()) {
+        qint64 v2 = qdbus_cast<qint64>(qvariant_cast<QDBusArgument>(v));
+        return v2;
+    }
     return 0;
 }
 
@@ -268,12 +303,15 @@ void MprisController::seek(double positionSeconds) {
     QString trackId = QStringLiteral("/org/mpris/MediaPlayer2/TrackList/NoTrack");
     if (r.isValid()) {
         QVariantMap md;
-        QVariant v = r.value();
-        if (v.canConvert<QDBusVariant>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusVariant>(v).variant());
-        else md = v.toMap();
-        QVariant tid = md.value(QStringLiteral("mpris:trackid"));
+        QVariant v = unwrapDVariant(r.value());
+        md = qdbus_cast<QVariantMap>(v);
+        if (md.isEmpty()) md = v.toMap();
+        QVariant tid = unwrapDVariant(md.value(QStringLiteral("mpris:trackid")));
         if (tid.canConvert<QDBusObjectPath>()) trackId = qvariant_cast<QDBusObjectPath>(tid).path();
-        else if (tid.isValid()) trackId = tid.toString();
+        else if (tid.userType() == qMetaTypeId<QDBusArgument>()) {
+            QDBusObjectPath op = qdbus_cast<QDBusObjectPath>(qvariant_cast<QDBusArgument>(tid));
+            trackId = op.path();
+        } else if (tid.isValid()) trackId = tid.toString();
     }
     QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
     iface.call(QStringLiteral("SetPosition"), QVariant::fromValue(QDBusObjectPath(trackId)), us);
