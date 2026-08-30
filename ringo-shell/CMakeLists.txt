@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Core DBus Qml)
+find_package(Qt6 REQUIRED COMPONENTS Core DBus Qml Network)
 
 qt_add_qml_module(IslandBackend
     URI IslandBackend
@@ -24,11 +24,17 @@ qt_add_qml_module(IslandBackend
         backend/BluetoothDeviceModel.cpp
         backend/LockController.h
         backend/LockController.cpp
+        backend/SystemMonitor.h
+        backend/SystemMonitor.cpp
+        backend/WeatherController.h
+        backend/WeatherController.cpp
+        backend/MprisController.h
+        backend/MprisController.cpp
 )
 
 target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend)
 
-target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::DBus Qt6::Qml pam)
+target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::DBus Qt6::Qml Qt6::Network pam)
 
 set_target_properties(IslandBackend IslandBackendPlugin PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
