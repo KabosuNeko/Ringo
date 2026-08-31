@@ -96,9 +96,13 @@ function fish_prompt
 end
 
 
-# Format man pages
-set -x MANROFFOPT "-c"
-set -x MANPAGER "sh -c 'col -bx | bat -l man -p'"
+if command -v bat >/dev/null
+    set -x MANROFFOPT "-c"
+    set -x MANPAGER "sh -c 'col -bx | bat -l man -p'"
+else
+    set -x MANROFFOPT "-c"
+    set -x MANPAGER "less"
+end
 
 # Set settings for https://github.com/franciscolourenco/done
 set -U __done_min_cmd_duration 10000
@@ -117,12 +121,10 @@ if test -d ~/.local/bin
     end
 end
 
-# Add depot_tools to PATH
-if test -d ~/Applications/depot_tools
-    if not contains -- ~/Applications/depot_tools $PATH
-        set -p PATH ~/Applications/depot_tools
-    end
-end
+# depot_tools (optional, uncomment if you use Chromium depot_tools)
+# if test -d ~/Applications/depot_tools; and not contains -- ~/Applications/depot_tools $PATH
+#     set -p PATH ~/Applications/depot_tools
+# end
 
 
 ## Functions
@@ -176,13 +178,19 @@ function copy
 end
 
 
-## Useful aliases
-# Replace ls with eza
-alias ls='eza -al --color=always --group-directories-first --icons' # preferred listing
-alias la='eza -a --color=always --group-directories-first --icons'  # all files and dirs
-alias ll='eza -l --color=always --group-directories-first --icons'  # long format
-alias lt='eza -aT --color=always --group-directories-first --icons' # tree listing
-alias l.="eza -a | grep -e '^\.'"                                     # show only dotfiles
+if command -v eza >/dev/null
+    alias ls='eza -al --color=always --group-directories-first --icons'
+    alias la='eza -a --color=always --group-directories-first --icons'
+    alias ll='eza -l --color=always --group-directories-first --icons'
+    alias lt='eza -aT --color=always --group-directories-first --icons'
+    alias l.="eza -a | grep -e '^\.'"
+else
+    alias ls='ls --color=auto'
+    alias la='ls -A --color=auto'
+    alias ll='ls -l --color=auto'
+    alias lt='ls -R --color=auto'
+    alias l.="ls -A | grep -e '^\.'"
+end
 
 # Common use
 alias grubup="sudo grub-mkconfig -o /boot/grub/grub.cfg"
@@ -226,15 +234,14 @@ alias jctl="journalctl -p 3 -xb"
 alias rip="expac --timefmt='%Y-%m-%d %T' '%l\t%n %v' | sort | tail -200 | nl"
 
 
-if not pgrep -u (whoami) ssh-agent > /dev/null
-    eval (ssh-agent -c) > /dev/null
+if test -z "$SSH_AUTH_SOCK"; or not ssh-add -l >/dev/null 2>&1
+    if not pgrep -u (whoami) ssh-agent >/dev/null
+        eval (ssh-agent -c) >/dev/null
+    end
+    ssh-add -l >/dev/null 2>&1; or ssh-add ~/.ssh/id_ed25519 >/dev/null 2>&1; or true
 end
 
-ssh-add -l > /dev/null 2>&1
-or ssh-add ~/.ssh/id_ed25519 > /dev/null 2>&1
-
-# You can create aliases in your shell (like .bashrc or .zshrc)
-alias sudachi='bash -c "$(curl -sL https://raw.githubusercontent.com/KabosuNeko/sudachi/main/sudachi.sh)"'
+alias sudachi='bash -c "$(curl -sL https://raw.githubusercontent.com/KabosuNeko/sudachi/main/sudachi.sh)"' # remote pipe — review before running
 
 if status is-login
     set -Ux GTK_IM_MODULE fcitx

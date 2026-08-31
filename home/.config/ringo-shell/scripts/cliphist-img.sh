@@ -1,18 +1,19 @@
 #!/bin/bash
-
-TMP_DIR="$HOME/.cache/ringo-shell/cliphist-imgs"
-mkdir -p "$TMP_DIR"
-
-if [[ -z "$1" ]]; then
+set -euo pipefail
+TMP_DIR="${HOME}/.cache/ringo-shell/cliphist-imgs"
+mkdir -p "${TMP_DIR}"
+if [[ -z "${1:-}" ]]; then
     cliphist list | while IFS=$'\t' read -r id rest; do
-        if [[ "$rest" == *"[[ binary data"* ]]; then
-            img_path="$TMP_DIR/$id.png"
-            [[ ! -f "$img_path" ]] && cliphist decode <<<"$id"$'\t'"$rest" > "$img_path"
-            printf "%s\t%s\000icon\x1f%s\n" "$id" "$rest" "$img_path"
+        if [[ "${rest}" == *"[[ binary data"* ]]; then
+            img_path="${TMP_DIR}/${id}.png"
+            [[ ! -f "${img_path}" ]] && cliphist decode <<<"${id}"$'\t'"${rest}" > "${img_path}"
+            printf "%s\t%s\000icon\x1f%s\n" "${id}" "${rest}" "${img_path}"
         else
-            printf "%s\t%s\n" "$id" "$rest"
+            printf "%s\t%s\n" "${id}" "${rest}"
         fi
     done
 else
     cliphist decode <<<"$1" | wl-copy
 fi
+# prune cache older than 7 days (avoid bloat)
+find "${TMP_DIR}" -type f -mtime +7 -delete 2>/dev/null || true

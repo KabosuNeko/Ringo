@@ -44,3 +44,12 @@ wlsunset
 sway-audio-idle-inhibit-git
 nusgmon
 wl-screenrec-git
+eza
+bat
+expac
+hwinfo
+playerctl
+fcitx5
+fcitx5-gtk
+fcitx5-qt
+fcitx5-configtool
