@@ -7,7 +7,10 @@ RINGO_DIR="$HOME/.config/ringo-shell"
 
 # Handle IPC forwarding: `ringo-shell call <target> <action>`
 # resolves to `qs ipc -p <RINGO_DIR> call <target> <action>`.
-if [ "$1" = "call" ] || [ "$1" = "ipc" ]; then
+if [ "$1" = "call" ]; then
+    exec qs ipc -p "$RINGO_DIR" "$@"
+fi
+if [ "$1" = "ipc" ]; then
     shift
     exec qs ipc -p "$RINGO_DIR" "$@"
 fi
