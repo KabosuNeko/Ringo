@@ -10,6 +10,14 @@
 window-rule {
     geometry-corner-radius 8
     clip-to-geometry true
+
+    match app-id=r#".*"#
+    background-effect {
+        xray true
+        blur true
+        noise 0.02
+        saturation 1
+    }
 }
 
 window-rule {
