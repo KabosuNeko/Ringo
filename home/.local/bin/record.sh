@@ -6,10 +6,8 @@
 # When called without arg and not recording, delegates to Quickshell RecordMenu.
 
 if ! command -v wl-screenrec > /dev/null 2>&1; then
-    if ! command -v wf-recorder > /dev/null 2>&1; then
-        notify-send -u critical "Recording System" "Error: wl-screenrec / wf-recorder not installed." -i dialog-error
-        exit 1
-    fi
+    notify-send -u critical "Recording System" "Error: wl-screenrec not installed." -i dialog-error
+    exit 1
 fi
 
 PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/ringo_recording.pid"
@@ -30,34 +28,18 @@ stop_recording() {
 start_recording() {
     chosen="$1"
     FILEPATH="$SAVE_DIR/recording_$(date +%Y%m%d_%H%M%S).mp4"
-    RECORDER="wl-screenrec"
-    if ! command -v wl-screenrec > /dev/null 2>&1; then
-        RECORDER="wf-recorder"
-    fi
 
     case "$chosen" in
         "Only Sound"|only-sound|only_sound|system|monitor)
-            if [ "$RECORDER" = "wl-screenrec" ]; then
-                wl-screenrec --max-fps 60 --audio --audio-device default.monitor -f "$FILEPATH" &
-            else
-                wf-recorder --audio --audio-device default.monitor -f "$FILEPATH" &
-            fi
+            wl-screenrec --max-fps 60 --audio --audio-device default.monitor -f "$FILEPATH" &
             MSG="Recording: System Audio"
             ;;
         "Micro and Sound"|micro|mic|both)
-            if [ "$RECORDER" = "wl-screenrec" ]; then
-                wl-screenrec --max-fps 60 --audio -f "$FILEPATH" &
-            else
-                wf-recorder --audio -f "$FILEPATH" &
-            fi
+            wl-screenrec --max-fps 60 --audio -f "$FILEPATH" &
             MSG="Recording: Microphone/Default"
             ;;
         "No Sound"|no-sound|no_sound|silent|none|"")
-            if [ "$RECORDER" = "wl-screenrec" ]; then
-                wl-screenrec --max-fps 60 -f "$FILEPATH" &
-            else
-                wf-recorder -f "$FILEPATH" &
-            fi
+            wl-screenrec --max-fps 60 -f "$FILEPATH" &
             MSG="Recording: No Sound"
             ;;
         *) exit 0 ;;
