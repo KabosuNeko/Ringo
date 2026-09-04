@@ -38,7 +38,7 @@ gruvbox-plus-icon-theme
 bibata-cursor-theme
 gtk-engine-murrine
 python-pywal16
-inotify-tools
+libpulse
 niri
 wlsunset
 sway-audio-idle-inhibit-git

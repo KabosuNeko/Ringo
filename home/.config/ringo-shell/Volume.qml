@@ -16,8 +16,6 @@ RowLayout {
   readonly property bool muted: ready && sink.audio.muted
   readonly property int vol: ready ? Math.round(sink.audio.volume * 100) : 0
 
-  readonly property var sinkProps: ready ? sink.properties : ({})
-
   readonly property string activePort: AudioController.activePort
   readonly property bool isHeadphone: AudioController.isHeadphone
   spacing: 4 * Config.paddingScale
@@ -42,13 +40,6 @@ RowLayout {
 
     font.family: Theme.nerdFontFamily
     font.pixelSize: 10 * Config.pillScale
-  }
-
-  MouseArea {
-    id: audioMuted
-    cursorShape: Qt.PointingHandCursor
-    onClicked: sink.audio.muted = !sink.audio.muted
-    hoverEnabled: true
   }
 
   Text {

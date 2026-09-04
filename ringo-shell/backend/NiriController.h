@@ -24,6 +24,9 @@ public:
     Q_INVOKABLE void quit();
     Q_INVOKABLE void powerOffMonitors();
     Q_INVOKABLE void powerOnMonitors();
+    Q_INVOKABLE void suspend();
+    Q_INVOKABLE void reboot();
+    Q_INVOKABLE void powerOff();
 
 signals:
     void fullscreenActiveChanged();

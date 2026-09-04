@@ -111,6 +111,20 @@ void BrightnessController::setPercent(double pct) {
     setBrightness(val);
 }
 
+void BrightnessController::dim() {
+    if (m_maxBrightness <= 0) return;
+    m_savedBrightness = m_brightness;
+    const int dimVal = std::max(1, static_cast<int>(std::round(0.10 * m_maxBrightness)));
+    setBrightness(dimVal);
+}
+
+void BrightnessController::restore() {
+    if (m_savedBrightness > 0) {
+        setBrightness(m_savedBrightness);
+        m_savedBrightness = -1;
+    }
+}
+
 void BrightnessController::refresh() {
     readBrightness();
 }

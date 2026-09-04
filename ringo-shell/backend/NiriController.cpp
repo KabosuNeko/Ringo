@@ -3,6 +3,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <QDebug>
 #include <unistd.h>
 
@@ -200,4 +202,34 @@ void NiriController::powerOffMonitors() {
 
 void NiriController::powerOnMonitors() {
     action(QStringLiteral("PowerOnMonitors"));
+}
+
+void NiriController::suspend() {
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        QStringLiteral("org.freedesktop.login1"),
+        QStringLiteral("/org/freedesktop/login1"),
+        QStringLiteral("org.freedesktop.login1.Manager"),
+        QStringLiteral("Suspend"));
+    msg << true;
+    QDBusConnection::systemBus().send(msg);
+}
+
+void NiriController::reboot() {
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        QStringLiteral("org.freedesktop.login1"),
+        QStringLiteral("/org/freedesktop/login1"),
+        QStringLiteral("org.freedesktop.login1.Manager"),
+        QStringLiteral("Reboot"));
+    msg << true;
+    QDBusConnection::systemBus().send(msg);
+}
+
+void NiriController::powerOff() {
+    QDBusMessage msg = QDBusMessage::createMethodCall(
+        QStringLiteral("org.freedesktop.login1"),
+        QStringLiteral("/org/freedesktop/login1"),
+        QStringLiteral("org.freedesktop.login1.Manager"),
+        QStringLiteral("PowerOff"));
+    msg << true;
+    QDBusConnection::systemBus().send(msg);
 }

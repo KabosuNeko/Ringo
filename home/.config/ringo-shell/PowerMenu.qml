@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Io
 import IslandBackend
 import QtQuick
 import QtQuick.Layouts
@@ -25,16 +24,16 @@ Rectangle {
         LockController.lock()
         break
       case 1:
-        sleepProc.startDetached()
+        NiriController.suspend()
         break
       case 2:
-        rebootProc.startDetached()
+        NiriController.reboot()
         break
       case 3:
-        shutdownProc.startDetached()
+        NiriController.powerOff()
         break
       case 4:
-        logoutProc.startDetached()
+        NiriController.quit()
         break
     }
     powerMenu.closeRequested()
@@ -121,7 +120,6 @@ Rectangle {
         onEntered: powerMenu.selectedIndex = 1
         onClicked: powerMenu.activate(1)
       }
-      Process { id: sleepProc; command: ["bash", "-c", "systemctl suspend"]; running: false }
     }
 
     Rectangle {
@@ -157,7 +155,6 @@ Rectangle {
         onEntered: powerMenu.selectedIndex = 2
         onClicked: powerMenu.activate(2)
       }
-      Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
     }
 
     Rectangle {
@@ -193,7 +190,6 @@ Rectangle {
         onEntered: powerMenu.selectedIndex = 3
         onClicked: powerMenu.activate(3)
       }
-      Process { id: shutdownProc; command: ["bash", "-c", "systemctl poweroff"]; running: false }
     }
 
     // logout (niri session quit -> back to ly)
@@ -230,7 +226,6 @@ Rectangle {
         onEntered: powerMenu.selectedIndex = 4
         onClicked: powerMenu.activate(4)
       }
-      Process { id: logoutProc; command: ["bash", "-c", "niri msg action quit"]; running: false }
     }
   }
 }

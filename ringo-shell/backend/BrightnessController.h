@@ -27,6 +27,8 @@ public:
     Q_INVOKABLE void setBrightness(int value);
     Q_INVOKABLE void setPercent(double pct);
     Q_INVOKABLE void refresh();
+    Q_INVOKABLE void dim();
+    Q_INVOKABLE void restore();
 
 signals:
     void brightnessChanged();
@@ -44,6 +46,7 @@ private:
     QString m_devicePath;
     int m_brightness = 0;
     int m_maxBrightness = 100;
+    int m_savedBrightness = -1;
     QFileSystemWatcher m_watcher;
     QTimer m_pollTimer;
 };

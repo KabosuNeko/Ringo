@@ -3,6 +3,7 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QNetworkInterface>
+#include <QSysInfo>
 #include <QtQml/qqml.h>
 
 class SystemMonitor final : public QObject {
@@ -22,9 +23,17 @@ class SystemMonitor final : public QObject {
     Q_PROPERTY(QString batteryIconColor READ batteryIconColor NOTIFY batteryIconColorChanged)
     Q_PROPERTY(QString uptime READ uptime NOTIFY uptimeChanged)
     Q_PROPERTY(bool hasBatteryInternal READ hasBatteryInternal NOTIFY hasBatteryChanged)
+    Q_PROPERTY(QString username READ username CONSTANT)
+    Q_PROPERTY(QString hostname READ hostname CONSTANT)
 
 public:
     explicit SystemMonitor(QObject *parent = nullptr);
+
+    QString username() const {
+        const QString u = qEnvironmentVariable("USER");
+        return u.isEmpty() ? qEnvironmentVariable("LOGNAME") : u;
+    }
+    QString hostname() const { return QSysInfo::machineHostName(); }
 
     QString rxRate() const { return m_rxRate; }
     QString txRate() const { return m_txRate; }

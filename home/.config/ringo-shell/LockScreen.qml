@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Io
 import Quickshell.Wayland
 import IslandBackend
 import QtQuick
@@ -139,10 +138,8 @@ PanelWindow {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onClicked: shutdownProc.startDetached()
+            onClicked: NiriController.powerOff()
           }
-
-          Process { id: shutdownProc; command: ["bash", "-c", "systemctl poweroff"]; running: false }
         }
 
         Rectangle {
@@ -175,10 +172,8 @@ PanelWindow {
             anchors.fill: parent
             cursorShape: Qt.PointingHandCursor
             hoverEnabled: true
-            onClicked: rebootProc.startDetached()
+            onClicked: NiriController.reboot()
           }
-
-          Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
         }
       }
     }

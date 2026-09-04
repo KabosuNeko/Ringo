@@ -1254,24 +1254,6 @@ ShellRoot {
             }
           }
 
-          Process {
-            id: whoamiProc
-            command: ["sh", "-c", 'whoami']
-            running: true
-            stdout: StdioCollector {
-              onStreamFinished: { whoamiText.text = this.text.trim(); whoamiProc.running = false }
-            }
-          }
-
-          Process {
-            id: hostnameProc
-            command: ["sh", "-c", "cat /etc/hostname"]
-            running: true
-            stdout: StdioCollector {
-              onStreamFinished: { hostnameText.text = "(" + this.text.trim() + ")"; hostnameProc.running = false }
-            }
-          }
-
           // username + uptime stacked
           ColumnLayout {
             spacing: 2
@@ -1280,6 +1262,7 @@ ShellRoot {
             RowLayout {
               Text {
                 id: whoamiText
+                text: SystemMonitor.username
                 color: Theme.fg
                 Layout.leftMargin: 10
                 font { family: Theme.fontFamily; pixelSize: 13; weight: 600 }
@@ -1287,6 +1270,7 @@ ShellRoot {
 
               Text {
                 id: hostnameText
+                text: "(" + SystemMonitor.hostname + ")"
                 color: Theme.fg5
                 Layout.topMargin: 2
                 font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
@@ -1386,10 +1370,9 @@ ShellRoot {
                 id: sleepHover
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: { sleepProc.running = false; sleepProc.running = true }
+                onClicked: NiriController.suspend()
                 hoverEnabled: true
               }
-              Process { id: sleepProc; command: ["bash", "-c", "systemctl suspend"]; running: false }
             }
 
             Item { Layout.fillWidth: true }
@@ -1418,10 +1401,9 @@ ShellRoot {
                 id: rebootHover
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: { rebootProc.running = false; rebootProc.running = true }
+                onClicked: NiriController.reboot()
                 hoverEnabled: true
               }
-              Process { id: rebootProc; command: ["bash", "-c", "systemctl reboot"]; running: false }
             }
 
             Rectangle {
@@ -1440,10 +1422,9 @@ ShellRoot {
                 id: shutdownHover
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: { shutdownProc.running = false; shutdownProc.running = true }
+                onClicked: NiriController.powerOff()
                 hoverEnabled: true
               }
-              Process { id: shutdownProc; command: ["bash", "-c", "systemctl poweroff"]; running: false }
             }
           }
         }
@@ -1605,13 +1586,8 @@ ShellRoot {
     timeout: 300
     respectInhibitors: true
     onIsIdleChanged: {
-      if (isIdle) {
-        brightnessDimProc.running = false
-        brightnessDimProc.running = true
-      } else {
-        brightnessRestoreProc.running = false
-        brightnessRestoreProc.running = true
-      }
+      if (isIdle) BrightnessController.dim()
+      else BrightnessController.restore()
     }
   }
 
@@ -1630,11 +1606,10 @@ ShellRoot {
     respectInhibitors: true
     onIsIdleChanged: {
       if (isIdle) {
-        monitorsOffProc.running = false
-        monitorsOffProc.running = true
+        NiriController.powerOffMonitors()
       } else {
-        monitorsOnProc.running = false
-        monitorsOnProc.running = true
+        NiriController.powerOnMonitors()
+        BrightnessController.restore()
       }
     }
   }
@@ -1644,18 +1619,9 @@ ShellRoot {
     timeout: 600
     respectInhibitors: false
     onIsIdleChanged: {
-      if (isIdle) {
-        suspendProc.running = false
-        suspendProc.running = true
-      }
+      if (isIdle) NiriController.suspend()
     }
   }
-
-  Process { id: brightnessDimProc; command: ["bash", "-c", "brightnessctl -s set 10"]; running: false }
-  Process { id: brightnessRestoreProc; command: ["bash", "-c", "brightnessctl -r"]; running: false }
-  Process { id: monitorsOffProc; command: ["bash", "-c", "niri msg action power-off-monitors"]; running: false }
-  Process { id: monitorsOnProc; command: ["bash", "-c", "niri msg action power-on-monitors && brightnessctl -r"]; running: false }
-  Process { id: suspendProc; command: ["bash", "-c", "systemctl suspend"]; running: false }
 
   LockScreen {}
 
