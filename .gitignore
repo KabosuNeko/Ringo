@@ -6,6 +6,7 @@ build/
 # Shell state / caches
 .builds_hash
 .cache/
+home/.config/fish/fish_variables
 
 # OS / editor cruft
 .DS_Store
