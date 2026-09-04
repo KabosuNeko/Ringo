@@ -9,6 +9,7 @@ Item {
   implicitHeight: row.implicitHeight
 
   property string weatherFg: Theme.fg4
+  property int fontSize: 10 * Config.pillScale
 
   Row {
     id: row
@@ -18,13 +19,13 @@ Item {
     Text {
       text: WeatherController.iconGlyph
       color: weatherFg
-      font { family: Config.nerdFontFamily; pixelSize: 12 }
+      font { family: Config.nerdFontFamily; pixelSize: root.fontSize }
       anchors.verticalCenter: parent.verticalCenter
     }
     Text {
       text: WeatherController.loading ? "--" : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
       color: weatherFg
-      font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
+      font { family: Theme.fontFamily; pixelSize: root.fontSize; weight: 500 }
       anchors.verticalCenter: parent.verticalCenter
     }
   }

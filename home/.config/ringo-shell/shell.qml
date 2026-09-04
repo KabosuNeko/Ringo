@@ -8,6 +8,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
+import Quickshell.Services.SystemTray
 
 ShellRoot {
   id: root
@@ -288,6 +289,7 @@ ShellRoot {
           heightAnim.start()
       }
 
+      readonly property int trayBump: (SystemTray.items.values && SystemTray.items.values.length > 0) ? 46 : 0
       readonly property int notifBump: notificationModule.notifications.length > 0
         ? Math.min(notifList.contentHeight + 40, 130) : 0
 
@@ -296,8 +298,9 @@ ShellRoot {
 
       property bool cliphistPreviewing: false
 
-      // keep Clock truly centered even when systray appears (left/right groups anchored, center independent)
+      // keep Clock truly centered and symmetric
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
+      readonly property real sideWidth: Math.max(leftGroup.implicitWidth, rightGroup.implicitWidth)
       readonly property real baseWidth: activeOsd === "battery" ? osdWidth
                      : activeOsd === "volume" ? osdWidth
                      : activeOsd === "brightness" ? osdWidth
@@ -310,16 +313,16 @@ ShellRoot {
                      : miniDashboard ? 420
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                      : (leftGroup.implicitWidth + centerClock.implicitWidth + rightGroup.implicitWidth + 26 * Config.paddingScale) + (12 * Config.paddingScale) + (hovered ? 68 : 56) * Config.paddingScale
+                      : (sideWidth * 2) + centerClock.implicitWidth + (38 * Config.paddingScale) + (hovered ? 68 : 56) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd === "battery" ? osdHeight
                   : activeOsd === "volume" ? osdHeight
                   : activeOsd === "brightness" ? osdHeight
                   : (notificationModule.active && !notifFullscreenMode) ? 52
                   : controlCenter && MprisController.hasPlayer
-                      ? (240 + notifBump)
+                      ? (240 + notifBump + trayBump)
                   : controlCenter
-                      ? (118 + notifBump)
+                      ? (118 + notifBump + trayBump)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
                    : miniDashboard ? 155
@@ -443,12 +446,12 @@ ShellRoot {
           }
       }
 
-      // modules in bar - split to keep Clock centered when systray appears
+      // modules in bar - symmetric anchors to centerClock
       RowLayout {
         id: leftGroup
-        anchors.left: parent.left
+        anchors.right: centerClock.left
         anchors.verticalCenter: parent.verticalCenter
-        anchors.leftMargin: 28
+        anchors.rightMargin: (box.hovered ? 24 : 18) * Config.paddingScale
         spacing: 13 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
@@ -472,9 +475,9 @@ ShellRoot {
       }
       RowLayout {
         id: rightGroup
-        anchors.right: parent.right
+        anchors.left: centerClock.right
         anchors.verticalCenter: parent.verticalCenter
-        anchors.rightMargin: 28
+        anchors.leftMargin: (box.hovered ? 24 : 18) * Config.paddingScale
         spacing: 13 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
@@ -492,7 +495,17 @@ ShellRoot {
             font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
           }
         }
-        TrayModule { parentWindow: panelWindow }
+        WeatherIndicator {
+          id: barWeatherIndicator
+          weatherFg: Theme.fg
+          onToggleWeather: {
+            if (!weatherPopupLoader.active)
+              weatherPopupLoader.active = true
+            else
+              weatherPopupLoader.item.shown = !weatherPopupLoader.item.shown
+            calendarPopup.shown = false
+          }
+        }
       }
 
       OsdBar {
@@ -923,6 +936,16 @@ ShellRoot {
           }
         } 
 
+        // background apps (systray) card in control center
+        TrayModule {
+          id: ccTrayModule
+          parentWindow: panelWindow
+          anchors.top: sliderColumn.bottom
+          anchors.topMargin: 10
+          anchors.horizontalCenter: parent.horizontalCenter
+          width: parent.width - 6
+        }
+
       // notifications stack popped header
       Rectangle {
         id: headerBar
@@ -983,8 +1006,8 @@ ShellRoot {
       // notifications list stack
       Rectangle {
         id: notifBox
-        anchors.top: sliderColumn.bottom
-        anchors.topMargin: 32
+        anchors.top: (ccTrayModule.itemCount > 0) ? ccTrayModule.bottom : sliderColumn.bottom
+        anchors.topMargin: (ccTrayModule.itemCount > 0) ? 28 : 32
         anchors.bottomMargin: 12
         anchors.horizontalCenter: parent.horizontalCenter
         width: parent.width - 10
