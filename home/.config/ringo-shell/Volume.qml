@@ -1,8 +1,8 @@
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
+import IslandBackend
 
 RowLayout {
   id: root
@@ -18,33 +18,9 @@ RowLayout {
 
   readonly property var sinkProps: ready ? sink.properties : ({})
 
-  property string activePort: ""
-  readonly property bool isHeadphone: activePort.indexOf("headphone") !== -1
-                                     || activePort.indexOf("headset") !== -1
+  readonly property string activePort: AudioController.activePort
+  readonly property bool isHeadphone: AudioController.isHeadphone
   spacing: 4 * Config.paddingScale
-  function checkPort() {
-    if (!ready) return
-    portCheck.command = ["bash", "-c",
-      "pactl list sinks | awk -v RS='' '/Name: " + sink.name + "/' | grep -oP 'Active Port: \\K.*'"]
-    portCheck.running = true
-  }
-
-  Process {
-    id: portCheck
-    stdout: SplitParser { onRead: data => root.activePort = data.trim() }
-  }
-
-  // watch for jack plug/unplug events ral time
-  Process {
-    running: true
-    command: ["pactl", "subscribe"]
-    stdout: SplitParser {
-      onRead: data => { if (data.indexOf("on sink") !== -1) root.checkPort() }
-    }
-  }
-
-  Component.onCompleted: checkPort()
-  onSinkChanged: checkPort()
 
   property string icon: {
     if (!ready || muted) return isHeadphone ? "\uf025" : String.fromCodePoint(0xf0581)

@@ -92,61 +92,8 @@ ShellRoot {
   property int buttonctlRadius: 6
 
   property bool notifFullscreenMode: false
-  property bool fullscreenActive: false
+  readonly property bool fullscreenActive: NiriController.fullscreenActive
   property bool barHidden: false
-
-  // Fullscreen state: initial snapshot + event-driven refresh. A persistent
-  // `niri msg event-stream` listener re-queries windows only when something
-  // relevant changes, instead of forking `niri msg windows` every second.
-  Process {
-    id: fullscreenPoll
-    running: true
-    command: ["niri", "msg", "--json", "windows"]
-    stdout: StdioCollector {
-      onStreamFinished: parseWindows(text)
-    }
-  }
-
-  Process {
-    id: fullscreenEvents
-    running: true
-    command: ["niri", "msg", "--json", "event-stream"]
-    stdout: SplitParser {
-      onRead: data => {
-        try {
-          var ev = JSON.parse(data)
-          if (!ev) return
-          // niri event-stream lines are { "<EventName>": {...} }
-          for (var key in ev) {
-            if (key === "WindowOpened" || key === "WindowClosed"
-                || key === "WindowChanged" || key === "FocusChanged") {
-              fullscreenPoll.running = false
-              fullscreenPoll.running = true
-              return
-            }
-          }
-        } catch (e) {
-          // ignore keepalive/partial lines
-        }
-      }
-    }
-  }
-
-  function parseWindows(text: string): void {
-    try {
-      var data = JSON.parse(text)
-      var found = false
-      for (var i = 0; i < data.length; i++) {
-        if (data[i].is_focused && data[i].is_fullscreen) {
-          found = true
-          break
-        }
-      }
-      root.fullscreenActive = found
-    } catch (e) {
-      console.log("niri windows parse error:", e)
-    }
-  }
 
   Component.onCompleted: {
     WeatherController.weatherLocation = Config.weatherLocation
@@ -275,13 +222,10 @@ ShellRoot {
 
       property string activeOsd: "" // volume, brightness, battery
 
-      Process { id: brightnessSetProc; running: false }
-
       Timer {
         id: osdHideTimer
         onTriggered: box.activeOsd = ""
       }
-      Timer { id: brightnessThrottle; interval: 80; repeat: false }
 
       onImplicitHeightChanged: {
           heightAnim.stop()
@@ -945,18 +889,13 @@ ShellRoot {
                 anchors.topMargin: -box.sliderHitSlop
                 anchors.bottomMargin: -box.sliderHitSlop
                 onClicked: (mouse) => {
-                  let pct = Math.round(Math.max(0, Math.min(1, mouse.x / width)) * 100)
-                  brightnessSetProc.command = ["brightnessctl", "set", pct + "%"]
-                  brightnessSetProc.running = false
-                  brightnessSetProc.running = true
+                  let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
+                  BrightnessController.setPercent(pct)
                 }
                 onPositionChanged: (mouse) => {
-                  if (pressed && !brightnessThrottle.running) {
-                    let pct = Math.round(Math.max(0, Math.min(1, mouse.x / width)) * 100)
-                    brightnessSetProc.command = ["brightnessctl", "set", pct + "%"]
-                    brightnessSetProc.running = false
-                    brightnessSetProc.running = true
-                    brightnessThrottle.start()
+                  if (pressed) {
+                    let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
+                    BrightnessController.setPercent(pct)
                   }
                 }
               }

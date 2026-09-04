@@ -30,11 +30,17 @@ qt_add_qml_module(IslandBackend
         backend/WeatherController.cpp
         backend/MprisController.h
         backend/MprisController.cpp
+        backend/BrightnessController.h
+        backend/BrightnessController.cpp
+        backend/NiriController.h
+        backend/NiriController.cpp
+        backend/AudioController.h
+        backend/AudioController.cpp
 )
 
 target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend)
 
-target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::DBus Qt6::Qml Qt6::Network pam)
+target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::DBus Qt6::Qml Qt6::Network pam pulse)
 
 set_target_properties(IslandBackend IslandBackendPlugin PROPERTIES
     BUILD_WITH_INSTALL_RPATH TRUE
