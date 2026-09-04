@@ -234,9 +234,8 @@ ShellRoot {
       clip: true
 
       property bool appLauncher: false
-      HoverHandler { id: boxHoverHandler }
-      property bool hovered: boxHoverHandler.hovered
-      readonly property bool barExpanded: box.hovered || (weatherPopupLoader.item && weatherPopupLoader.item.shown) || calendarPopup.shown
+      HoverHandler { id: boxHoverHandler; onHoveredChanged: box.hovered = hovered }
+      property bool hovered: false
       property bool miniDashboard: false
       property bool controlCenter: false
       property bool cliphistOpen: false
@@ -303,8 +302,6 @@ ShellRoot {
       // keep Clock truly centered and symmetric
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
       readonly property real sideWidth: Math.max(leftGroup.implicitWidth, rightGroup.implicitWidth)
-      readonly property real restWidth: Math.max(82 * Config.paddingScale, centerGroup.implicitWidth + (36 * Config.paddingScale))
-      readonly property real fullWidth: (sideWidth * 2) + centerClock.implicitWidth + (82 * Config.paddingScale)
       readonly property real baseWidth: activeOsd === "battery" ? osdWidth
                      : activeOsd === "volume" ? osdWidth
                      : activeOsd === "brightness" ? osdWidth
@@ -317,7 +314,7 @@ ShellRoot {
                      : miniDashboard ? 420
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                      : (barExpanded ? fullWidth : restWidth)
+                      : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 96 : 84) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd === "battery" ? osdHeight
                   : activeOsd === "volume" ? osdHeight
@@ -370,12 +367,16 @@ ShellRoot {
           }
       }
 
-      Behavior on implicitWidth { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+      Behavior on implicitWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
       NumberAnimation { id: heightAnim; target: box; property: "height"; easing.type: Easing.OutExpo }
 
       MouseArea {
         anchors.fill: parent
+        hoverEnabled: true
         acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+
+        onEntered: box.hovered = true
+        onExited: box.hovered = false
 
         onClicked: (mouse) => {
 
@@ -446,7 +447,7 @@ ShellRoot {
           }
       }
 
-      // modules in bar - Ricelin style morphing layout
+      // modules in bar - symmetric layout with Theme.hair dividers
       RowLayout {
         id: centerGroup
         anchors.centerIn: parent
@@ -456,7 +457,7 @@ ShellRoot {
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
         Text {
-          visible: MprisController.playing && !box.barExpanded
+          visible: MprisController.playing
           text: "󰎆"
           color: Theme.accent
           font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
@@ -472,25 +473,25 @@ ShellRoot {
       Rectangle {
         id: leftDivider
         anchors.right: centerGroup.left
-        anchors.rightMargin: 12 * Config.paddingScale
+        anchors.rightMargin: (box.hovered ? 15 : 12) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         width: 1
         height: 12 * Config.pillScale
         color: Theme.hair
-        opacity: (box.barContentOpacity > 0 && box.barExpanded) ? 1 : 0
+        opacity: box.barContentOpacity
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: 100 } }
       }
 
       RowLayout {
         id: leftGroup
         anchors.right: leftDivider.left
-        anchors.rightMargin: 12 * Config.paddingScale
+        anchors.rightMargin: (box.hovered ? 15 : 12) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         spacing: 12 * Config.paddingScale
-        opacity: (box.barContentOpacity > 0 && box.barExpanded) ? 1 : 0
+        opacity: box.barContentOpacity
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: 100 } }
         Battery {}
         Volume {
           id: volumeModule
@@ -505,25 +506,25 @@ ShellRoot {
       Rectangle {
         id: rightDivider
         anchors.left: centerGroup.right
-        anchors.leftMargin: 12 * Config.paddingScale
+        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         width: 1
         height: 12 * Config.pillScale
         color: Theme.hair
-        opacity: (box.barContentOpacity > 0 && box.barExpanded) ? 1 : 0
+        opacity: box.barContentOpacity
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: 100 } }
       }
 
       RowLayout {
         id: rightGroup
         anchors.left: rightDivider.right
-        anchors.leftMargin: 12 * Config.paddingScale
+        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         spacing: 12 * Config.paddingScale
-        opacity: (box.barContentOpacity > 0 && box.barExpanded) ? 1 : 0
+        opacity: box.barContentOpacity
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on opacity { NumberAnimation { duration: 100 } }
         RowLayout {
           spacing: 4 * Config.paddingScale
           Text {
