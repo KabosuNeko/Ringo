@@ -6,7 +6,7 @@
   "textFontFamily": "JetBrainsMono Nerd Font",
   "nerdFontFamily": "JetBrainsMono Nerd Font Propo",
   "timerPresets": [1, 5, 10, 15, 30],
-  "mediaPopupDuration": 2000,
+  "mediaPopupDuration": 3000,
   "maxWorkspaces": 5,
   "notificationDisplayTime": 3000,
   "maxNotificationsInStack": 20,
@@ -19,5 +19,7 @@
   "defaultTerminal": "foot",
   "pillScale": 1.0,
   "dpiScale": 1.0,
-  "wallpapersDir": "~/Pictures/Wallpapers"
+  "wallpapersDir": "~/Pictures/Wallpapers",
+  "wsCloseOnWallpaperSet": true,
+  "wsAnimation": true
 }

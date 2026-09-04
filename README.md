@@ -37,7 +37,7 @@ Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 
 ## Features
 
-- **pywal16 color scheme** — colors come straight from the config files `wal` generates in `~/.cache/wal/` (Foot reads `colors-foot-dark.ini`, ringo-shell reads `colors.qml`, GTK reads `gtk-colors`), refreshed automatically whenever the wallpaper changes
+- **pywal16 color scheme** — colors come straight from the config files `wal` generates in `~/.cache/wal/` (Foot reads `colors-foot-dark.ini`, ringo-shell reads `colors.json`, GTK reads `gtk-colors`), refreshed automatically whenever the wallpaper changes
 - **All-in-one shell (ringo-shell)** — a Quickshell-based pill bar that replaces the traditional status bar, launcher, notifications, lock screen, and idle daemon: app launcher, clipboard history, control center (wifi/bluetooth/volume/brightness/media/power profiles), mini dashboard (system info + power controls), wallpaper switcher, power menu, and a PAM-backed lock screen with blur
 - **GNU Stow deployment** — symlink-based, safe to rerun, trivial to uninstall
 - **Hardware-adaptive** — no hardcoded monitor names, backlight devices, battery IDs, or GPU drivers
@@ -59,12 +59,13 @@ The script is fully interactive — each phase prompts for confirmation:
 1. Installs `yay` (AUR helper) if needed
 2. Ensures `stow`, `git`, and `curl` are available
 3. Installs all packages from `pkg.txt`
-4. Creates required directories
-5. Deploys dotfiles via **GNU Stow** (symlinks to `~/.config`, `~/.local/bin`, `~/Pictures/Wallpapers`)
-6. Installs Fish shell (optional, with confirmation for default shell)
-7. Extracts GTK theme and icon packs to `~/.themes` and `~/.icons`
-8. Enables systemd services with safety checks (won't break TTY login)
-9. Builds the ringo-shell C++ backend (`IslandBackend` module with WiFi, Bluetooth, and PAM lock support) into `~/.config/ringo-shell/IslandBackend`
+4. Creates required directories (`~/.icons`, `~/.themes`, `~/Pictures/Screenshots`)
+5. Deploys dotfiles via **GNU Stow** (symlinks to `~/.config`, `~/.local/bin`)
+6. Installs Fish shell if missing (optional)
+7. Clones Wallpapers collection (optional)
+8. Applies GTK theme settings via gsettings (optional)
+9. Enables systemd services with safety checks (won't break TTY login)
+10. Builds the ringo-shell C++ backend (`IslandBackend` module with WiFi, Bluetooth, and PAM lock support) into `~/.config/ringo-shell/IslandBackend`
 
 ### Daily Management
 
@@ -93,6 +94,9 @@ All bindings use `Mod` (Super/Windows key) unless noted otherwise.
 | `Mod+Ctrl+W`      | Wallpaper switcher                      |
 | `Mod+Shift+P`     | Power menu                              |
 | `Mod+Shift+C`     | Wipe clipboard history                  |
+| `Mod+E`           | File manager (Thunar)                   |
+| `Mod+Alt+B`       | Toggle bar (hide/unhide)                |
+| `Mod+F11`         | Record screen (wl-screenrec menu)       |
 | `Mod+Q`           | Close window                            |
 | `Mod+Space`       | Toggle floating                         |
 | `Mod+O`           | Toggle overview                         |

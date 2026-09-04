@@ -16,7 +16,7 @@ spawn-at-startup "sway-audio-idle-inhibit"
 spawn-at-startup "sh" "-c" "$HOME/.local/bin/ringo-shell"
 
 // Restore wallpaper (from pywal colors.json)
-spawn-at-startup "sh" "-c" "wall=$(jq -r .wallpaper ~/.cache/wal/colors.json 2>/dev/null) && [ -n \"$wall\" ] && swaybg -i \"$wall\" -m fill &"
+spawn-at-startup "sh" "-c" "pkill -x swaybg 2>/dev/null; wall=$(jq -r .wallpaper ~/.cache/wal/colors.json 2>/dev/null) && [ -n \"$wall\" ] && [ -f \"$wall\" ] && exec swaybg -i \"$wall\" -m fill || true"
 
 // Optional
 spawn-at-startup "fcitx5" "-d"

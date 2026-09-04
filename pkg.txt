@@ -53,3 +53,10 @@ fcitx5
 fcitx5-gtk
 fcitx5-qt
 fcitx5-configtool
+fcitx5-unikey
+qt6ct
+stow
+git
+curl
+fish
+wf-recorder

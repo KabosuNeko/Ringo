@@ -10,14 +10,6 @@
 window-rule {
     geometry-corner-radius 8
     clip-to-geometry true
-
-    match app-id=r#".*"#
-    background-effect {
-        xray true
-        blur true
-        noise 0.05
-        saturation 2
-    }
 }
 
 window-rule {
@@ -30,7 +22,7 @@ window-rule {
     match app-id=r#"zed"#
     match app-id=r#"foot"#
     match app-id=r#"firefox"#
-    opacity 0.8
+    opacity 0.92
 }
 
 window-rule {

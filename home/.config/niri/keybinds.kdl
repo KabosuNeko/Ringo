@@ -11,22 +11,21 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Custom Script Launchers
-    Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call cliphist toggle"; }
+    Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call cliphist toggle"; }
     Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "sh" "-c" "cliphist wipe && notify-send -i edit-clear 'Clipboard' 'Clipboard cleared' -t 2000"; }
 
     // Application Launchers
     Mod+Return hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
-    Mod+D hotkey-overlay-title="Run Application Menu: ringo-shell" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call appLauncher toggle"; }
+    Mod+D hotkey-overlay-title="Run Application Menu: ringo-shell" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call appLauncher toggle"; }
     Mod+E hotkey-overlay-title="Open File Manager: thunar" { spawn "thunar"; }
     Mod+B hotkey-overlay-title="Open Browser: firefox" { spawn "firefox"; }
 
-    Mod+Ctrl+C hotkey-overlay-title="Control Center" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call controlCenter toggle"; }
-    Mod+Ctrl+V hotkey-overlay-title="Clipboard History" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call cliphist toggle"; }
-    Mod+Ctrl+B hotkey-overlay-title="Mini Dashboard" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call miniDashboard toggle"; }
-    Mod+Ctrl+W hotkey-overlay-title="Wallpaper Switcher" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call wallpaperSwitcher toggle"; }
-    Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call powerMenu toggle"; }
+    Mod+Ctrl+C hotkey-overlay-title="Control Center" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call controlCenter toggle"; }
+    Mod+Ctrl+B hotkey-overlay-title="Mini Dashboard" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call miniDashboard toggle"; }
+    Mod+Ctrl+W hotkey-overlay-title="Wallpaper Switcher" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call wallpaperSwitcher toggle"; }
+    Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call powerMenu toggle"; }
 
-    Mod+Alt+B hotkey-overlay-title="Toggle Bar" { spawn "sh" "-c" "qs ipc -p \"$HOME/.config/ringo-shell\" call bar toggle"; }
+    Mod+Alt+B hotkey-overlay-title="Toggle Bar" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call bar toggle"; }
 
     // Screenshots
     Print { screenshot; }

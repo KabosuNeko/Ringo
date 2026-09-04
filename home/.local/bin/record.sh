@@ -81,7 +81,10 @@ if [ -n "$1" ]; then
 fi
 
 # 3) no arg and not recording -> open Quickshell RecordMenu (no rofi)
-if command -v qs > /dev/null 2>&1; then
+if [ -x "$HOME/.local/bin/ringo-shell" ]; then
+    "$HOME/.local/bin/ringo-shell" call recordMenu toggle 2>/dev/null || \
+    "$HOME/.local/bin/ringo-shell" call recordMenu show 2>/dev/null || true
+elif command -v qs > /dev/null 2>&1; then
     qs ipc -p "$HOME/.config/ringo-shell" call recordMenu toggle 2>/dev/null || \
     qs ipc -p "$HOME/.config/ringo-shell" call recordMenu show 2>/dev/null || true
     exit 0

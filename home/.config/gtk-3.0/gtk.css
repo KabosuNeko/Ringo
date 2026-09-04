@@ -5,12 +5,12 @@
    ========================================== */
 
 .thunar {
-    background-color: rgba(40, 40, 40, 0.95);
+    background-color: alpha(@wal_base, 0.95);
 }
 
 .thunar .view {
     background-color: transparent;
-    color: #ebdbb2;
+    color: @wal_fg;
 }
 
 .thunar headerbar,
@@ -26,7 +26,7 @@
     padding: 6px 14px;
     margin: 0 4px;
     background-color: rgba(235, 219, 178, 0.05);
-    color: #ebdbb2;
+    color: @wal_fg;
     border: 1px solid rgba(235, 219, 178, 0.02);
     transition: all 0.2s ease-in-out;
 }
@@ -44,7 +44,7 @@
 }
 
 .thunar .sidebar {
-    background-color: rgba(29, 32, 33, 0.6);
+    background-color: alpha(@wal_base, 0.6);
     padding: 10px 8px;
     border-right: 1px solid rgba(235, 219, 178, 0.05);
 }
@@ -83,14 +83,14 @@
     border-radius: 99px;
     background-color: rgba(235, 219, 178, 0.06);
     margin: 0 4px;
-    color: rgba(235, 219, 178, 0.6);
+    color: alpha(@wal_fg, 0.6);
     border: 1px solid transparent;
     transition: all 0.2s ease;
 }
 
 .thunar notebook > header > tabs > tab:hover {
     background-color: rgba(235, 219, 178, 0.12);
-    color: #ebdbb2;
+    color: @wal_fg;
 }
 
 .thunar notebook > header > tabs > tab:checked {
@@ -104,7 +104,7 @@
     background-color: transparent;
     padding: 6px 14px;
     border-top: 1px solid rgba(235, 219, 178, 0.05);
-    color: rgba(235, 219, 178, 0.5);
+    color: alpha(@wal_fg, 0.5);
 }
 
 .thunar paned,
@@ -122,7 +122,7 @@
 
 menu,
 .popup {
-    background-color: rgba(60, 56, 54, 0.98);
+    background-color: alpha(@wal_base, 0.98);
     border: 1px solid rgba(235, 219, 178, 0.08);
     border-radius: 14px;
     padding: 6px;
@@ -132,7 +132,7 @@ menu,
 menu menuitem {
     border-radius: 8px;
     padding: 6px 12px;
-    color: #ebdbb2;
+    color: @wal_fg;
 }
 
 menu menuitem:hover {
