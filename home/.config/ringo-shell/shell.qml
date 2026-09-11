@@ -123,7 +123,7 @@ ShellRoot {
     visible: !LockController.locked && !root.barHidden
     WlrLayershell.layer: WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
-    WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.controlCenter || box.miniDashboard) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     // Height follows the actual content: pill box + any open popup below it.
     // (Fixed 885px tall windows would cover most of the screen on niri.)
     implicitWidth: Math.max(

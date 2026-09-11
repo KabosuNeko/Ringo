@@ -17,6 +17,9 @@ PanelWindow {
   margins.top: anchorY
   margins.left: anchorX
 
+  WlrLayershell.layer: WlrLayershell.Overlay
+  WlrLayershell.namespace: "ringo-shell"
+
   // keyboard focus needed whenever the agent wants a PIN/passkey typed in
   WlrLayershell.keyboardFocus: (BluetoothPairingAgent.requestActive && BluetoothPairingAgent.requestRequiresInput)
                                  ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
@@ -176,7 +179,19 @@ PanelWindow {
     // pairing request overlay - driven entirely by BluetoothPairingAgent
     Rectangle {
       visible: BluetoothPairingAgent.requestActive
-      onVisibleChanged: if (visible && BluetoothPairingAgent.requestRequiresInput) secretField.forceActiveFocus()
+      onVisibleChanged: {
+        if (visible && BluetoothPairingAgent.requestRequiresInput) {
+          secretField.text = ""
+          btFocusTimer.restart()
+        }
+      }
+
+      Timer {
+        id: btFocusTimer
+        interval: 60
+        onTriggered: secretField.forceActiveFocus()
+      }
+
       anchors.fill: parent
       color: Theme.bg1
       radius: 28 * dpi
@@ -212,20 +227,26 @@ PanelWindow {
         Rectangle {
           visible: BluetoothPairingAgent.requestRequiresInput
           width: parent.width
-          height: 36 * dpi
+          height: 38 * dpi
           radius: 8 * dpi
           color: Theme.bg4
-          border.color: Theme.borderBg1
-          border.width: 1
+          border.color: secretField.activeFocus ? Theme.accent : Theme.borderBg1
+          border.width: secretField.activeFocus ? 2 : 1
+          Behavior on border.color { ColorAnimation { duration: 100 } }
 
           TextInput {
             id: secretField
             anchors.fill: parent
-            anchors.margins: 10 * dpi
-            color: Theme.fg4
+            leftPadding: 12 * dpi
+            rightPadding: 12 * dpi
+            color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 12 * dpi }
             echoMode: TextInput.Normal
             verticalAlignment: TextInput.AlignVCenter
+            selectByMouse: true
+            selectionColor: Theme.accent
+            selectedTextColor: Theme.bg
+            clip: true
             inputMethodHints: BluetoothPairingAgent.requestNumericInput ? Qt.ImhDigitsOnly : Qt.ImhNone
             validator: BluetoothPairingAgent.requestNumericInput ? intValidator : null
             IntValidator { id: intValidator; bottom: 0 }

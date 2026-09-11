@@ -17,10 +17,24 @@ PanelWindow {
   margins.top: anchorY
   margins.left: anchorX
 
-  property bool controlCenter: false
+  WlrLayershell.layer: WlrLayershell.Overlay
+  WlrLayershell.namespace: "ringo-shell"
+
   property string passwordPromptSsid: ""
   property bool passwordPromptVisible: false
   property string passwordValue: ""
+
+  function submitPassword() {
+    if (passwordPromptSsid.length === 0) return
+    WifiController.connectToNetwork(passwordPromptSsid, passwordValue)
+    passwordPromptVisible = false
+    passwordValue = ""
+  }
+
+  function cancelPassword() {
+    passwordPromptVisible = false
+    passwordValue = ""
+  }
 
   // keyboard focus for password prompt
   WlrLayershell.keyboardFocus: passwordPromptVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
@@ -30,9 +44,13 @@ PanelWindow {
   implicitHeight: 348 * dpi
   color: "transparent"
 
-  // auto hide if control center close
   onVisibleChanged: {
-    if (visible && WifiController.enabled) WifiController.refreshNetworks(true)
+    if (!visible) {
+      passwordPromptVisible = false
+      passwordValue = ""
+    } else if (WifiController.enabled) {
+      WifiController.refreshNetworks(true)
+    }
   }
 
   Rectangle {
@@ -158,14 +176,30 @@ PanelWindow {
     }
 
     Rectangle {
+      id: passwordPromptRect
       visible: wifiListWindow.passwordPromptVisible
-      onVisibleChanged: if (visible) passwordField.forceActiveFocus()
       anchors.fill: parent
       color: Theme.bg1
       radius: 28 * dpi
       z: 10
 
-      MouseArea { anchors.fill: parent }
+      onVisibleChanged: {
+        if (visible) {
+          passwordField.text = ""
+          focusTimer.restart()
+        }
+      }
+
+      Timer {
+        id: focusTimer
+        interval: 60
+        onTriggered: passwordField.forceActiveFocus()
+      }
+
+      MouseArea {
+        anchors.fill: parent
+        // Eat clicks outside to prevent dismissing the list behind
+      }
 
       Column {
         anchors.centerIn: parent
@@ -182,23 +216,67 @@ PanelWindow {
 
         Rectangle {
           width: parent.width
-          height: 36 * dpi
+          height: 38 * dpi
           radius: 8 * dpi
           color: Theme.bg4
-          border.color: Theme.borderBg1
-          border.width: 1
+          border.color: passwordField.activeFocus ? Theme.accent : Theme.borderBg1
+          border.width: passwordField.activeFocus ? 2 : 1
+          Behavior on border.color { ColorAnimation { duration: 100 } }
 
           TextInput {
             id: passwordField
             focus: true
             anchors.fill: parent
-            anchors.margins: 10 * dpi
-            color: Theme.fg4
+            leftPadding: 12 * dpi
+            rightPadding: 36 * dpi
+            color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 12 * dpi }
-            echoMode: TextInput.Normal
+            echoMode: eyeBtn.showPassword ? TextInput.Normal : TextInput.Password
             verticalAlignment: TextInput.AlignVCenter
+            selectByMouse: true
+            selectionColor: Theme.accent
+            selectedTextColor: Theme.bg
+            clip: true
             onTextChanged: wifiListWindow.passwordValue = text
-            Keys.onReturnPressed: submitBtn.clicked()
+            Keys.onReturnPressed: wifiListWindow.submitPassword()
+            Keys.onEscapePressed: wifiListWindow.cancelPassword()
+
+            Text {
+              anchors.left: parent.left
+              anchors.leftMargin: 12 * dpi
+              anchors.verticalCenter: parent.verticalCenter
+              text: "Enter password..."
+              color: Theme.fg4
+              font: passwordField.font
+              visible: passwordField.text.length === 0
+            }
+          }
+
+          Rectangle {
+            id: eyeBtn
+            property bool showPassword: false
+            anchors.right: parent.right
+            anchors.rightMargin: 6 * dpi
+            anchors.verticalCenter: parent.verticalCenter
+            width: 26 * dpi
+            height: 26 * dpi
+            radius: 6 * dpi
+            color: eyeMA.containsMouse ? Theme.bg5 : "transparent"
+
+            Text {
+              anchors.centerIn: parent
+              text: eyeBtn.showPassword ? "󰈈" : "󰈉"
+              color: eyeBtn.showPassword ? Theme.accent : Theme.fg3
+              font { family: Theme.nerdFontFamily; pixelSize: 13 * dpi }
+            }
+
+            MouseArea {
+              id: eyeMA
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: eyeBtn.showPassword = !eyeBtn.showPassword
+            }
           }
         }
 
@@ -208,7 +286,6 @@ PanelWindow {
             id: submitBtn
             width: 80 * dpi; height: 32 * dpi; radius: 9 * dpi
             color: submitBtnMA.containsMouse ? "#3065be" : "#3874d7"
-            signal clicked()
             Text { anchors.centerIn: parent; text: "Join"; color: "white"; font { family: Theme.fontFamily; pixelSize: 12 * dpi } }
             Behavior on color { ColorAnimation { duration: 80 } }
             MouseArea {
@@ -216,12 +293,7 @@ PanelWindow {
               hoverEnabled: true
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                WifiController.connectToNetwork(wifiListWindow.passwordPromptSsid, wifiListWindow.passwordValue)
-                wifiListWindow.passwordPromptVisible = false
-                wifiListWindow.passwordValue = ""
-                passwordField.text = ""
-              }
+              onClicked: wifiListWindow.submitPassword()
             }
           }
 
@@ -235,11 +307,7 @@ PanelWindow {
               hoverEnabled: true
               anchors.fill: parent
               cursorShape: Qt.PointingHandCursor
-              onClicked: {
-                wifiListWindow.passwordPromptVisible = false
-                wifiListWindow.passwordValue = ""
-                passwordField.text = ""
-              }
+              onClicked: wifiListWindow.cancelPassword()
             }
           }
         }
