@@ -80,6 +80,20 @@ ShellRoot {
     function hide(): void { root.barHidden = true }
   }
 
+  IpcHandler {
+    target: "calendar"
+    function toggle(): void { calendarPopup.shown = !calendarPopup.shown; weatherPopup.shown = false }
+    function show(): void { calendarPopup.shown = true; weatherPopup.shown = false }
+    function hide(): void { calendarPopup.shown = false }
+  }
+
+  IpcHandler {
+    target: "weather"
+    function toggle(): void { weatherPopup.shown = !weatherPopup.shown; calendarPopup.shown = false }
+    function show(): void { weatherPopup.shown = true; calendarPopup.shown = false }
+    function hide(): void { weatherPopup.shown = false }
+  }
+
   property string bg: Theme.bg
   property real barSurfaceOpacity: 0.5
   property string fg: Theme.fg
@@ -124,20 +138,9 @@ ShellRoot {
     WlrLayershell.layer: WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
     WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    // Height follows the actual content: pill box + any open popup below it.
-    // (Fixed 885px tall windows would cover most of the screen on niri.)
-    implicitWidth: Math.max(
-      Math.ceil(box.width * box.dpi),
-      calendarPopup.shown ? Math.ceil(calendarPopup.width) : 0,
-      weatherPopupLoader.item && weatherPopupLoader.item.shown
-        ? Math.ceil(weatherPopupLoader.item.width) : 0
-    )
-    implicitHeight: Math.max(
-      box.y + box.height * box.dpi,
-      calendarPopup.shown ? calendarPopup.y + calendarPopup.height : 0,
-      weatherPopupLoader.item && weatherPopupLoader.item.shown
-        ? weatherPopupLoader.item.y + weatherPopupLoader.item.height : 0
-    )
+    // Height follows the actual content: pill box capsule.
+    implicitWidth: Math.ceil(box.width * box.dpi)
+    implicitHeight: Math.ceil(box.y + box.height * box.dpi)
     onScreenChanged: { }
 
     anchors {
@@ -151,24 +154,10 @@ ShellRoot {
 
     // Mask input to only the capsule
     mask: Region {
-      Region {
-        intersection: Intersection.Combine
-        x: Math.floor(box.x - box.width * (box.dpi - 1) / 2); y: Math.floor(box.y)
-        width: Math.ceil(box.width * box.dpi); height: Math.ceil(box.height * box.dpi)
-      }
-      Region {
-        intersection: Intersection.Combine
-        x: Math.floor(calendarPopup.x); y: Math.floor(calendarPopup.y)
-        width: calendarPopup.shown ? Math.ceil(calendarPopup.width) : 0
-        height: calendarPopup.shown ? Math.ceil(calendarPopup.height) : 0
-      }
-      Region {
-          intersection: Intersection.Combine
-          x: weatherPopupLoader.item ? Math.floor(weatherPopupLoader.item.x) : 0
-          y: weatherPopupLoader.item ? Math.floor(weatherPopupLoader.item.y) : 0
-          width: weatherPopupLoader.item && weatherPopupLoader.item.shown ? Math.ceil(weatherPopupLoader.item.width) : 0
-          height: weatherPopupLoader.item && weatherPopupLoader.item.shown ? Math.ceil(weatherPopupLoader.item.height) : 0
-      }
+      x: Math.floor(box.x - box.width * (box.dpi - 1) / 2)
+      y: Math.floor(box.y)
+      width: Math.ceil(box.width * box.dpi)
+      height: Math.ceil(box.height * box.dpi)
     }
 
     // main dynamic pill bar
@@ -307,7 +296,7 @@ ShellRoot {
       onMiniDashboardChanged: {
           if (!box.miniDashboard) {
               calendarPopup.shown = false
-              if (weatherPopupLoader.item) weatherPopupLoader.item.shown = false
+              weatherPopup.shown = false
           }
       }
 
@@ -400,14 +389,6 @@ ShellRoot {
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
-        Text {
-          visible: MprisController.playing
-          text: "󰎆"
-          color: Theme.accent
-          font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-          Layout.alignment: Qt.AlignVCenter
-        }
-
         Clock {
           id: centerClock
           Layout.alignment: Qt.AlignVCenter
@@ -486,10 +467,7 @@ ShellRoot {
           id: barWeatherIndicator
           weatherFg: Theme.fg
           onToggleWeather: {
-            if (!weatherPopupLoader.active)
-              weatherPopupLoader.active = true
-            else
-              weatherPopupLoader.item.shown = !weatherPopupLoader.item.shown
+            weatherPopup.shown = !weatherPopup.shown
             calendarPopup.shown = false
           }
         }
@@ -1435,48 +1413,38 @@ ShellRoot {
       }
     }
 
-    // calendar popup box
-    CalendarBox { id: calendarPopup }
-
-    Loader {
-        id: weatherPopupLoader
-        active: false
-        asynchronous: false
-
-        sourceComponent: WeatherPopup {
-            onShownChanged: if (!shown) closeTimer.start()
-        }
-
-        onLoaded: item.shown = true
-        Timer {
-            id: closeTimer
-            interval: 250
-            onTriggered: weatherPopupLoader.active = false
-        }
     }
 
-    // open calendar when click on date in mini dashboard
-    Connections {
-      target: datetimeItem
-      function onToggleCalendar() {
-        calendarPopup.shown = !calendarPopup.shown
-        if (weatherPopupLoader.item) weatherPopupLoader.item.shown = false
-      }
-    }
+  // calendar popup window
+  CalendarBox {
+    id: calendarPopup
+    datetimeItem: datetimeItem
+    anchorY: Config.pillTopMargin + Math.round(box.height * box.dpi) + 5 * Config.dpiScale
+  }
 
-    // open weather when click on weather in mini dashboard
-    Connections {
-        target: weatherIndicatorItem
-        function onToggleWeather() {
-          if (!weatherPopupLoader.active)
-            weatherPopupLoader.active = true
-          else
-            weatherPopupLoader.item.shown = !weatherPopupLoader.item.shown
-          calendarPopup.shown = false
-        }
-    }
+  // weather popup window
+  WeatherPopup {
+    id: weatherPopup
+    anchorY: Config.pillTopMargin + Math.round(box.height * box.dpi) + 5 * Config.dpiScale
+  }
 
+  // open calendar when click on date in mini dashboard
+  Connections {
+    target: datetimeItem
+    function onToggleCalendar() {
+      calendarPopup.shown = !calendarPopup.shown
+      weatherPopup.shown = false
     }
+  }
+
+  // open weather when click on weather in mini dashboard
+  Connections {
+    target: weatherIndicatorItem
+    function onToggleWeather() {
+      weatherPopup.shown = !weatherPopup.shown
+      calendarPopup.shown = false
+    }
+  }
 
   NotificationServer {
     id: notifServer

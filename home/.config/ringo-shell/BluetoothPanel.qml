@@ -18,15 +18,15 @@ PanelWindow {
   margins.left: anchorX
 
   WlrLayershell.layer: WlrLayershell.Overlay
-  WlrLayershell.namespace: "ringo-shell"
+  WlrLayershell.namespace: "ringo-popup"
 
   // keyboard focus needed whenever the agent wants a PIN/passkey typed in
   WlrLayershell.keyboardFocus: (BluetoothPairingAgent.requestActive && BluetoothPairingAgent.requestRequiresInput)
                                  ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
   exclusionMode: ExclusionMode.Ignore
-  implicitWidth: 270 * dpi
-  implicitHeight: 348 * dpi
+  implicitWidth: 238 * dpi
+  implicitHeight: 308 * dpi
   color: "transparent"
 
   onVisibleChanged: {
@@ -35,8 +35,6 @@ PanelWindow {
 
   Rectangle {
     anchors.fill: parent
-    anchors.topMargin: 40 * dpi
-    anchors.rightMargin: 32 * dpi
     color: Theme.bg
     radius: 26 * dpi
 
@@ -99,7 +97,7 @@ PanelWindow {
               width: deviceColumn.width
               height: Math.max(45, contentRow.implicitHeight + 15)
               radius: 16 * dpi
-              color: connected ? "#4173c4" : (deviceMouse.containsMouse ? Theme.focusBgL : Theme.bg2)
+              color: connected ? Theme.accent : (deviceMouse.containsMouse ? Theme.focusBgL : Theme.bg2)
               border.color: connected ? "" : Theme.borderBg2
               border.width: connected ? 0 : 1
 
@@ -139,7 +137,7 @@ PanelWindow {
                   anchors.verticalCenter: parent.verticalCenter
                   text: connected ? "\uf5b0" : paired ? "\uf0c1" : "\uf294" // dynamic glyph
                   font { family: Theme.nerdFontFamily; pixelSize: 12 * dpi }
-                  color: Theme.fg4
+                  color: connected ? Theme.fgL : Theme.fg4
                 }
 
                 Column {
@@ -148,14 +146,14 @@ PanelWindow {
                   spacing: 2 * dpi
                   Text {
                     text: name
-                    color: "white"
+                    color: connected ? Theme.fgL : Theme.fg
                     font { family: Theme.fontFamily; pixelSize: 11 * dpi; weight: connected ? 500 : 300 }
                   }
                   Text {
                     width: parent.width
                     text: (connected ? "Connected" : (paired ? "Paired \u2022 right-click to forget" : "Not paired"))
                       + (battery >= 0 ? " \u2022 " + battery + "%" : "")
-                    color: connected ? "#c8d7ef" : "#949494"
+                    color: connected ? Theme.fg2 : Theme.fg4
                     wrapMode: Text.WordWrap
                     font { family: Theme.fontFamily; pixelSize: 9 * dpi }
                   }
@@ -169,7 +167,7 @@ PanelWindow {
       Text {
         visible: BluetoothController.errorMessage.length > 0
         text: BluetoothController.errorMessage
-        color: "#e94545"
+        color: Theme.deleting
         font { family: Theme.fontFamily; pixelSize: 11 * dpi }
         wrapMode: Text.WordWrap
         Layout.fillWidth: true
@@ -283,12 +281,12 @@ PanelWindow {
             id: pairSubmitBtn
             visible: BluetoothPairingAgent.requestRequiresInput || BluetoothPairingAgent.requestRequiresConfirmation
             width: 80 * dpi; height: 32 * dpi; radius: 9 * dpi
-            color: pairSubmitMA.containsMouse ? "#3065be" : "#3874d7"
+            color: pairSubmitMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
             signal clicked()
             Text {
               anchors.centerIn: parent
               text: BluetoothPairingAgent.requestRequiresInput ? "Pair" : "Confirm"
-              color: "white"
+              color: Theme.fgL
               font { family: Theme.fontFamily; pixelSize: 12 * dpi}
             }
             Behavior on color { ColorAnimation { duration: 80 } }
@@ -312,8 +310,8 @@ PanelWindow {
           Rectangle {
             visible: !BluetoothPairingAgent.requestRequiresInput && !BluetoothPairingAgent.requestRequiresConfirmation
             width: 80 * dpi; height: 32 * dpi; radius: 9 * dpi
-            color: okMA.containsMouse ? "#3065be" : "#3874d7"
-            Text { anchors.centerIn: parent; text: "OK"; color: "white"; font { family: Theme.fontFamily; pixelSize: 12 * dpi } }
+            color: okMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
+            Text { anchors.centerIn: parent; text: "OK"; color: Theme.fgL; font { family: Theme.fontFamily; pixelSize: 12 * dpi } }
             Behavior on color { ColorAnimation { duration: 80 } }
             MouseArea {
               id: okMA

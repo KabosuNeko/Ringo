@@ -17,6 +17,8 @@ RowLayout {
   property color buttonBgOff
   property color buttonFgOff
 
+  property color buttonBgOn: Theme.focusBg
+
   property bool notificationPopup: false
   property bool controlCenterOpen: false
   property bool wifiPanelOpened: false
@@ -47,7 +49,7 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: WifiController.enabled
-            ? (wifiHover.hovered ? Qt.lighter(Theme.surface("#212529", 0.8), 1.2) : Theme.surface("#212529", 0.8))
+            ? (wifiHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
             : (wifiHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
     border.width: WifiController.enabled ? 0 : buttonBorderWidth
     border.color: buttonBorderColor
@@ -59,7 +61,7 @@ RowLayout {
         anchors.centerIn: parent
         spacing: 5 * root.dpi
         icon: "\uf1eb"
-        iconColor: WifiController.enabled ? "#4282e9" : root.buttonFgOff
+        iconColor: WifiController.enabled ? Theme.accent : root.buttonFgOff
         iconFontFamily: Theme.nerdFontFamily
         iconPixelSize: 12
 
@@ -94,7 +96,7 @@ RowLayout {
     // bluetooth panel used to take); clamp to the screen edge so the panel
     // never lands off-screen.
     anchorX: Math.max(8, root.mapToGlobal(root.width, 0).x + (29 * root.dpi))
-    anchorY: wifiBtn.mapToGlobal(0, 0).y
+    anchorY: wifiBtn.mapToGlobal(0, 0).y + (40 * root.dpi)
   }
 
   onNotificationPopupChanged: {
@@ -108,7 +110,7 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: notificationModule.dndEnabled
-    ? (dndHover.hovered ? Qt.lighter(Theme.surface("#262626", 0.8), 1.2) : Theme.surface("#262626", 0.8))
+    ? (dndHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
     : (dndHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
     border.width: notificationModule.dndEnabled ? 0 : buttonBorderWidth
     border.color: buttonBorderColor
@@ -118,7 +120,7 @@ RowLayout {
 
     Text {
       text: String.fromCodePoint(0xf1f6)
-      color: notificationModule.dndEnabled ? "#fff9eb" : root.buttonFgOff
+      color: notificationModule.dndEnabled ? Theme.accent : root.buttonFgOff
       anchors.centerIn: parent
       font { family: Theme.nerdFontFamily; pixelSize: 13 }
     }
@@ -137,10 +139,10 @@ RowLayout {
     implicitHeight: root.buttonHeight
     radius: root.buttonRadius
     visible: root.controlCenterOpen
-    color: ppBtn.currentProfile === "power-saver"
-           ? (ppHover.hovered ? Qt.lighter(Theme.surface("#262626", 0.8), 1.2) : Theme.surface("#262626", 0.8))
+    color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "")
+           ? (ppHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
            : (ppHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
-    border.width: ppBtn.currentProfile === "power-saver" ? 0 : buttonBorderWidth
+    border.width: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? 0 : buttonBorderWidth
     border.color: buttonBorderColor
     scale: ppMouse.pressed ? 0.93 : 1.0
     Behavior on color { ColorAnimation { duration: 150 } }
@@ -161,13 +163,13 @@ RowLayout {
         text: ppBtn.currentProfile === "performance" ? String.fromCodePoint(0xf135) // nf-fa-rocket
             : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a) // nf-md-leaf
             : String.fromCodePoint(0xf029a) // nf-md-gauge
-        color: ppBtn.currentProfile === "performance" ? "#e9c46a" : root.buttonFgOff
+        color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.accent : root.buttonFgOff
         font { family: Theme.nerdFontFamily; pixelSize: 14 }
       }
       Text {
         text: ppBtn.currentProfile === "" ? "Pwr"
             : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
-        color: root.buttonFgOff
+        color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.fg : root.buttonFgOff
         font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
       }
     }
@@ -212,7 +214,7 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: BluetoothController.enabled
-            ? (btHover.hovered ? Qt.lighter(Theme.surface("#212529", 0.8), 1.2) : Theme.surface("#212529", 0.8))
+            ? (btHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
             : (btHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
     border.width: BluetoothController.enabled ? 0 : buttonBorderWidth
     border.color: buttonBorderColor
@@ -224,7 +226,7 @@ RowLayout {
       spacing: 5 * root.dpi
       Text {
         text: "\uf294"
-        color: BluetoothController.enabled ? "#4282e9" : root.buttonFgOff
+        color: BluetoothController.enabled ? Theme.accent : root.buttonFgOff
         font { family: Theme.nerdFontFamily; pixelSize: 15 }
       }
       MarqueeText {
@@ -261,8 +263,8 @@ RowLayout {
     anchorX: Quickshell.screens[0]
              ? Quickshell.screens[0].x + Quickshell.screens[0].width
                - (root.mapToGlobal(root.width, 0).x + (29 * root.dpi))
-               - (270 * root.dpi)
+               - (238 * root.dpi)
              : 0
-    anchorY: btBtn.mapToGlobal(0, 0).y
+    anchorY: btBtn.mapToGlobal(0, 0).y + (40 * root.dpi)
   }
 }
