@@ -38,4 +38,13 @@ RowLayout {
         color: Theme.fg
         font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
     }
+
+    WheelHandler {
+        orientation: Qt.Vertical
+        onWheel: (event) => {
+            const step = 0.05
+            const delta = event.angleDelta.y > 0 ? step : -step
+            BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
+        }
+    }
 }

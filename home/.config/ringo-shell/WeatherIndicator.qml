@@ -10,6 +10,7 @@ Item {
 
   property string weatherFg: Theme.fg4
   property int fontSize: 10 * Config.pillScale
+  property bool clickable: true
 
   Row {
     id: row
@@ -32,7 +33,8 @@ Item {
 
   MouseArea {
     anchors.fill: parent
-    cursorShape: Qt.PointingHandCursor
+    enabled: root.clickable
+    cursorShape: root.clickable ? Qt.PointingHandCursor : Qt.ArrowCursor
     onClicked: root.toggleWeather()
   }
 }

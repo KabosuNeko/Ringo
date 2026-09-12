@@ -184,7 +184,7 @@ void NiriController::action(const QString &actionName) {
     QLocalSocket sock;
     sock.connectToServer(m_socketPath);
     if (sock.waitForConnected(300)) {
-        const QString cmd = QStringLiteral("{\"Action\":\"%1\"}\n").arg(actionName);
+        const QString cmd = QStringLiteral("{\"Action\":{\"%1\":{}}}\n").arg(actionName);
         sock.write(cmd.toUtf8());
         sock.flush();
         sock.waitForBytesWritten(300);

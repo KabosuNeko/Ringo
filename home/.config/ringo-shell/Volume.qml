@@ -60,4 +60,14 @@ RowLayout {
   PwObjectTracker {
     objects: [root.sink]
   }
+
+  WheelHandler {
+    orientation: Qt.Vertical
+    onWheel: (event) => {
+      if (!root.sink || !root.sink.ready) return
+      const step = 0.03
+      const delta = event.angleDelta.y > 0 ? step : -step
+      root.sink.audio.volume = Math.max(0, Math.min(1.0, root.sink.audio.volume + delta))
+    }
+  }
 }

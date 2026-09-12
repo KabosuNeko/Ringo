@@ -382,6 +382,17 @@ ShellRoot {
           id: centerClock
           Layout.alignment: Qt.AlignVCenter
         }
+
+        WheelHandler {
+          orientation: Qt.Vertical
+          onWheel: (event) => {
+            if (event.angleDelta.y > 0) {
+              NiriController.action("FocusColumnLeft")
+            } else if (event.angleDelta.y < 0) {
+              NiriController.action("FocusColumnRight")
+            }
+          }
+        }
       }
 
       RowLayout {
@@ -413,6 +424,7 @@ ShellRoot {
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
+
         RowLayout {
           spacing: 4 * Config.paddingScale
           Text {
@@ -425,14 +437,21 @@ ShellRoot {
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
           }
+
+          WheelHandler {
+            orientation: Qt.Vertical
+            onWheel: (event) => {
+              const step = 0.05
+              const delta = event.angleDelta.y > 0 ? step : -step
+              BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
+            }
+          }
         }
+
         WeatherIndicator {
           id: barWeatherIndicator
           weatherFg: Theme.fg
-          onToggleWeather: {
-            weatherPopup.shown = !weatherPopup.shown
-            calendarPopup.shown = false
-          }
+          clickable: false
         }
       }
 
