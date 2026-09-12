@@ -247,7 +247,7 @@ ShellRoot {
                      : miniDashboard ? 420
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                      : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 96 : 84) * Config.paddingScale
+                       : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd === "battery" ? osdHeight
                   : activeOsd === "volume" ? osdHeight
@@ -380,7 +380,7 @@ ShellRoot {
           }
       }
 
-      // modules in bar - symmetric layout with Theme.hair dividers
+      // modules in bar - symmetric layout
       RowLayout {
         id: centerGroup
         anchors.centerIn: parent
@@ -395,23 +395,10 @@ ShellRoot {
         }
       }
 
-      Rectangle {
-        id: leftDivider
-        anchors.right: centerGroup.left
-        anchors.rightMargin: (box.hovered ? 15 : 12) * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        width: 1
-        height: 12 * Config.pillScale
-        color: Theme.hair
-        opacity: box.barContentOpacity
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
-      }
-
       RowLayout {
         id: leftGroup
-        anchors.right: leftDivider.left
-        anchors.rightMargin: (box.hovered ? 15 : 12) * Config.paddingScale
+        anchors.right: centerGroup.left
+        anchors.rightMargin: (box.hovered ? 18 : 14) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         spacing: 12 * Config.paddingScale
         opacity: box.barContentOpacity
@@ -428,23 +415,10 @@ ShellRoot {
         }
       }
 
-      Rectangle {
-        id: rightDivider
-        anchors.left: centerGroup.right
-        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        width: 1
-        height: 12 * Config.pillScale
-        color: Theme.hair
-        opacity: box.barContentOpacity
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
-      }
-
       RowLayout {
         id: rightGroup
-        anchors.left: rightDivider.right
-        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
+        anchors.left: centerGroup.right
+        anchors.leftMargin: (box.hovered ? 18 : 14) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
         spacing: 12 * Config.paddingScale
         opacity: box.barContentOpacity
