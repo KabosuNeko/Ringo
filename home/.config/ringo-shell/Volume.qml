@@ -2,8 +2,6 @@ import Quickshell
 import Quickshell.Services.Pipewire
 import QtQuick
 import QtQuick.Layouts
-import IslandBackend
-
 RowLayout {
   id: root
   signal volumeChanged
@@ -16,8 +14,7 @@ RowLayout {
   readonly property bool muted: ready && sink.audio.muted
   readonly property int vol: ready ? Math.round(sink.audio.volume * 100) : 0
 
-  readonly property string activePort: AudioController.activePort
-  readonly property bool isHeadphone: AudioController.isHeadphone
+  readonly property bool isHeadphone: root.ready && (root.sink.description || "").toLowerCase().includes("headphone")
   spacing: 4 * Config.paddingScale
 
   property string icon: {

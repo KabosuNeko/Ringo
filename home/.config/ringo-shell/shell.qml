@@ -13,16 +13,6 @@ import Quickshell.Services.SystemTray
 ShellRoot {
   id: root
 
-  Keys.onEscapePressed: {
-      box.controlCenter = false
-      box.miniDashboard = false
-      box.cliphistOpen = false
-      box.appLauncher = false
-      box.wallpaperSwitcherOpen = false
-      box.powerMenuOpen = false
-      box.recordMenuOpen = false
-      box.activeOsd = ""
-  }
 
   IpcHandler {
       target: "cliphist"
@@ -162,6 +152,18 @@ ShellRoot {
       opacity: (!fullscreenActive && !notifFullscreenMode && !LockController.locked) ? 1 : 0
       visible: opacity > 0
       clip: true
+      focus: true
+
+      Keys.onEscapePressed: {
+          box.controlCenter = false
+          box.miniDashboard = false
+          box.cliphistOpen = false
+          box.appLauncher = false
+          box.wallpaperSwitcherOpen = false
+          box.powerMenuOpen = false
+          box.recordMenuOpen = false
+          box.activeOsd = ""
+      }
 
       property bool appLauncher: false
       HoverHandler { id: boxHoverHandler; onHoveredChanged: box.hovered = hovered }
@@ -229,9 +231,7 @@ ShellRoot {
       // keep Clock truly centered and symmetric
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
       readonly property real sideWidth: Math.max(leftGroup.implicitWidth, rightGroup.implicitWidth)
-      readonly property real baseWidth: activeOsd === "battery" ? osdWidth
-                     : activeOsd === "volume" ? osdWidth
-                     : activeOsd === "brightness" ? osdWidth
+      readonly property real baseWidth: activeOsd !== "" ? 220
                      : (notificationModule.active && !notifFullscreenMode) ? 320
                      : controlCenter ? 390
                      : appLauncher ? 390
@@ -243,9 +243,7 @@ ShellRoot {
                       : cliphistOpen ? 460
                        : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
 
-      readonly property real baseHeight: activeOsd === "battery" ? osdHeight
-                  : activeOsd === "volume" ? osdHeight
-                  : activeOsd === "brightness" ? osdHeight
+      readonly property real baseHeight: activeOsd !== "" ? 40
                   : (notificationModule.active && !notifFullscreenMode) ? 52
                   : controlCenter && MprisController.hasPlayer
                       ? (240 + notifBump + trayBump)

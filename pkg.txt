@@ -2,7 +2,7 @@ networkmanager
 bluez
 bluez-utils
 power-profiles-daemon
-quickshell-git
+quickshell
 foot
 swaybg
 ly

@@ -56,7 +56,7 @@ Rectangle {
                     visible: MprisController.artUrl !== "" && status !== Image.Error
                     asynchronous: true
                     cache: true
-                    sourceSize: Qt.size(94 * box.dpi, 94 * box.dpi)
+                    sourceSize: Qt.size(94 * Config.dpiScale, 94 * Config.dpiScale)
                 }
 
                 Text {

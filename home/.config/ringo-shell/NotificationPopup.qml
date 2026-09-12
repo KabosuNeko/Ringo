@@ -25,8 +25,8 @@ Item {
 
     Image {
       id: notifIcon
-      width: 23 * box.dpi
-      height: 23 * box.dpi
+      Layout.preferredWidth: 23 * Config.dpiScale
+      Layout.preferredHeight: 23 * Config.dpiScale
       fillMode: Image.PreserveAspectCrop
       source: {
         // Only show the app icon. Attached images (e.g. screenshots) are

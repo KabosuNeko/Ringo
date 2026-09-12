@@ -690,7 +690,7 @@ void WifiController::handleDeviceRemoved(const QDBusObjectPath &) {
     m_stateRefreshTimer.start();
 }
 
-void WifiController::handleIwdInterfacesAdded(const QDBusObjectPath &, const QDBusArgument &) {
+void WifiController::handleIwdInterfacesAdded(const QDBusMessage &) {
     if (m_backendName != QLatin1String("iwd"))
         return;
 
@@ -784,7 +784,7 @@ void WifiController::detectBackend() {
             kObjectManagerInterface,
             "InterfacesAdded",
             this,
-            SLOT(handleIwdInterfacesAdded(QDBusObjectPath,QDBusArgument))
+            SLOT(handleIwdInterfacesAdded(QDBusMessage))
         );
         QDBusConnection::systemBus().connect(
             kIwdService,

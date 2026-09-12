@@ -53,6 +53,7 @@ binds {
     Mod+Down  { focus-window-down; }
     Mod+K     { focus-window-up; }
     Mod+Up    { focus-window-up; }
+    Mod+L     { focus-column-right; }
     Mod+Right { focus-column-right; }
     Mod+S     { focus-column-right; }
 

@@ -89,7 +89,7 @@ private slots:
     void handleAccessPointRemoved(const QDBusObjectPath &accessPointPath);
     void handleDeviceAdded(const QDBusObjectPath &devicePath);
     void handleDeviceRemoved(const QDBusObjectPath &devicePath);
-    void handleIwdInterfacesAdded(const QDBusObjectPath &objectPath, const QDBusArgument &interfacesAndProperties);
+    void handleIwdInterfacesAdded(const QDBusMessage &message = {});
     void handleIwdInterfacesRemoved(const QDBusObjectPath &objectPath, const QStringList &interfaces);
     void handleNewConnection(const QDBusObjectPath &connectionPath);
     void handleConnectionRemoved(const QDBusObjectPath &connectionPath);
