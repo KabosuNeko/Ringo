@@ -8,12 +8,7 @@
 
 Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 
-Unlike typical desktop shells that stitch together dozens of heavy bash scripts, background polling commands, and disconnected daemons, **ringo-shell** is built from the ground up with a dedicated **C++ backend** (`IslandBackend`) bound directly to Qt/QML:
-
-- **Native C++ Engine**: Asynchronous D-Bus integration for WiFi (IWD / NetworkManager) and Bluetooth (BlueZ) — zero polling loops, zero subprocess overhead.
-- **All-in-One Experience**: Your status bar, application launcher, notification center, clipboard manager, control center, and lock screen unified in a single, ultra-lightweight process.
-- **Direct System Services**: Integrated PAM authentication for instant lock screen security, PipeWire audio tracking, MPRIS media control, and power-profiles-daemon management.
-- **Buttery Smooth UI**: Hardware-accelerated QtQuick/QML animations designed to blend seamlessly into Niri's scrollable tiling desktop.
+Unlike traditional desktop bars glued together with fragile shell scripts and endless polling loops, Ringo is powered by **ringo-shell** — a unified, dynamic island shell with a native **C++ backend** (`IslandBackend`) tailored specifically for Niri.
 
 ## Preview
 
@@ -44,11 +39,12 @@ Unlike typical desktop shells that stitch together dozens of heavy bash scripts,
 
 ## Features
 
-- **pywal16 color scheme** — colors come straight from the config files `wal` generates in `~/.cache/wal/` (Foot reads `colors-foot-dark.ini`, ringo-shell reads `colors.json`, GTK reads `gtk-colors`), refreshed automatically whenever the wallpaper changes
-- **All-in-one shell (ringo-shell)** — a Quickshell-based pill bar that replaces the traditional status bar, launcher, notifications, lock screen, and idle daemon: app launcher, clipboard history, control center (wifi/bluetooth/volume/brightness/media/power profiles), mini dashboard (system info + power controls), wallpaper switcher, power menu, and a PAM-backed lock screen with blur
-- **GNU Stow deployment** — symlink-based, safe to rerun, trivial to uninstall
-- **Hardware-adaptive** — no hardcoded monitor names, backlight devices, battery IDs, or GPU drivers
-- **Progressive idle** — 300s dim → 330s lock → 360s monitor off → 600s suspend
+- **Native C++ Backend (`IslandBackend`)** — Asynchronous D-Bus integration for WiFi (IWD / NetworkManager), Bluetooth (BlueZ), and direct PAM authentication — zero polling loops, zero subprocess spawns.
+- **All-in-One Dynamic Shell** — A single, hardware-accelerated QtQuick process that replaces your status bar, application launcher, notification center, clipboard history, control center, mini dashboard, and blur lock screen.
+- **pywal16 Color Scheme** — Colors come straight from `wal` configs (`colors.json` for ringo-shell, `colors-foot-dark.ini` for Foot, `gtk-colors` for GTK) and refresh automatically with wallpaper changes.
+- **Progressive Idle Management** — Built-in Quickshell IdleMonitor with staged timeouts: 300s dim → 330s lock → 360s monitor off → 600s suspend.
+- **Hardware-Adaptive** — No hardcoded monitor names, backlight paths, battery devices, or GPU drivers.
+- **GNU Stow Deployment** — Symlink-based dotfile management: safe to re-run, easy to inspect, and trivial to uninstall.
 
 ## Installation
 
