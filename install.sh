@@ -194,6 +194,14 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
         cp build/libIslandBackend.so build/libIslandBackendPlugin.so build/qmldir build/IslandBackend.qmltypes "$HOME/.config/ringo-shell/IslandBackend/"
         chmod +x "$HOME/.local/bin/ringo-shell"
 
+        if [ -f "$RINGO_DIR/assets/ringo.png" ]; then
+            echo ":: Installing ringo-shell icon..."
+            mkdir -p "$HOME/.local/share/icons/hicolor/256x256/apps"
+            mkdir -p "$HOME/.local/share/pixmaps"
+            cp "$RINGO_DIR/assets/ringo.png" "$HOME/.local/share/icons/hicolor/256x256/apps/ringo.png"
+            cp "$RINGO_DIR/assets/ringo.png" "$HOME/.local/share/pixmaps/ringo.png"
+        fi
+
         echo ":: Cleaning up ringo-shell build files..."
         rm -rf build
         cd "$RINGO_DIR"
