@@ -17,4 +17,4 @@ fi
 
 export LD_LIBRARY_PATH="$RINGO_DIR/IslandBackend:$LD_LIBRARY_PATH"
 export QML_IMPORT_PATH="$RINGO_DIR:$QML_IMPORT_PATH"
-exec qs -p "$RINGO_DIR"
+exec qs -d -p "$RINGO_DIR"

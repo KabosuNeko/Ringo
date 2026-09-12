@@ -67,10 +67,20 @@ Rectangle {
           Behavior on color { ColorAnimation { duration: 100 } }
 
           IconImage {
+            id: trayIconImage
             anchors.centerIn: parent
             width: 16
             height: 16
             source: modelData.icon
+            visible: status !== Image.Error
+          }
+
+          Text {
+            anchors.centerIn: parent
+            visible: trayIconImage.status === Image.Error || !modelData.icon
+            text: "󰍜"
+            color: Theme.fg4
+            font { family: Theme.nerdFontFamily; pixelSize: 13 }
           }
 
           MouseArea {
