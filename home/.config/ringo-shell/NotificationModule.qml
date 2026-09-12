@@ -74,6 +74,7 @@ Item {
     notifications.push(entry)
     if (notifications.length > maxStored) {
       const old = notifications.shift()
+      if (old.notif) old.notif.tracked = false
       old.tracked = false
     }
     syncReversed()
@@ -103,6 +104,7 @@ Item {
     if (idx === -1) return
     const entry = notifications[idx]
     notifications.splice(idx, 1)
+    if (entry.notif) entry.notif.tracked = false
     entry.tracked = false
     const qidx = queue.indexOf(entry)
     if (qidx !== -1) queue.splice(qidx, 1)
@@ -111,7 +113,10 @@ Item {
   }
 
   function clearAll(): void {
-    for (let i = 0; i < notifications.length; i++) notifications[i].tracked = false
+    for (let i = 0; i < notifications.length; i++) {
+      if (notifications[i].notif) notifications[i].notif.tracked = false
+      notifications[i].tracked = false
+    }
     notifications = []
     notificationsReversed = []
     notificationsChanged()

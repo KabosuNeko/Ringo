@@ -123,12 +123,6 @@ ShellRoot {
     function onWeatherRefreshIntervalChanged() { WeatherController.refreshInterval = Config.weatherRefreshInterval }
   }
 
-  property int osdInWidth: 120
-  property real osdInHeight: 3.7
-  property int osdBarRadius: 2
-  property int osdSpeed: 60 // how fast bar fill/unfill
-  property int osdWidth: 220
-  property int osdHeight: 40
 
   readonly property int notifMaxHeight: 97
 

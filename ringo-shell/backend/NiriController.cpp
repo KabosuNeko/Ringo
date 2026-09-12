@@ -96,6 +96,7 @@ void NiriController::onEventSocketDisconnected() {
 void NiriController::onEventSocketReadyRead() {
     if (!m_eventSocket) return;
 
+    bool needsQuery = false;
     while (m_eventSocket->canReadLine()) {
         const QByteArray line = m_eventSocket->readLine().trimmed();
         if (line.isEmpty() || line.startsWith("{\"Ok\":\"Handled\"}")) continue;
@@ -104,8 +105,12 @@ void NiriController::onEventSocketReadyRead() {
         if (line.contains("WindowOpened") || line.contains("WindowClosed")
             || line.contains("WindowChanged") || line.contains("WindowFocusChanged")
             || line.contains("WorkspacesChanged") || line.contains("WorkspaceActivated")) {
-            queryWindows();
+            needsQuery = true;
         }
+    }
+
+    if (needsQuery) {
+        queryWindows();
     }
 }
 
@@ -133,6 +138,9 @@ void NiriController::onQuerySocketReadyRead() {
     // Niri sends JSON responses ending with newline
     if (m_queryBuffer.endsWith('\n')) {
         parseWindowsJson(m_queryBuffer.trimmed());
+        m_queryBuffer.clear();
+    } else if (m_queryBuffer.size() > 1024 * 1024) {
+        // Sanity guard against runaway buffer on malformed stream
         m_queryBuffer.clear();
     }
 }

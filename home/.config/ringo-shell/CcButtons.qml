@@ -100,7 +100,10 @@ RowLayout {
   }
 
   onNotificationPopupChanged: {
-    if (root.notificationPopup) root.wifiPanelOpened = false; root.btPanelOpened = false
+    if (root.notificationPopup) {
+      root.wifiPanelOpened = false
+      root.btPanelOpened = false
+    }
   }
 
   Rectangle {

@@ -10,14 +10,6 @@
 #include <QRegularExpression>
 #include <cmath>
 
-namespace {
-QString readFile(const QString &path) {
-    QFile f(path);
-    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return {};
-    return QString::fromUtf8(f.readAll());
-}
-}
-
 SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
     m_bwTimer.setInterval(1000);
     m_bwTimer.setSingleShot(false);

@@ -41,7 +41,7 @@ Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 - **All-in-one shell (ringo-shell)** — a Quickshell-based pill bar that replaces the traditional status bar, launcher, notifications, lock screen, and idle daemon: app launcher, clipboard history, control center (wifi/bluetooth/volume/brightness/media/power profiles), mini dashboard (system info + power controls), wallpaper switcher, power menu, and a PAM-backed lock screen with blur
 - **GNU Stow deployment** — symlink-based, safe to rerun, trivial to uninstall
 - **Hardware-adaptive** — no hardcoded monitor names, backlight devices, battery IDs, or GPU drivers
-- **Progressive idle** — 300s dim → 330s lock → 360s monitor off → 600s suspendl
+- **Progressive idle** — 300s dim → 330s lock → 360s monitor off → 600s suspend
 
 ## Installation
 

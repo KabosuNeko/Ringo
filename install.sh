@@ -173,7 +173,6 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
         echo ":: Checking ringo-shell build dependencies..."
         missing=""
         command -v cmake > /dev/null 2>&1 || missing="${missing}cmake "
-        pkg-config --exists libpulse > /dev/null 2>&1 || missing="${missing}libpulse "
         if [ -n "$missing" ]; then
             echo "XXX [MISSING] $missing"
             yay -S --noconfirm $missing

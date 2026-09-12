@@ -16,10 +16,10 @@ Item {
     property int defaultSpacing: spacing !== 0 ? spacing : 10
 
     // bar adjustments
-    property int barWidth: osdInWidth
-    property real barHeight: osdInHeight
-    property int barRadius: osdBarRadius
-    property int fillSpeed: osdSpeed
+    property int barWidth: 120
+    property real barHeight: 3.7
+    property int barRadius: 2
+    property int fillSpeed: 60
 
     anchors.centerIn: parent
     opacity: active ? 1 : 0

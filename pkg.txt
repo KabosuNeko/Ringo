@@ -38,11 +38,9 @@ gruvbox-plus-icon-theme
 bibata-cursor-theme
 gtk-engine-murrine
 python-pywal16
-libpulse
 niri
 wlsunset
 sway-audio-idle-inhibit-git
-nusgmon
 wl-screenrec-git
 eza
 bat

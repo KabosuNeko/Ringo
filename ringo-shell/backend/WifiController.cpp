@@ -299,7 +299,6 @@ private:
 
 WifiController::WifiController(QObject *parent)
     : QObject(parent) {
-    qDebug() << "[Wifi] WifiController constructor called";
     qDBusRegisterMetaType<ConnectionSettingsMap>();
     qDBusRegisterMetaType<IwdManagedObjectMap>();
     qDBusRegisterMetaType<IwdOrderedNetworkList>();
@@ -798,10 +797,7 @@ void WifiController::detectBackend() {
         m_iwdSignalsConnected = true;
     }
 
-    qDebug() << "[Wifi] Detecting backend: NM=" << hasNetworkManager << " Iwd=" << hasIwd;
-
     if (hasNetworkManager) {
-        qDebug() << "[Wifi] Selecting NetworkManager backend";
         unregisterIwdAgent();
         m_iwdPendingPassphrases.clear();
         setBackendName(QStringLiteral("networkmanager"));
@@ -813,7 +809,6 @@ void WifiController::detectBackend() {
     }
 
     if (hasIwd) {
-        qDebug() << "[Wifi] Selecting Iwd backend";
         setBackendName(QStringLiteral("iwd"));
         setSupported(true);
         setReadOnly(false);
@@ -823,7 +818,6 @@ void WifiController::detectBackend() {
         return;
     }
 
-    qDebug() << "[Wifi] No supported backend found";
     disconnectDeviceSignals();
     m_savedConnectionsBySsid.clear();
     m_savedConnectionsDirty = true;
