@@ -108,11 +108,6 @@ binds {
     Mod+Ctrl+Shift+WheelScrollDown { move-column-right; }
     Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
 
-    // Mouse Side Buttons (Forward / Back)
-    MouseBack    { focus-column-left; }
-    MouseForward { focus-column-right; }
-    Mod+MouseBack    { move-column-left; }
-    Mod+MouseForward { move-column-right; }
 
     // Workspace Navigation (Keyboard)
     Mod+U { focus-workspace-down; }
