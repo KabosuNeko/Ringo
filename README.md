@@ -8,10 +8,6 @@
 
 Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 
-A lot of modern desktop setups focus mainly on looking as flashy as possible. In practice, that often means heavy bloat, wasted screen real estate, and a pile of widgets and features that 99% of people never touch while trying to get actual work done. Ringo takes the opposite path: keep it lightweight, purposeful, and out of your way.
-
-Instead of stitching together brittle shell scripts and background polling loops, Ringo is powered by **ringo-shell** — an all-in-one dynamic island with a dedicated C++ backend (`IslandBackend`) for direct D-Bus communication and PAM authentication.
-
 ## Preview
 
 | <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7" /> |
@@ -48,7 +44,13 @@ Instead of stitching together brittle shell scripts and background polling loops
 - **Hardware-Adaptive** — No hardcoded monitor names, backlight paths, battery devices, or GPU drivers.
 - **GNU Stow Deployment** — Symlink-based dotfile management: safe to re-run, easy to inspect, and trivial to uninstall.
 
-## Why Niri?
+## Why Ringo?
+
+A lot of modern desktop setups focus mainly on looking as flashy as possible. In practice, that often means heavy bloat, wasted screen real estate, and a pile of widgets and features that 99% of people never touch while trying to get actual work done. Ringo takes the opposite path: keep it lightweight, purposeful, and out of your way.
+
+Instead of stitching together brittle shell scripts and background polling loops, Ringo is powered by **ringo-shell** — an all-in-one dynamic island with a dedicated C++ backend (`IslandBackend`) for direct D-Bus communication and PAM authentication.
+
+### Why Niri?
 
 For me, Niri strikes the ideal balance: lightweight, fast, and exceptionally practical for everyday laptop use. The scrollable tiling ribbon feels completely natural with trackpad gestures, avoids the constant window juggling of manual tilers on a smaller screen, and keeps your display focused on what you're actually doing without wasting space.
 
