@@ -8,6 +8,13 @@
 
 Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 
+Unlike typical desktop shells that stitch together dozens of heavy bash scripts, background polling commands, and disconnected daemons, **ringo-shell** is built from the ground up with a dedicated **C++ backend** (`IslandBackend`) bound directly to Qt/QML:
+
+- **Native C++ Engine**: Asynchronous D-Bus integration for WiFi (IWD / NetworkManager) and Bluetooth (BlueZ) — zero polling loops, zero subprocess overhead.
+- **All-in-One Experience**: Your status bar, application launcher, notification center, clipboard manager, control center, and lock screen unified in a single, ultra-lightweight process.
+- **Direct System Services**: Integrated PAM authentication for instant lock screen security, PipeWire audio tracking, MPRIS media control, and power-profiles-daemon management.
+- **Buttery Smooth UI**: Hardware-accelerated QtQuick/QML animations designed to blend seamlessly into Niri's scrollable tiling desktop.
+
 ## Preview
 
 | <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7" /> |
