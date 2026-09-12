@@ -58,7 +58,7 @@ window-rule {
 
 layer-rule {
     match namespace="^ringo-shell$"
-    geometry-corner-radius 12
+    geometry-corner-radius 20
     background-effect {
         xray true
         blur true

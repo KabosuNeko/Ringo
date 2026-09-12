@@ -266,18 +266,7 @@ ShellRoot {
                     : recordMenuOpen ? 90
                     : (Math.max(leftGroup.implicitHeight, centerGroup.implicitHeight, rightGroup.implicitHeight) * Config.pillScale) + 10
 
-      readonly property real baseRadius: notificationModule.active ? 99
-        : cliphistOpen && cliphistPreviewing ? 35
-        : cliphistOpen ? 28
-        : wallpaperSwitcherOpen ? 30
-        : powerMenuOpen ? 24
-        : recordMenuOpen ? 24
-        : controlCenter ? (notificationModule.notifications.length > 0
-          ? (MprisController.hasPlayer ? 27 : 25)
-          : (MprisController.hasPlayer ? 26 : 22))
-        : appLauncher ? 30
-        : miniDashboard ? 20
-        : 20 * Config.pillScale
+      readonly property real baseRadius: 20 * Config.pillScale
 
       implicitWidth: baseWidth
       implicitHeight: baseHeight
@@ -1278,54 +1267,10 @@ ShellRoot {
           anchors.topMargin: 95
 
           RowLayout {
-            anchors.left: parent.left
-            anchors.right: parent.right
+            anchors.fill: parent
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
             anchors.verticalCenter: parent.verticalCenter
-            anchors.leftMargin: 8
-            anchors.rightMargin: 8
-            spacing: 8
-
-            Rectangle {
-              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
-              radius: buttonctlRadius; color: buttonBg
-              Layout.alignment: Qt.AlignVCenter
-              Text {
-                anchors.centerIn: parent;
-                text: "󰌾";
-                color: lockHover.containsMouse ? buttonHoverBg : Theme.fg;
-                font.pixelSize: 8
-                Behavior on color { ColorAnimation { duration: buttonHoverSpeed } }
-              }
-
-              MouseArea {
-                id: lockHover
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: LockController.lock()
-                hoverEnabled: true
-              }
-            }
-
-            Rectangle {
-              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
-              radius: buttonctlRadius; color: buttonBg
-              Layout.alignment: Qt.AlignVCenter
-              Text {
-                anchors.centerIn: parent;
-                text: "󰤄";
-                color: sleepHover.containsMouse ? buttonHoverBg : Theme.fg;
-                font.pixelSize: 9
-                Behavior on color { ColorAnimation { duration: buttonHoverSpeed } }
-              }
-
-              MouseArea {
-                id: sleepHover
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: NiriController.suspend()
-                hoverEnabled: true
-              }
-            }
 
             Item { Layout.fillWidth: true }
 
@@ -1336,48 +1281,6 @@ ShellRoot {
             WeatherIndicator { id: weatherIndicatorItem }
 
             Item { Layout.fillWidth: true }
-
-            Rectangle {
-              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
-              radius: buttonctlRadius; color: buttonBg
-              Layout.alignment: Qt.AlignVCenter
-              Text {
-                anchors.centerIn: parent;
-                text: "󰜉";
-                color: rebootHover.containsMouse ? buttonHoverBg : Theme.fg;
-                font.pixelSize: 9;
-                Behavior on color { ColorAnimation { duration: buttonHoverSpeed } }
-              }
-
-              MouseArea {
-                id: rebootHover
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: NiriController.reboot()
-                hoverEnabled: true
-              }
-            }
-
-            Rectangle {
-              Layout.preferredWidth: buttonSize; Layout.preferredHeight: buttonSize
-              radius: buttonctlRadius; color: buttonBg
-              Layout.alignment: Qt.AlignVCenter
-              Text {
-                anchors.centerIn: parent;
-                text: "󰐥";
-                color: shutdownHover.containsMouse ? buttonHoverBg : Theme.fg;
-                font.pixelSize: 12;
-                Behavior on color { ColorAnimation { duration: buttonHoverSpeed } }
-              }
-
-              MouseArea {
-                id: shutdownHover
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: NiriController.powerOff()
-                hoverEnabled: true
-              }
-            }
           }
         }
       }
