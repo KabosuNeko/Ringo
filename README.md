@@ -10,10 +10,6 @@
   </p>
 </div>
 
-<br/>
-
-Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
-
 ---
 
 ## Preview
@@ -62,6 +58,8 @@ Ringo is a Niri + quickshell configuration. It's clean, simple, and just works.
 ---
 
 ## Why Ringo?
+
+Ringo is a Niri + Quickshell configuration designed to be clean, simple, and functional.
 
 A lot of modern desktop setups focus mainly on looking as flashy as possible. In practice, that often means heavy bloat, wasted screen real estate, and a pile of widgets and features that 99% of people never touch while trying to get actual work done. Ringo takes the opposite path: keep it lightweight, purposeful, and out of your way.
 
