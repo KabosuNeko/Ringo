@@ -8,16 +8,16 @@ Rectangle {
     anchors.left: parent.left
     anchors.right: parent.right
     height: MprisController.hasPlayer ? 118 : 0
-    radius: 16
-    color: Theme.bgD
+    radius: 14
+    color: Theme.cardBg
     visible: MprisController.hasPlayer
     clip: true
-    border.color: Theme.borderBg3
+    border.color: Theme.cardBorder
     border.width: 1
 
     property int artistFontSize: 10
     property string artistFontColor: Theme.fg4
-    property int artistFontWeight: 300
+    property int artistFontWeight: 400
 
     property real mprisProgress: MprisController.progress
     property string mprisTimePlayed: formatMprisTime(MprisController.polledPosition)
@@ -33,19 +33,21 @@ Rectangle {
 
      Column {
         anchors.fill: parent
-        anchors.margins: 16
-        spacing: 15
+        anchors.margins: 14
+        spacing: 14
 
         Row {
             width: parent.width
             height: 48
-            spacing: 15
+            spacing: 12
 
             ClippingRectangle {
-                width: 47; height: 47
-                radius: 7
-                color: "transparent"
+                width: 48; height: 48
+                radius: 10
+                color: Theme.bg4
                 anchors.verticalCenter: parent.verticalCenter
+                border.width: 1
+                border.color: Theme.pillBorder
                 clip: true
 
                 Image {
@@ -56,7 +58,7 @@ Rectangle {
                     visible: MprisController.artUrl !== "" && status !== Image.Error
                     asynchronous: true
                     cache: true
-                    sourceSize: Qt.size(94 * Config.dpiScale, 94 * Config.dpiScale)
+                    sourceSize: Qt.size(96 * Config.dpiScale, 96 * Config.dpiScale)
                 }
 
                 Text {
@@ -71,13 +73,13 @@ Rectangle {
 
             Column {
                 anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 46 - 90 - 24
-                spacing: 4
+                width: parent.width - 48 - 96 - 16
+                spacing: 3
 
                 Text {
                     width: parent.width
                     text: MprisController.track !== "" ? MprisController.track : "Nothing playing"
-                    color: Theme.fgL
+                    color: Theme.fg
                     font.pixelSize: 12
                     font.weight: 600
                     font.family: Theme.fontFamily
@@ -97,35 +99,48 @@ Rectangle {
 
             Row {
                 anchors.verticalCenter: parent.verticalCenter
-                spacing: 14
+                spacing: 10
 
                 Text {
                     text: "⏮"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 23
-                    color: prevHover.containsMouse ? "white" : Theme.fg3
+                    font.pixelSize: 16
+                    color: prevHover.hovered ? Theme.fg : Theme.fg4
                     anchors.verticalCenter: parent.verticalCenter
                     Behavior on color { ColorAnimation { duration: 100 } }
+                    HoverHandler { id: prevHover }
                     MouseArea {
-                        id: prevHover
                         anchors.fill: parent
-                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: { MprisController.prev() }
                     }
                 }
 
-                Text {
-                    text: MprisController.playing ? "󰏤" : "󰐊"
-                    font.family: Theme.nerdFontFamily
-                    font.pixelSize: 23
-                    color: playHover.containsMouse ? "white" : Theme.fg2
+                Rectangle {
+                    width: 30; height: 30
+                    radius: 15
+                    color: playHover.hovered ? Theme.accentSoft : Theme.chipBg
+                    border.width: 1
+                    border.color: playHover.hovered ? Theme.accent : Theme.chipBorder
                     anchors.verticalCenter: parent.verticalCenter
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    scale: playMouse.pressed ? 0.92 : 1.0
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: MprisController.playing ? "󰏤" : "󰐊"
+                        font.family: Theme.nerdFontFamily
+                        font.pixelSize: 14
+                        color: playHover.hovered ? Theme.accent : Theme.fg
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                    }
+
+                    HoverHandler { id: playHover }
                     MouseArea {
-                        id: playHover
+                        id: playMouse
                         anchors.fill: parent
-                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: MprisController.playPause()
                     }
@@ -134,16 +149,15 @@ Rectangle {
                 Text {
                     text: "⏭"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 23
-                    color: nextHover.containsMouse ? "white" : Theme.fg3
+                    font.pixelSize: 16
+                    color: nextHover.hovered ? Theme.fg : Theme.fg4
                     anchors.verticalCenter: parent.verticalCenter
                     Behavior on color { ColorAnimation { duration: 100 } }
+                    HoverHandler { id: nextHover }
                     MouseArea {
-                        id: nextHover
                         anchors.fill: parent
-                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: MprisController.next()
+                        onClicked: { MprisController.next() }
                     }
                 }
             }
@@ -151,28 +165,29 @@ Rectangle {
 
         Column {
             width: parent.width
-            spacing: 8
+            spacing: 6
 
             Rectangle {
                 width: parent.width
-                height: barHover.containsMouse ? 5 : 3
-                radius: 8
-                color: Theme.bg5
+                height: barMouse.containsMouse ? 5 : 3
+                radius: 3
+                color: Theme.bg4
 
-                Behavior on height { NumberAnimation { duration: 380; easing.type: Easing.OutExpo } }
+                Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
 
                 Rectangle {
                     width: parent.width * mediaCard.mprisProgress
                     height: parent.height
-                    radius: 5
-                    color: barHover.containsMouse ? Theme.fgL : fg
+                    radius: 3
+                    color: Theme.accent
                     Behavior on width { NumberAnimation { duration: 510; easing.type: Easing.Linear } }
                 }
 
                 MouseArea {
-                    id: barHover
+                    id: barMouse
                     anchors.fill: parent
                     hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
                     onClicked: (mouse) => {
                         let len = MprisController.polledLength
                         if (len <= 0) return
@@ -190,7 +205,8 @@ Rectangle {
                     anchors.left: parent.left
                     text: mediaCard.mprisTimePlayed
                     color: Theme.fg5
-                    font.pixelSize: 10
+                    font.pixelSize: 9
+                    font.weight: 500
                     font.family: Theme.fontFamily
                 }
 
@@ -198,7 +214,8 @@ Rectangle {
                     anchors.right: parent.right
                     text: mediaCard.mprisTimeTotal
                     color: Theme.fg5
-                    font.pixelSize: 10
+                    font.pixelSize: 9
+                    font.weight: 500
                     font.family: Theme.fontFamily
                 }
             }

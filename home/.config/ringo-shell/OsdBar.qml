@@ -16,10 +16,10 @@ Item {
     property int defaultSpacing: spacing !== 0 ? spacing : 10
 
     // bar adjustments
-    property int barWidth: 120
-    property real barHeight: 3.7
-    property int barRadius: 2
-    property int fillSpeed: 60
+    property int barWidth: 110
+    property real barHeight: 6
+    property int barRadius: 3
+    property int fillSpeed: 80
 
     anchors.centerIn: parent
     opacity: active ? 1 : 0
@@ -34,27 +34,36 @@ Item {
             id: valIcon
             text: root.icon
             color: root.iconColor !== "" ? root.iconColor : root.fg
-            font { family: Theme.nerdFontFamily; pixelSize: 15 }
+            font { family: Theme.nerdFontFamily; pixelSize: 14 }
             opacity: 1.0
             onTextChanged: iconPulse.restart()
             SequentialAnimation {
                 id: iconPulse
-                NumberAnimation { target: valIcon; property: "opacity"; to: 0.5; duration: 100; easing.type: Easing.InOutQuad }
-                NumberAnimation { target: valIcon; property: "opacity"; to: 1.0; duration: 140; easing.type: Easing.InOutQuad }
+                NumberAnimation { target: valIcon; property: "scale"; to: 1.15; duration: 60; easing.type: Easing.OutQuad }
+                NumberAnimation { target: valIcon; property: "scale"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
             }
         }
 
         Rectangle {
             width: root.barWidth; height: root.barHeight
             radius: root.barRadius
-            color: "#333"
+            color: Theme.cardBg
+            border.width: 1
+            border.color: Theme.cardBorder
+            visible: root.barWidth > 0
 
             Rectangle {
                 width: parent.width * root.percent
                 height: parent.height
-                radius: 2
-                color: root.fg
-                Behavior on width { NumberAnimation { duration: root.fillSpeed } }
+                radius: root.barRadius
+                color: Theme.accent
+                Behavior on width {
+                    SpringAnimation {
+                        spring: 18.0
+                        damping: 1.8
+                        epsilon: 0.25
+                    }
+                }
             }
         }
 

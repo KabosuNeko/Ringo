@@ -6,7 +6,7 @@ Item {
   implicitWidth: dateLabel.implicitWidth
   implicitHeight: dateLabel.implicitHeight
 
-  property string dateFg: "#9d9d9d"
+  property string dateFg: Theme.fg4
   property int viewYear: new Date().getFullYear()
   property int viewMonth: new Date().getMonth()
 
@@ -22,7 +22,7 @@ Item {
     id: dateLabel
     text: Qt.formatDateTime(clock.date, "hh:mm a ddd, dd MMM yyyy")
     color: dateFg
-    font { family: Theme.fontFamily; weight: 500; pixelSize: 10; letterSpacing: -0.5 }
+    font { family: Theme.fontFamily; weight: 500; pixelSize: 10; letterSpacing: -0.2 }
 
     // call calendar to popup on left click
     MouseArea {

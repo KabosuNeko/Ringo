@@ -191,18 +191,18 @@ ShellRoot {
 
       // control center UI
       property real ccButtonBorderWidth: 1
-      property string ccButtonBorderColor: Theme.borderBg4
+      property string ccButtonBorderColor: Theme.cardBorder
       property real ccButtonWidth: 85.3
       property int ccButtonHeight: 35
-      property int ccButtonRadius: 10
-      property string ccButtonBgOff: Theme.bg1
-      property string ccButtonFgOff: Theme.fg3
-      property int sliderHeight: 4
-      property int sliderRadius: 4
-      property string sliderColor: Theme.sliderBg
+      property int ccButtonRadius: 11
+      property color ccButtonBgOff: Theme.cardBg
+      property color ccButtonFgOff: Theme.fg3
+      property int sliderHeight: 6
+      property int sliderRadius: 3
+      property string sliderColor: Theme.accent
       // invisible extra clickable area above/below the thin slider bars
       // (proportional to the bar height, so it scales with sliderHeight)
-      property int sliderHitSlop: sliderHeight * 2
+      property int sliderHitSlop: 12
       property int mprisControlsIconSize: 20
 
       property string activeOsd: "" // volume, brightness, battery
@@ -265,6 +265,21 @@ ShellRoot {
       radius: baseRadius
       scale: dpi
       transformOrigin: Item.Top
+
+      border.width: 1
+      border.color: Theme.pillBorder
+
+      // top sheen line for physical glass refraction
+      Rectangle {
+        anchors.top: parent.top
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.margins: 1
+        height: 1
+        radius: box.radius
+        color: Theme.pillHighlight
+        z: 99
+      }
 
       Behavior on radius {
           NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -747,7 +762,9 @@ ShellRoot {
               Layout.fillWidth: true
               Layout.preferredHeight: box.sliderHeight
               radius: box.sliderRadius
-              color: Theme.bg5
+              color: Theme.cardBg
+              border.width: 1
+              border.color: Theme.cardBorder
 
               Rectangle {
                 width: parent.width * (volumeModule.vol / 100)
@@ -784,7 +801,9 @@ ShellRoot {
               color: Theme.fg
               font.family: Theme.fontFamily
               font.pixelSize: 10
+              font.weight: 600
               Layout.minimumWidth: 35
+              horizontalAlignment: Text.AlignRight
               onTextChanged: valPulse.restart()
               SequentialAnimation {
                 id: valPulse
@@ -819,7 +838,9 @@ ShellRoot {
               Layout.fillWidth: true
               Layout.preferredHeight: box.sliderHeight
               radius: box.sliderRadius
-              color: Theme.bg5
+              color: Theme.cardBg
+              border.width: 1
+              border.color: Theme.cardBorder
 
               Rectangle {
                 width: parent.width * brightnessModule.percent
@@ -859,7 +880,9 @@ ShellRoot {
               color: Theme.fg
               font.family: Theme.fontFamily
               font.pixelSize: 10
+              font.weight: 600
               Layout.minimumWidth: 35
+              horizontalAlignment: Text.AlignRight
               onTextChanged: btPulse.restart()
               SequentialAnimation {
                   id: btPulse
@@ -1181,18 +1204,25 @@ ShellRoot {
         }
 
         RowLayout {
-         // profile picture (display picture)
-           ClippingRectangle {
+          spacing: 8
+          anchors.top: parent.top
+          anchors.left: parent.left
+          anchors.topMargin: 4
+
+          // profile picture (squircle display picture)
+          ClippingRectangle {
             id: avatarClip
-            Layout.preferredWidth: avatarSize
-            Layout.preferredHeight: avatarSize
-            radius: avatarSize / 2
+            Layout.preferredWidth: 42
+            Layout.preferredHeight: 42
+            radius: 10
             property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
-            color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.bg5 : "transparent"
+            color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
+            border.width: 1
+            border.color: Theme.accentSoft
             layer.enabled: true
             layer.smooth: true
             layer.mipmap: true
-            layer.textureSize: Qt.size(avatarSize, avatarSize)
+            layer.textureSize: Qt.size(42, 42)
 
             Image {
               id: avatarImg
@@ -1202,85 +1232,118 @@ ShellRoot {
               asynchronous: false
               smooth: true
               mipmap: true
-              sourceSize: Qt.size(avatarSize, avatarSize)
+              sourceSize: Qt.size(42, 42)
             }
           }
 
-          // username + uptime stacked
+          // username + hostname badge + uptime stacked
           ColumnLayout {
-            spacing: 2
+            spacing: 3
             Layout.alignment: Qt.AlignVCenter
 
             RowLayout {
+              spacing: 6
               Text {
                 id: whoamiText
                 text: SystemMonitor.username
                 color: Theme.fg
-                Layout.leftMargin: 10
-                font { family: Theme.fontFamily; pixelSize: 13; weight: 600 }
+                Layout.leftMargin: 4
+                font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
               }
 
-              Text {
-                id: hostnameText
-                text: "(" + SystemMonitor.hostname + ")"
-                color: Theme.fg5
-                Layout.topMargin: 2
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+              Rectangle {
+                radius: 5
+                color: Theme.chipBg
+                border.width: 1
+                border.color: Theme.chipBorder
+                implicitHeight: 16
+                implicitWidth: hostText.implicitWidth + 8
+                Layout.alignment: Qt.AlignVCenter
+
+                Text {
+                  id: hostText
+                  anchors.centerIn: parent
+                  text: "@" + SystemMonitor.hostname
+                  color: Theme.accent
+                  font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                }
               }
             }
 
-            Text {
-              id: uptimeText
-              text: SystemMonitor.uptime
-              color: Theme.fg
-              opacity: 0.6
-              Layout.leftMargin: 10
-              font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+            RowLayout {
+              Layout.leftMargin: 4
+              spacing: 4
+              Text {
+                text: "\uf017"
+                color: Theme.fg5
+                font { family: Theme.nerdFontFamily; pixelSize: 9 }
+              }
+              Text {
+                id: uptimeText
+                text: "up " + SystemMonitor.uptime
+                color: Theme.fg4
+                font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+              }
             }
           }
         }
 
-        // show battery in mini dashboard too
+        // show battery in mini dashboard
         Battery {
-          fontSize: 14
+          fontSize: 12
           anchors.top: parent.top
           anchors.right: parent.right
-          anchors.topMargin: 8
-          anchors.rightMargin: 12
+          anchors.topMargin: 6
+          anchors.rightMargin: 8
         }
 
-        // internet protocol information
-        IpStatus {
-          anchors.left: parent.left
-          anchors.leftMargin: 5
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: 42
-        }
-
-        // bandwidth usage status
-        Bandwidth {
-          anchors.right: parent.right
-          anchors.rightMargin: 4
-          anchors.bottom: parent.bottom
-          anchors.bottomMargin: 42
-        }
-
-        // rectangle where poweroff, sleep etc. buttons placed
+        // network stats card (IP + Bandwidth)
         Rectangle {
-          color: Theme.bg1
+          anchors.top: parent.top
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.topMargin: 54
+          height: 32
+          radius: 8
+          color: Theme.cardBg
+          border.width: 1
+          border.color: Theme.cardBorder
+
+          RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 10
+            anchors.rightMargin: 10
+
+            IpStatus {
+              Layout.alignment: Qt.AlignVCenter
+            }
+
+            Item { Layout.fillWidth: true }
+
+            Bandwidth {
+              Layout.alignment: Qt.AlignVCenter
+            }
+          }
+        }
+
+        // datetime & weather card
+        Rectangle {
+          color: Theme.cardBg
+          border.width: 1
+          border.color: Theme.cardBorder
           implicitWidth: 15
-          implicitHeight: 30
+          implicitHeight: 28
           radius: 8
 
           anchors.top: parent.top
           anchors.left: parent.left
           anchors.right: parent.right
-          anchors.topMargin: 95
+          anchors.topMargin: 92
 
           RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 16
-            anchors.rightMargin: 16
+            anchors.leftMargin: 14
+            anchors.rightMargin: 14
             anchors.verticalCenter: parent.verticalCenter
 
             Item { Layout.fillWidth: true }

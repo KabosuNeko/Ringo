@@ -128,7 +128,7 @@ Singleton {
 
     property string coverArtGlowShadow: "#80aae6" // hardcored for now
 
-    // Ricelin-inspired surface tokens (compositor-agnostic, niri-safe)
+    // Surface & Glassmorphism tokens
     property color shadow: Qt.rgba(0, 0, 0, 0.55)
     property real shadowOpacity: 0.5
     property color hair: Qt.alpha(root.walFg, 0.13)
@@ -136,6 +136,17 @@ Singleton {
     property color sheen: Qt.alpha(root.walFg, 0.07)
     property color frameBg: Qt.alpha(root.walFg, 0.055)
     property color frameBorder: Qt.alpha(root.walFg, 0.10)
+
+    // Modern Pill & Card tokens
+    property color pillHighlight: Qt.alpha(root.walFg, 0.15)
+    property color pillBorder: Qt.alpha(root.walFg, 0.08)
+    property color cardBg: surface(Qt.lighter(root.walBg, 1.25), root.surfaceOpacity * 0.95)
+    property color cardBorder: Qt.alpha(root.walFg, 0.09)
+    property color chipBg: Qt.alpha(root.walFg, 0.06)
+    property color chipBgHover: Qt.alpha(root.walFg, 0.12)
+    property color chipBorder: Qt.alpha(root.walFg, 0.08)
+    property color accentSoft: surface(root.walAccent, 0.18)
+    property color accentGlow: surface(root.walAccent, 0.35)
 
     property int fontSizeBase: 13
     property int fontSize: Math.round(fontSizeBase * Config.pillScale)

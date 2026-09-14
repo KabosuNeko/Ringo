@@ -24,6 +24,9 @@ environment {
     // Games & SDL
     SDL_VIDEODRIVER "wayland,x11"
 
+    // XWayland (xwayland-satellite defaults to :0; required by X11 apps like Minecraft/GLFW)
+    DISPLAY ":0"
+
     // Java GUI apps
     _JAVA_AWT_WM_NONREPARENTING "1"
 }

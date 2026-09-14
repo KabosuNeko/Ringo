@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Layouts
 import IslandBackend
 
 Item {
@@ -6,16 +7,16 @@ Item {
     implicitWidth: col.implicitWidth
     implicitHeight: col.implicitHeight
 
-    Column {
+    ColumnLayout {
         id: col
-        spacing: 2
+        spacing: 1
 
-        Row {
+        RowLayout {
             spacing: 5
 
             Text {
                 text: SystemMonitor.vpn ? "󰦝" : "󰩟"
-                color: SystemMonitor.vpn ? "#64d667" : "#6496dd"
+                color: SystemMonitor.vpn ? "#64d667" : Theme.accent
                 font { family: Theme.nerdFontFamily; pixelSize: 11 }
             }
 
@@ -27,10 +28,10 @@ Item {
         }
 
         Text {
-            text: SystemMonitor.iface + (SystemMonitor.vpn ? "  VPN" : "")
-            color: Theme.fg
-            opacity: 0.5
-            font { family: Theme.fontFamily; pixelSize: 8 }
+            text: SystemMonitor.iface + (SystemMonitor.vpn ? " · VPN" : "")
+            color: Theme.fg5
+            font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+            Layout.leftMargin: 16
         }
     }
 }

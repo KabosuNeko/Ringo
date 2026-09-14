@@ -9,15 +9,15 @@ RowLayout {
 
   readonly property real dpi: Config.dpiScale
 
-  property real buttonBorderWidth
-  property string buttonBorderColor
+  property real buttonBorderWidth: 1
+  property string buttonBorderColor: Theme.cardBorder
   property real buttonWidth
   property real buttonHeight
-  property real buttonRadius
-  property color buttonBgOff
-  property color buttonFgOff
+  property real buttonRadius: 11
+  property color buttonBgOff: Theme.cardBg
+  property color buttonFgOff: Theme.fg4
 
-  property color buttonBgOn: Theme.focusBg
+  property color buttonBgOn: Theme.accentSoft
 
   property bool notificationPopup: false
   property bool controlCenterOpen: false
@@ -49,13 +49,14 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: WifiController.enabled
-            ? (wifiHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
-            : (wifiHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
-    border.width: WifiController.enabled ? 0 : buttonBorderWidth
-    border.color: buttonBorderColor
-    scale: wifiMouse.pressed ? 0.93 : 1.0
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+            ? (wifiHover.hovered ? Qt.lighter(root.buttonBgOn, 1.18) : root.buttonBgOn)
+            : (wifiHover.hovered ? Theme.chipBgHover : root.buttonBgOff)
+    border.width: 1
+    border.color: WifiController.enabled ? Theme.accent : root.buttonBorderColor
+    scale: wifiMouse.pressed ? 0.94 : (wifiHover.hovered ? 1.02 : 1.0)
+    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on border.color { ColorAnimation { duration: 120 } }
+    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
 
     MarqueeText {
         anchors.centerIn: parent
@@ -67,10 +68,10 @@ RowLayout {
 
         text: !WifiController.enabled ? "Off"
             : WifiController.currentSsid.length > 0 ? WifiController.currentSsid
-            : (WifiController.statusText.length > 0 ? WifiController.statusText : "Not connected")
+            : (WifiController.statusText.length > 0 ? WifiController.statusText : "Disconnected")
         color: WifiController.enabled ? Theme.fg : root.buttonFgOff
         font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
-        maxWidth: 50
+        maxWidth: 54
     }
 
     HoverHandler { id: wifiHover }
@@ -113,19 +114,28 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: notificationModule.dndEnabled
-    ? (dndHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
-    : (dndHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
-    border.width: notificationModule.dndEnabled ? 0 : buttonBorderWidth
-    border.color: buttonBorderColor
-    scale: dndMouse.pressed ? 0.93 : 1.0
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+            ? (dndHover.hovered ? Qt.lighter(root.buttonBgOn, 1.18) : root.buttonBgOn)
+            : (dndHover.hovered ? Theme.chipBgHover : root.buttonBgOff)
+    border.width: 1
+    border.color: notificationModule.dndEnabled ? Theme.accent : root.buttonBorderColor
+    scale: dndMouse.pressed ? 0.94 : (dndHover.hovered ? 1.02 : 1.0)
+    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on border.color { ColorAnimation { duration: 120 } }
+    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
 
-    Text {
-      text: String.fromCodePoint(0xf1f6)
-      color: notificationModule.dndEnabled ? Theme.accent : root.buttonFgOff
+    RowLayout {
       anchors.centerIn: parent
-      font { family: Theme.nerdFontFamily; pixelSize: 13 }
+      spacing: 5 * root.dpi
+      Text {
+        text: String.fromCodePoint(0xf1f6)
+        color: notificationModule.dndEnabled ? Theme.accent : root.buttonFgOff
+        font { family: Theme.nerdFontFamily; pixelSize: 12 }
+      }
+      Text {
+        text: notificationModule.dndEnabled ? "DND On" : "DND"
+        color: notificationModule.dndEnabled ? Theme.fg : root.buttonFgOff
+        font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+      }
     }
     HoverHandler { id: dndHover }
     MouseArea {
@@ -143,13 +153,14 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "")
-           ? (ppHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
-           : (ppHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
-    border.width: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? 0 : buttonBorderWidth
-    border.color: buttonBorderColor
-    scale: ppMouse.pressed ? 0.93 : 1.0
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+           ? (ppHover.hovered ? Qt.lighter(root.buttonBgOn, 1.18) : root.buttonBgOn)
+           : (ppHover.hovered ? Theme.chipBgHover : root.buttonBgOff)
+    border.width: 1
+    border.color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.accent : root.buttonBorderColor
+    scale: ppMouse.pressed ? 0.94 : (ppHover.hovered ? 1.02 : 1.0)
+    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on border.color { ColorAnimation { duration: 120 } }
+    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
 
     property string currentProfile: ""
     readonly property var profiles: ["power-saver", "balanced", "performance"]
@@ -167,13 +178,15 @@ RowLayout {
             : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a) // nf-md-leaf
             : String.fromCodePoint(0xf029a) // nf-md-gauge
         color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.accent : root.buttonFgOff
-        font { family: Theme.nerdFontFamily; pixelSize: 14 }
+        font { family: Theme.nerdFontFamily; pixelSize: 13 }
       }
       Text {
         text: ppBtn.currentProfile === "" ? "Pwr"
-            : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
+            : ppBtn.currentProfile === "power-saver" ? "Saver"
+            : ppBtn.currentProfile === "performance" ? "Perf"
+            : "Bal"
         color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.fg : root.buttonFgOff
-        font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
+        font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
       }
     }
 
@@ -217,28 +230,29 @@ RowLayout {
     radius: root.buttonRadius
     visible: root.controlCenterOpen
     color: BluetoothController.enabled
-            ? (btHover.hovered ? Qt.lighter(root.buttonBgOn, 1.2) : root.buttonBgOn)
-            : (btHover.hovered ? Qt.lighter(root.buttonBgOff, 1.3) : root.buttonBgOff)
-    border.width: BluetoothController.enabled ? 0 : buttonBorderWidth
-    border.color: buttonBorderColor
-    scale: btMouse.pressed ? 0.93 : 1.0
-    Behavior on color { ColorAnimation { duration: 150 } }
-    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+            ? (btHover.hovered ? Qt.lighter(root.buttonBgOn, 1.18) : root.buttonBgOn)
+            : (btHover.hovered ? Theme.chipBgHover : root.buttonBgOff)
+    border.width: 1
+    border.color: BluetoothController.enabled ? Theme.accent : root.buttonBorderColor
+    scale: btMouse.pressed ? 0.94 : (btHover.hovered ? 1.02 : 1.0)
+    Behavior on color { ColorAnimation { duration: 120 } }
+    Behavior on border.color { ColorAnimation { duration: 120 } }
+    Behavior on scale { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
     RowLayout {
       anchors.centerIn: parent
       spacing: 5 * root.dpi
       Text {
         text: "\uf294"
         color: BluetoothController.enabled ? Theme.accent : root.buttonFgOff
-        font { family: Theme.nerdFontFamily; pixelSize: 15 }
+        font { family: Theme.nerdFontFamily; pixelSize: 13 }
       }
       MarqueeText {
         text: !BluetoothController.enabled ? "Off"
             : BluetoothController.currentDeviceName.length > 0 ? BluetoothController.currentDeviceName
-            : (BluetoothController.statusText.length > 0 ? BluetoothController.statusText : "Not connected")
+            : (BluetoothController.statusText.length > 0 ? BluetoothController.statusText : "Disconnected")
         color: BluetoothController.enabled ? Theme.fg : root.buttonFgOff
-        font { family: Theme.fontFamily; pixelSize: 10; weight: 400 }
-        maxWidth: 50
+        font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+        maxWidth: 54
       }
     }
     HoverHandler { id: btHover }

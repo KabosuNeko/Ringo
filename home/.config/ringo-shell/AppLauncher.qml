@@ -80,9 +80,9 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 19
-        color: Theme.bgD1
-        border.color: Theme.borderBg2
+        radius: 16
+        color: Theme.cardBg
+        border.color: Theme.cardBorder
         border.width: 1
     }
 
@@ -99,69 +99,82 @@ Item {
               color: Theme.fg
               font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
               Layout.alignment: Qt.AlignLeft
-              Layout.leftMargin: 5
+              Layout.leftMargin: 4
           }
 
           Text {
               id: listCountText
-              property int total: 0
-              text: (filteredApps.count === 0 ? 0 : root.selectedIndex + 1)
-                     + " / " + appList.count + " (" + appList.count + ")"
+              text: (filteredApps.length === 0 ? "0" : (root.selectedIndex + 1))
+                     + " / " + root.filteredApps.length
               color: Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+              font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
               Layout.alignment: Qt.AlignRight
-              Layout.rightMargin: 6
+              Layout.rightMargin: 4
             }
         }
 
+        // Spotlight search bar
         Rectangle {
             width: parent.width
-            height: 30
-            radius: 8
-            color: Theme.bg4
-            border.color: searchInput.activeFocus ? Theme.borderBgFocus : Theme.borderBg
+            height: 34
+            radius: 9
+            color: Theme.bgD
+            border.color: searchInput.activeFocus ? Theme.accent : Theme.cardBorder
             border.width: 1
             Behavior on border.color { ColorAnimation { duration: 120 } }
 
-            TextInput {
-                id: searchInput
+            RowLayout {
                 anchors.fill: parent
                 anchors.leftMargin: 10
                 anchors.rightMargin: 10
-                verticalAlignment: TextInput.AlignVCenter
-                color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 11 }
-                clip: true
-
-                onTextChanged: root.searchQuery = text
+                spacing: 8
 
                 Text {
-                    text: "search apps..."
-                    color: Theme.fg4
-                    font: searchInput.font
-                    visible: searchInput.text.length === 0
-                    anchors.verticalCenter: parent.verticalCenter
+                    text: "\uf002"
+                    color: searchInput.activeFocus ? Theme.accent : Theme.fg5
+                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    Behavior on color { ColorAnimation { duration: 120 } }
                 }
 
-                Keys.onPressed: (event) => {
-                    if (event.key === Qt.Key_Down) {
-                        if (root.filteredApps.length > 0)
-                            root.selectedIndex = (root.selectedIndex + 1) % root.filteredApps.length
-                        appList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Up) {
-                        if (root.filteredApps.length > 0)
-                            root.selectedIndex = root.selectedIndex <= 0
-                                ? root.filteredApps.length - 1
-                                : root.selectedIndex - 1
-                        appList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                        root.launchSelected()
-                        event.accepted = true
-                    } else if (event.key === Qt.Key_Escape) {
-                        root.closeRequested()
-                        event.accepted = true
+                TextInput {
+                    id: searchInput
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    verticalAlignment: TextInput.AlignVCenter
+                    color: Theme.fg
+                    font { family: Theme.fontFamily; pixelSize: 11 }
+                    clip: true
+
+                    onTextChanged: root.searchQuery = text
+
+                    Text {
+                        text: "Type to search..."
+                        color: Theme.fg5
+                        font: searchInput.font
+                        visible: searchInput.text.length === 0
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    Keys.onPressed: (event) => {
+                        if (event.key === Qt.Key_Down) {
+                            if (root.filteredApps.length > 0)
+                                root.selectedIndex = (root.selectedIndex + 1) % root.filteredApps.length
+                            appList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Up) {
+                            if (root.filteredApps.length > 0)
+                                root.selectedIndex = root.selectedIndex <= 0
+                                    ? root.filteredApps.length - 1
+                                    : root.selectedIndex - 1
+                            appList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                            root.launchSelected()
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Escape) {
+                            root.closeRequested()
+                            event.accepted = true
+                        }
                     }
                 }
             }
@@ -170,31 +183,31 @@ Item {
         ListView {
             id: appList
             width: parent.width
-            height: parent.height - 67
+            height: parent.height - 86
             clip: true
             model: root.filteredApps
             currentIndex: root.selectedIndex
             highlightFollowsCurrentItem: false
             highlightMoveDuration: 80
-            spacing: 2
+            spacing: 3
 
             delegate: Rectangle {
                 id: rowDelegate
                 width: appList.width
                 height: 44
-                radius: 9
+                radius: 8
                 color: index === root.selectedIndex
-                       ? Qt.rgba(0, 0, 0, 0.20)
-                       : (rowHover.hovered ? Qt.rgba(0, 0, 0, 0.20) : "transparent")
-                Behavior on color { ColorAnimation { duration: 150 } }
+                       ? Theme.chipBgHover
+                       : (rowHover.hovered ? Theme.chipBg : "transparent")
+                Behavior on color { ColorAnimation { duration: 120 } }
 
+                // Left accent indicator pill
                 Rectangle {
                     anchors.left: parent.left
-                    anchors.top: parent.top
-                    anchors.bottom: parent.bottom
-                    anchors.margins: 7
-                    width: 2
-                    radius: 5
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 3
+                    height: 18
+                    radius: 2
                     color: Theme.accent
                     opacity: index === root.selectedIndex ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: 120 } }
@@ -202,7 +215,7 @@ Item {
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 14
+                    anchors.leftMargin: 12
                     anchors.rightMargin: 10
                     spacing: 10
 
@@ -214,18 +227,18 @@ Item {
                         Layout.alignment: Qt.AlignVCenter
                         source: Quickshell.iconPath(modelData.icon, true)
                         asynchronous: true
-                        scale: index === root.selectedIndex ? 1.10 : (rowHover.hovered ? 1.10 : 1)
-                        Behavior on scale { NumberAnimation { duration: 500; easing.type: Easing.OutExpo } }
+                        scale: index === root.selectedIndex ? 1.08 : (rowHover.hovered ? 1.05 : 1)
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
                     }
 
                     Text {
                         visible: !Quickshell.iconPath(modelData.icon, true)
-                        text: "?"
-                        color: Theme.fg
-                        font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+                        text: "󰣆"
+                        color: Theme.accent
+                        font { family: Theme.nerdFontFamily; pixelSize: 22 }
                         Layout.alignment: Qt.AlignVCenter
-                        Layout.leftMargin: 8
-                        Layout.rightMargin: 10
+                        Layout.leftMargin: 2
+                        Layout.rightMargin: 2
                     }
 
                     ColumnLayout {
@@ -235,8 +248,7 @@ Item {
                         Text {
                             text: modelData.name
                             color: Theme.fg
-                            opacity: index === root.selectedIndex ? 1 : 0.9
-                            font { family: Theme.fontFamily; pixelSize: 11; weight: index === root.selectedIndex ? 600 : 500 }
+                            font { family: Theme.fontFamily; pixelSize: 11; weight: index === root.selectedIndex ? 700 : 500 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -244,7 +256,7 @@ Item {
                             text: modelData.comment
                             visible: text.length > 0
                             color: Theme.fg5
-                            font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
+                            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -269,10 +281,22 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: appList.count === 0
-                text: "No apps found"
-                color: Theme.fg3
-                font { family: Theme.fontFamily; pixelSize: 10 }
+                text: "No applications found"
+                color: Theme.fg4
+                font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
             }
+        }
+
+        // Footer keyboard hints
+        RowLayout {
+            width: parent.width
+            Item { Layout.fillWidth: true }
+            Text {
+                text: "↵ Launch   Esc Close"
+                color: Theme.fg5
+                font { family: Theme.fontFamily; pixelSize: 8; weight: 500 }
+            }
+            Item { Layout.fillWidth: true }
         }
     }
 }
