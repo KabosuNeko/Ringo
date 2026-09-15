@@ -238,7 +238,7 @@ ShellRoot {
                      : wallpaperSwitcherOpen ? 600
                      : powerMenuOpen ? 400
                      : recordMenuOpen ? 360
-                     : miniDashboard ? 430
+                     : miniDashboard ? 410
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
                         : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
@@ -251,7 +251,7 @@ ShellRoot {
                       ? (156 + notifBump + trayBump)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
-                   : miniDashboard ? 176
+                   : miniDashboard ? 160
                    : appLauncher ? 410
                     : wallpaperSwitcherOpen ? 308
                     : powerMenuOpen ? 90
@@ -1369,82 +1369,32 @@ ShellRoot {
             }
           }
 
-          // 3. Cockpit Footer: Datetime / Weather card & Quick Session controls
-          RowLayout {
+          // 3. Cockpit Footer: Datetime & Weather Card
+          Rectangle {
             Layout.fillWidth: true
-            spacing: 6
+            implicitHeight: 30
+            radius: 8
+            color: Theme.cardBg
+            border.width: 1
+            border.color: Theme.cardBorder
 
-            // Datetime & Weather Card
-            Rectangle {
-              Layout.fillWidth: true
-              implicitHeight: 30
-              radius: 8
-              color: Theme.cardBg
-              border.width: 1
-              border.color: Theme.cardBorder
-
-              RowLayout {
-                anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                spacing: 8
-
-                Datetime {
-                  id: datetimeItem
-                  dateFg: Theme.fg3
-                  Layout.alignment: Qt.AlignVCenter
-                }
-
-                Item { Layout.fillWidth: true }
-
-                WeatherIndicator {
-                  id: weatherIndicatorItem
-                  Layout.alignment: Qt.AlignVCenter
-                }
-              }
-            }
-
-            // Session Buttons Bar
             RowLayout {
-              spacing: 4
+              anchors.fill: parent
+              anchors.leftMargin: 12
+              anchors.rightMargin: 12
+              spacing: 8
 
-              Repeater {
-                model: [
-                  { icon: "󰌾", tip: "Lock", action: () => LockController.lock() },
-                  { icon: "󰒲", tip: "Sleep", action: () => NiriController.suspend() },
-                  { icon: "󰑓", tip: "Reboot", action: () => NiriController.reboot() },
-                  { icon: "󰐥", tip: "Power", action: () => NiriController.powerOff() }
-                ]
+              Datetime {
+                id: datetimeItem
+                dateFg: Theme.fg3
+                Layout.alignment: Qt.AlignVCenter
+              }
 
-                delegate: Rectangle {
-                  width: 28
-                  height: 28
-                  radius: 7
-                  color: sBtnHover.containsMouse ? Theme.cardHoverBg : Theme.cardBg
-                  border.width: 1
-                  border.color: sBtnHover.containsMouse ? Theme.cardHoverBorder : Theme.cardBorder
-                  Behavior on color { ColorAnimation { duration: 100 } }
+              Item { Layout.fillWidth: true }
 
-                  Text {
-                    anchors.centerIn: parent
-                    text: modelData.icon
-                    font.family: Theme.nerdFontFamily
-                    font.pixelSize: 12
-                    color: sBtnHover.containsMouse ? (modelData.tip === "Power" ? "#fd2222" : Theme.accent) : Theme.fg3
-                    Behavior on color { ColorAnimation { duration: 100 } }
-                  }
-
-                  MouseArea {
-                    id: sBtnHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                      box.miniDashboard = false
-                      modelData.action()
-                    }
-                  }
-                }
+              WeatherIndicator {
+                id: weatherIndicatorItem
+                Layout.alignment: Qt.AlignVCenter
               }
             }
           }
