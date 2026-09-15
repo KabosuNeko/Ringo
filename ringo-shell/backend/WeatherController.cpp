@@ -11,9 +11,7 @@
 WeatherController::WeatherController(QObject *parent) : QObject(parent) {
     m_timer.setSingleShot(false);
     connect(&m_timer, &QTimer::timeout, this, &WeatherController::onTimerTriggered);
-    // try cache first
     loadCache();
-    // apply interval later when QML sets it
 }
 
 void WeatherController::setWeatherLocation(const QString &v) {

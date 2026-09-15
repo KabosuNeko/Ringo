@@ -45,7 +45,6 @@ if set -q foreground
     set fish_pager_color_selected_description $color8
     set fish_pager_color_selected_prefix $color4
 end
-# =============================================================================
 
 
 ## Set values
@@ -121,10 +120,6 @@ if test -d ~/.local/bin
     end
 end
 
-# depot_tools (optional, uncomment if you use Chromium depot_tools)
-# if test -d ~/Applications/depot_tools; and not contains -- ~/Applications/depot_tools $PATH
-#     set -p PATH ~/Applications/depot_tools
-# end
 
 
 ## Functions
@@ -218,11 +213,6 @@ alias update='sudo pacman -Syu'
 # Get fastest mirrors
 alias mirror="sudo cachyos-rate-mirrors"
 
-# Help people new to Arch
-alias apt='man pacman'
-alias apt-get='man pacman'
-alias please='sudo'
-alias tb='nc termbin.com 9999'
 
 # Cleanup orphaned packages
 alias cleanup='sudo pacman -Rns (pacman -Qtdq)'

@@ -35,12 +35,10 @@ Rectangle {
             Layout.fillWidth: true
             spacing: 12
 
-            // Squircle album art with glow
             Item {
                 Layout.preferredWidth: 54
                 Layout.preferredHeight: 54
 
-                // Ambient glow behind art
                 Rectangle {
                     anchors.centerIn: parent
                     width: parent.width + 4
@@ -80,7 +78,6 @@ Rectangle {
                 }
             }
 
-            // Track details
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 3
@@ -123,7 +120,6 @@ Rectangle {
                 }
             }
 
-            // Transport controls
             RowLayout {
                 spacing: 8
                 Layout.alignment: Qt.AlignVCenter
@@ -142,7 +138,6 @@ Rectangle {
                     }
                 }
 
-                // Elevated Play/Pause disc
                 Rectangle {
                     Layout.preferredWidth: 34
                     Layout.preferredHeight: 34
@@ -184,7 +179,6 @@ Rectangle {
             }
         }
 
-        // Scrub capsule bar
         ColumnLayout {
             Layout.fillWidth: true
             spacing: 4

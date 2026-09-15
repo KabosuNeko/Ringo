@@ -5,8 +5,6 @@
 #include <QDBusObjectPath>
 #include <QObject>
 
-#include <QObject>
-#include <QString>
 #include <QVariantMap>
 #include <QDBusMessage>
 #include <QtQml/qqml.h>

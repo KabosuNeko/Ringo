@@ -24,7 +24,6 @@ Rectangle {
     Behavior on border.color { ColorAnimation { duration: 120 } }
     Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
 
-    // Active fill track
     Rectangle {
         id: fillTrack
         anchors.top: parent.top
@@ -43,7 +42,6 @@ Rectangle {
         }
     }
 
-    // Inner labels & icons
     RowLayout {
         anchors.fill: parent
         anchors.leftMargin: 12

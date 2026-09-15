@@ -1,32 +1,17 @@
-//=============================================================================
-//         ______           _                                       __
-//        / ____/___ _   __(_)________  ____  ____ ___  ___  ____  / /_
-//       / __/ / __ \ | / / / ___/ __ \/ __ \/ __ `__ \/ _ \/ __ \/ __/
-//      / /___/ / / / |/ / / /  / /_/ / / / / / / / / /  __/ / / / /_
-//     /_____/_/ /_/|___/_/_/   \____/_/ /_/_/ /_/ /_/\___/_/ /_/\__/
-//
-//=============================================================================
-
 environment {
-    // Wayland session standards
     XDG_SESSION_TYPE "wayland"
     XDG_CURRENT_DESKTOP "niri"
 
-    // GTK & Qt toolkits
     GDK_BACKEND "wayland,x11"
     QT_QPA_PLATFORM "wayland;xcb"
     QT_QPA_PLATFORMTHEME "qt6ct"
     QT_WAYLAND_DISABLE_WINDOWDECORATION "1"
 
-    // Electron / Chromium apps
     ELECTRON_OZONE_PLATFORM_HINT "auto"
 
-    // Games & SDL
     SDL_VIDEODRIVER "wayland,x11"
 
-    // XWayland (xwayland-satellite defaults to :0; required by X11 apps like Minecraft/GLFW)
     DISPLAY ":0"
 
-    // Java GUI apps
     _JAVA_AWT_WM_NONREPARENTING "1"
 }

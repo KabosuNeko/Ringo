@@ -10,7 +10,6 @@ Singleton {
     watchChanges: true
     onFileChanged: reload()
 
-    // fallback values
     JsonAdapter {
       id: adapter
       property string displayPicture: Quickshell.env("HOME") + "/.pfp.png"

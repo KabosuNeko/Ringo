@@ -117,7 +117,6 @@ Item {
         anchors.margins: 12
         spacing: 8
 
-        // Spotlight Search Bar
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 36
@@ -203,7 +202,6 @@ Item {
             }
         }
 
-        // Category Filter Chips
         RowLayout {
             Layout.fillWidth: true
             spacing: 5
@@ -240,7 +238,6 @@ Item {
             }
         }
 
-        // Applications List View
         ListView {
             id: appList
             Layout.fillWidth: true
@@ -348,7 +345,6 @@ Item {
             }
         }
 
-        // Keycap Footer
         RowLayout {
             Layout.fillWidth: true
             spacing: 12

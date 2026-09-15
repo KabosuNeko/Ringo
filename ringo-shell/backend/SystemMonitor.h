@@ -22,13 +22,11 @@ class SystemMonitor final : public QObject {
     Q_PROPERTY(QString batteryIcon READ batteryIcon NOTIFY batteryIconChanged)
     Q_PROPERTY(QString batteryIconColor READ batteryIconColor NOTIFY batteryIconColorChanged)
     Q_PROPERTY(QString uptime READ uptime NOTIFY uptimeChanged)
-    Q_PROPERTY(bool hasBatteryInternal READ hasBatteryInternal NOTIFY hasBatteryChanged)
+
     Q_PROPERTY(QString username READ username CONSTANT)
     Q_PROPERTY(QString hostname READ hostname CONSTANT)
     Q_PROPERTY(int cpuPercent READ cpuPercent NOTIFY cpuPercentChanged)
-    Q_PROPERTY(int cpuUsage READ cpuPercent NOTIFY cpuPercentChanged)
     Q_PROPERTY(int ramPercent READ ramPercent NOTIFY ramPercentChanged)
-    Q_PROPERTY(int ramUsage READ ramPercent NOTIFY ramPercentChanged)
     Q_PROPERTY(QString ramDetail READ ramDetail NOTIFY ramDetailChanged)
     Q_PROPERTY(bool telemetryActive READ telemetryActive WRITE setTelemetryActive NOTIFY telemetryActiveChanged)
 
@@ -47,7 +45,7 @@ public:
     QString iface() const { return m_iface; }
     bool vpn() const { return m_vpn; }
     bool hasBattery() const { return m_hasBattery; }
-    bool hasBatteryInternal() const { return m_hasBattery; }
+
     int batteryPercentage() const { return m_batteryPercentage; }
     bool charging() const { return m_charging; }
     QString batteryIcon() const { return m_batteryIcon; }

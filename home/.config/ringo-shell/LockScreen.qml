@@ -30,7 +30,6 @@ PanelWindow {
       anchors.centerIn: parent
       spacing: 6
 
-      // Big clock
       Text {
         Layout.alignment: Qt.AlignHCenter
         text: Qt.formatDateTime(clock.date, "hh:mm")
@@ -49,7 +48,6 @@ PanelWindow {
         font.pixelSize: 16
       }
 
-      // Password field
       TextField {
         id: passField
         Layout.alignment: Qt.AlignHCenter
@@ -82,7 +80,6 @@ PanelWindow {
         }
       }
 
-      // Error / hint
       Text {
         id: errorText
         Layout.alignment: Qt.AlignHCenter
@@ -93,15 +90,7 @@ PanelWindow {
         font.pixelSize: 13
       }
 
-      // Unlock button (mouse users)
-      Button {
-        id: unlockBtn
-        Layout.alignment: Qt.AlignHCenter
-        Layout.topMargin: 8
-        visible: false // keyboard Enter is primary; keep UI minimal
-        text: "Unlock"
-        onClicked: passField.accepted()
-      }
+
 
       RowLayout {
         Layout.alignment: Qt.AlignHCenter
@@ -184,7 +173,6 @@ PanelWindow {
     precision: SystemClock.Minutes
   }
 
-  // Shake the password field on failure
   SequentialAnimation {
     id: shakeAnim
     property real startX: passField.x
@@ -194,7 +182,6 @@ PanelWindow {
     NumberAnimation { target: passField; property: "x"; to: passField.x; duration: 40 }
   }
 
-  // Focus the field as soon as the lock screen appears
   onVisibleChanged: {
     if (visible) {
       errorText.visible = false

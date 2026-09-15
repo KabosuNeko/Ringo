@@ -26,60 +26,10 @@ end
 
 set -g __done_version 1.19.1
 
-function __done_run_powershell_script
-    set -l powershell_exe (command --search "powershell.exe")
 
-    if test $status -ne 0
-        and command --search wslvar
-
-        set -l powershell_exe (wslpath (wslvar windir)/System32/WindowsPowerShell/v1.0/powershell.exe)
-    end
-
-    if string length --quiet "$powershell_exe"
-        and test -x "$powershell_exe"
-
-        set cmd (string escape $argv)
-
-        eval "$powershell_exe -Command $cmd"
-    end
-end
-
-function __done_windows_notification -a title -a message
-    if test "$__done_notify_sound" -eq 1
-        set soundopt "<audio silent=\"false\" src=\"ms-winsoundevent:Notification.Default\" />"
-    else
-        set soundopt "<audio silent=\"true\" />"
-    end
-
-    __done_run_powershell_script "
-[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
-[Windows.UI.Notifications.ToastNotification, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-
-\$toast_xml_source = @\"
-    <toast>
-        $soundopt
-        <visual>
-            <binding template=\"ToastText02\">
-                <text id=\"1\">$title</text>
-                <text id=\"2\">$message</text>
-            </binding>
-        </visual>
-    </toast>
-\"@
-
-\$toast_xml = New-Object Windows.Data.Xml.Dom.XmlDocument
-\$toast_xml.loadXml(\$toast_xml_source)
-
-\$toast = New-Object Windows.UI.Notifications.ToastNotification \$toast_xml
-
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier(\"fish\").Show(\$toast)
-"
-end
 
 function __done_get_focused_window_id
-    if type -q lsappinfo
-        lsappinfo info -only bundleID (lsappinfo front | string replace 'ASN:0x0-' '0x') | cut -d '"' -f4
-    else if test -n "$SWAYSOCK"
+    if test -n "$SWAYSOCK"
         and type -q jq
         swaymsg --type get_tree | jq '.. | objects | select(.focused == true) | .id'
     else if test -n "$HYPRLAND_INSTANCE_SIGNATURE"
@@ -93,18 +43,7 @@ function __done_get_focused_window_id
         # Test that the X server at $DISPLAY is running
         and xprop -grammar >/dev/null 2>&1
         xprop -root 32x '\t$0' _NET_ACTIVE_WINDOW | cut -f 2
-    else if uname -a | string match --quiet --ignore-case --regex microsoft
-        __done_run_powershell_script '
-Add-Type @"
-    using System;
-    using System.Runtime.InteropServices;
-    public class WindowsCompat {
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetForegroundWindow();
-    }
-"@
-[WindowsCompat]::GetForegroundWindow()
-'
+
     else if set -q __done_allow_nongraphical
         echo 12345 # dummy value
     end
@@ -260,25 +199,7 @@ if set -q __done_enabled
             else if set -q KITTY_WINDOW_ID
                 printf "\x1b]99;i=done:d=0;$title\x1b\\"
                 printf "\x1b]99;i=done:d=1:p=body;$message\x1b\\"
-            else if type -q terminal-notifier # https://github.com/julienXX/terminal-notifier
-                if test "$__done_notify_sound" -eq 1
-                    # pipe message into terminal-notifier to avoid escaping issues (https://github.com/julienXX/terminal-notifier/issues/134). fixes #140
-                    echo "$message" | terminal-notifier -title "$title" -sender "$__done_initial_window_id" -sound default
-                else
-                    echo "$message" | terminal-notifier -title "$title" -sender "$__done_initial_window_id"
-                end
 
-            else if type -q osascript # AppleScript
-                # escape double quotes that might exist in the message and break osascript. fixes #133
-                set -l message (string replace --all '"' '\"' "$message")
-                set -l title (string replace --all '"' '\"' "$title")
-
-                osascript -e "display notification \"$message\" with title \"$title\""
-                if test "$__done_notify_sound" -eq 1
-                    osascript -e "display notification \"$message\" with title \"$title\" sound name \"Glass\""
-                else
-                    osascript -e "display notification \"$message\" with title \"$title\""
-                end
 
             else if type -q notify-send # Linux notify-send
                 # set urgency to normal
@@ -312,8 +233,7 @@ if set -q __done_enabled
                     echo -e "\a" # bell sound
                 end
 
-            else if uname -a | string match --quiet --ignore-case --regex microsoft
-                __done_windows_notification "$title" "$message"
+
 
             else # anything else
                 echo -e "\a" # bell sound
@@ -331,8 +251,7 @@ function __done_uninstall -e done_uninstall
     functions -e __done_is_tmux_window_active
     functions -e __done_is_screen_window_active
     functions -e __done_is_process_window_focused
-    functions -e __done_windows_notification
-    functions -e __done_run_powershell_script
+
     functions -e __done_humanize_duration
 
     # Erase __done variables

@@ -365,7 +365,6 @@ Item {
                             }
                         }
 
-                        // red tint flash on delete confirm
                         Rectangle {
                             anchors.topMargin: 5
                             anchors.fill: previewImage
@@ -375,7 +374,6 @@ Item {
                             Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
                         }
 
-                        // "Deleted" pop text
                         Text {
                             anchors.centerIn: previewImage
                             text: "Deleted"

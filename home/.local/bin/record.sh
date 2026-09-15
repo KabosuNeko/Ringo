@@ -51,18 +51,15 @@ start_recording() {
     rm -f "$PID_FILE"
 }
 
-# 1) if already recording -> stop
 if [ -f "$PID_FILE" ]; then
     stop_recording
 fi
 
-# 2) explicit mode arg -> start directly (called from Quickshell menu)
 if [ -n "$1" ]; then
     start_recording "$1"
     exit 0
 fi
 
-# 3) no arg and not recording -> open Quickshell RecordMenu (no rofi)
 if [ -x "$HOME/.local/bin/ringo-shell" ]; then
     "$HOME/.local/bin/ringo-shell" call recordMenu toggle 2>/dev/null || \
     "$HOME/.local/bin/ringo-shell" call recordMenu show 2>/dev/null || true

@@ -7,12 +7,6 @@ PanelWindow {
   id: root
 
   default property alias content: cardRow.children
-  property alias extra: extraHolder.data
-
-  Item {
-    id: extraHolder
-    visible: false
-  }
 
   property bool active: false
   property int cardWidth: 280

@@ -1,20 +1,9 @@
-//============================================
-//          __    _           __
-//         / /_  (_)___  ____/ /____
-//        / __ \/ / __ \/ __  / ___/
-//       / /_/ / / / / / /_/ (__  )
-//      /_.___/_/_/ /_/\__,_/____/
-
-//============================================
-
 binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
-    // Custom Script Launchers
     Mod+V hotkey-overlay-title="Clipboard Menu" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call cliphist toggle"; }
     Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn "sh" "-c" "cliphist wipe && notify-send -i edit-clear 'Clipboard' 'Clipboard cleared' -t 2000"; }
 
-    // Application Launchers
     Mod+Return hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
     Mod+D hotkey-overlay-title="Run Application Menu: ringo-shell" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call appLauncher toggle"; }
     Mod+E hotkey-overlay-title="Open File Manager: thunar" { spawn "thunar"; }
@@ -27,16 +16,13 @@ binds {
 
     Mod+Alt+B hotkey-overlay-title="Toggle Bar" { spawn "sh" "-c" "$HOME/.local/bin/ringo-shell call bar toggle"; }
 
-    // Screenshots
     Print { screenshot; }
     Ctrl+Print { screenshot-screen; }
     Alt+Print { screenshot-window; }
 
-    // Screen recording (like Kumin Mod+F11)
     Mod+F11 hotkey-overlay-title="Record Screen" { spawn "sh" "-c" "$HOME/.local/bin/record.sh"; }
 
 
-    // Window Management
     Mod+Q repeat=false { close-window; }
     Mod+Space { toggle-window-floating; }
     Mod+O repeat=false { toggle-overview; }
@@ -93,7 +79,6 @@ binds {
     Mod+W { toggle-column-tabbed-display; }
     Mod+Shift+V { switch-focus-between-floating-and-tiling; }
 
-    // Mouse & Touchpad Wheels
     Mod+WheelScrollDown      cooldown-ms=150 { focus-workspace-down; }
     Mod+WheelScrollUp        cooldown-ms=150 { focus-workspace-up; }
     Mod+Ctrl+WheelScrollDown cooldown-ms=150 { move-column-to-workspace-down; }
@@ -110,13 +95,11 @@ binds {
     Mod+Ctrl+Shift+WheelScrollUp   { move-column-left; }
 
 
-    // Workspace Navigation (Keyboard)
     Mod+U { focus-workspace-down; }
     Mod+I { focus-workspace-up; }
     Mod+Ctrl+U { move-column-to-workspace-down; }
     Mod+Ctrl+I { move-column-to-workspace-up; }
 
-    // Workspace Indices (1-9)
     Mod+1 { focus-workspace 1; }
     Mod+2 { focus-workspace 2; }
     Mod+3 { focus-workspace 3; }
@@ -136,11 +119,9 @@ binds {
     Mod+Ctrl+8 { move-column-to-workspace 8; }
     Mod+Ctrl+9 { move-column-to-workspace 9; }
 
-    // Misc actions
     Mod+Escape allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
     Mod+Shift+E { quit; }
 
-    // Audio - Media Controls
     XF86AudioRaiseVolume allow-when-locked=true { spawn-sh "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 2%+"; }
     XF86AudioLowerVolume allow-when-locked=true { spawn-sh "wpctl set-volume @DEFAULT_AUDIO_SINK@ 2%-"; }
     XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }

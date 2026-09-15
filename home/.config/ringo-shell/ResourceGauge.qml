@@ -7,7 +7,7 @@ Rectangle {
 
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
-    readonly property string ramDetail: SystemMonitor.ramDetail
+
 
     radius: 10
     color: Theme.cardBg
@@ -19,7 +19,6 @@ Rectangle {
         anchors.margins: 10
         spacing: 6
 
-        // CPU Bar
         RowLayout {
             Layout.fillWidth: true
             spacing: 6
@@ -63,7 +62,6 @@ Rectangle {
             }
         }
 
-        // RAM Bar
         RowLayout {
             Layout.fillWidth: true
             spacing: 6

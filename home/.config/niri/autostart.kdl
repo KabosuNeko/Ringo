@@ -1,11 +1,3 @@
-//============================================
-//         _____ __             __
-//        / ___// /_____ ______/ /_
-//        \__ \/ __/ __ `/ ___/ __/
-//       ___/ / /_/ /_/ / /  / /_
-//      /____/\__/\__,_/_/   \__/
-//
-//============================================
 
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
 spawn-at-startup "systemctl" "--user" "import-environment" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
@@ -16,9 +8,7 @@ spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
 spawn-at-startup "sway-audio-idle-inhibit"
 spawn-at-startup "sh" "-c" "$HOME/.local/bin/ringo-shell"
 
-// Restore wallpaper (from pywal colors.json)
 spawn-at-startup "sh" "-c" "pkill -x swaybg 2>/dev/null; wall=$(jq -r .wallpaper ~/.cache/wal/colors.json 2>/dev/null) && [ -n \"$wall\" ] && [ -f \"$wall\" ] && exec swaybg -i \"$wall\" -m fill || true"
 
-// Optional
 spawn-at-startup "fcitx5" "-d"
 spawn-at-startup "wlsunset" "-l" "11.0" "-L" "105.0" "-t" "4000" "-T" "6500"

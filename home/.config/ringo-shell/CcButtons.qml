@@ -41,7 +41,6 @@ Item {
     rowSpacing: 6
     columnSpacing: 6
 
-    // 1. Wi-Fi Tile
     Rectangle {
       id: wifiBtn
       Layout.fillWidth: true
@@ -118,7 +117,6 @@ Item {
       }
     }
 
-    // 2. Bluetooth Tile
     Rectangle {
       id: btBtn
       Layout.fillWidth: true
@@ -195,24 +193,24 @@ Item {
       }
     }
 
-    // 3. Power Profile Tile
     Rectangle {
       id: ppBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
-      color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "")
+      property string currentProfile: ""
+      readonly property bool isCustomProfile: ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== ""
+      readonly property var profiles: ["power-saver", "balanced", "performance"]
+
+      color: isCustomProfile
              ? (ppHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
              : (ppHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
-      border.color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.accent : Theme.cardBorder
+      border.color: isCustomProfile ? Theme.accent : Theme.cardBorder
       scale: ppMouse.pressed ? 0.96 : (ppHover.hovered ? 1.01 : 1.0)
       Behavior on color { ColorAnimation { duration: 120 } }
       Behavior on border.color { ColorAnimation { duration: 120 } }
       Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
-
-      property string currentProfile: ""
-      readonly property var profiles: ["power-saver", "balanced", "performance"]
 
       function refresh() {
         ppGetProc.running = false
@@ -228,7 +226,7 @@ Item {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
           radius: 8
-          color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.accent : Theme.chipBg
+          color: isCustomProfile ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: 120 } }
 
           Text {
@@ -236,7 +234,7 @@ Item {
             text: ppBtn.currentProfile === "performance" ? String.fromCodePoint(0xf135)
                 : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a)
                 : String.fromCodePoint(0xf029a)
-            color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.bg : Theme.fg4
+            color: isCustomProfile ? Theme.bg : Theme.fg4
             font { family: Theme.nerdFontFamily; pixelSize: 13 }
           }
         }
@@ -256,7 +254,7 @@ Item {
           Text {
             text: ppBtn.currentProfile === "" ? "Balanced"
                 : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
-            color: (ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== "") ? Theme.fg : Theme.fg5
+            color: isCustomProfile ? Theme.fg : Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -297,7 +295,6 @@ Item {
       }
     }
 
-    // 4. Do Not Disturb Tile
     Rectangle {
       id: dndBtn
       Layout.fillWidth: true

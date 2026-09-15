@@ -15,7 +15,6 @@ Item {
     property int spacing: 10
     property int defaultSpacing: spacing !== 0 ? spacing : 10
 
-    // bar adjustments
     property int barWidth: 110
     property real barHeight: 8
     property int barRadius: 4

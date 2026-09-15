@@ -1,8 +1,5 @@
 @import url("../../.cache/wal/gtk-colors");
 
-/* ==========================================
-   THUNAR WINDOW CONFIGURATION
-   ========================================== */
 
 .thunar {
     background-color: alpha(@wal_base, 0.95);
@@ -116,9 +113,6 @@
     background-color: transparent;
 }
 
-/* ==========================================
-   MENU CONFIGURATION (Right Click Menu)
-   ========================================== */
 
 menu,
 .popup {

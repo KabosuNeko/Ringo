@@ -26,7 +26,6 @@ Rectangle {
     anchors.rightMargin: 8
     spacing: 8
 
-    // Header badge with dynamic app tooltip
     RowLayout {
       spacing: 6
       Layout.maximumWidth: 160
@@ -50,7 +49,6 @@ Rectangle {
 
     Item { Layout.fillWidth: true }
 
-    // Tray icons dock
     RowLayout {
       spacing: 4
 

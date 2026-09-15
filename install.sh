@@ -6,10 +6,6 @@ PKG_FILE="$RINGO_DIR/pkg.txt"
 
 sudo -v
 
-echo "=========================================="
-echo "  Ringo Dotfiles Installer"
-echo "  Stow-based deployment to \$HOME"
-echo "=========================================="
 
 printf "===> Install yay (AUR helper)? (y/n): "
 read -r confirm
@@ -214,8 +210,4 @@ else
 fi
 
 echo ""
-echo "=========================================="
-echo "  Installation complete!"
-echo "  To uninstall:  cd ~/Ringo && stow -D -t ~ home"
-echo "  To update:     cd ~/Ringo && stow --restow -t ~ home"
-echo "=========================================="
+

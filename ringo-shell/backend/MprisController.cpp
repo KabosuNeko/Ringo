@@ -7,6 +7,8 @@
 #include <QVariantMap>
 #include <QDBusArgument>
 #include <QDBusVariant>
+#include <QUrl>
+#include <QUrlQuery>
 
 static inline QVariant unwrapDVariant(const QVariant &v) {
     if (v.userType() == qMetaTypeId<QDBusVariant>())
@@ -103,22 +105,15 @@ void MprisController::fetchPlayerState(const QString &name) {
         if (!r.isValid()) return {};
         return unwrapDVariant(r.value());
     };
-    // PlaybackStatus
     QVariant vStatus = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("PlaybackStatus"));
     if (vStatus.isValid()) it->playbackStatus = unwrapDVariant(vStatus).toString();
     QVariant vMeta = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Metadata"));
     QVariantMap md;
     if (vMeta.isValid()) {
         QVariant inner = unwrapDVariant(vMeta);
-        if (inner.canConvert<QVariantMap>()) {
-            // Metadata outer map may contain QDBusVariant values; qdbus_cast handles inner variants
-            if (inner.userType() == qMetaTypeId<QDBusArgument>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
-            else md = qdbus_cast<QVariantMap>(inner);
-            if (md.isEmpty()) md = inner.toMap();
-        } else {
-            md = qdbus_cast<QVariantMap>(inner);
-            if (md.isEmpty()) md = inner.toMap();
-        }
+        if (inner.userType() == qMetaTypeId<QDBusArgument>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
+        else md = qdbus_cast<QVariantMap>(inner);
+        if (md.isEmpty()) md = inner.toMap();
     }
     if (!md.isEmpty()) {
         it->track = trackFromMetadata(md);
@@ -133,7 +128,6 @@ void MprisController::fetchPlayerState(const QString &name) {
         it->positionUs = pos;
         it->positionUpdatedUs = 0;
     }
-    // Can* properties
     QVariant vCanPlay = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPlay"));
     if (vCanPlay.isValid()) it->canPlay = unwrapDVariant(vCanPlay).toBool();
     QVariant vCanPause = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPause"));
@@ -151,21 +145,17 @@ QString MprisController::trackFromMetadata(const QVariantMap &md) {
 }
 QString MprisController::artistFromMetadata(const QVariantMap &md) {
     QVariant v = unwrapDVariant(md.value(QStringLiteral("xesam:artist")));
-    if (v.userType() == QMetaType::QStringList || v.typeId() == QMetaType::QStringList) return v.toStringList().join(QStringLiteral(", "));
     if (v.canConvert<QStringList>()) {
         QStringList sl = v.toStringList();
         if (!sl.isEmpty()) return sl.join(QStringLiteral(", "));
     }
-    if (v.userType() == qMetaTypeId<QDBusArgument>()) {
-        QVariantList l = qdbus_cast<QVariantList>(qvariant_cast<QDBusArgument>(v));
-        QStringList sl; for (auto &x : l) sl << unwrapDVariant(x).toString(); if (!sl.isEmpty()) return sl.join(QStringLiteral(", "));
-    }
-    if (v.typeId() == QMetaType::QVariantList) {
-        QStringList l; for (auto &x : v.toList()) l << unwrapDVariant(x).toString(); return l.join(QStringLiteral(", "));
-    }
     QVariantList vl = v.toList();
     if (!vl.isEmpty()) {
         QStringList sl; for (auto &x : vl) sl << unwrapDVariant(x).toString(); return sl.join(QStringLiteral(", "));
+    }
+    if (v.userType() == qMetaTypeId<QDBusArgument>()) {
+        QVariantList l = qdbus_cast<QVariantList>(qvariant_cast<QDBusArgument>(v));
+        QStringList sl; for (auto &x : l) sl << unwrapDVariant(x).toString(); if (!sl.isEmpty()) return sl.join(QStringLiteral(", "));
     }
     return v.toString();
 }
@@ -174,15 +164,15 @@ QString MprisController::artUrlFromMetadata(const QVariantMap &md) {
     if (!art.isEmpty()) return art;
     // Firefox/YouTube often omits mpris:artUrl – derive YouTube thumbnail from xesam:url
     QVariant uv = unwrapDVariant(md.value(QStringLiteral("xesam:url")));
-    QString url = uv.toString();
-    if (url.contains(QStringLiteral("youtube.com/watch")) || url.contains(QStringLiteral("youtu.be/"))) {
+    QString urlStr = uv.toString();
+    if (urlStr.contains(QStringLiteral("youtube.com/watch")) || urlStr.contains(QStringLiteral("youtu.be/"))) {
+        QUrl url(urlStr);
         QString vid;
-        if (url.contains(QStringLiteral("youtu.be/"))) {
-            int p = url.indexOf(QStringLiteral("youtu.be/")) + 9;
-            vid = url.mid(p); int amp = vid.indexOf(QLatin1Char('&')); if (amp != -1) vid = vid.left(amp); int q = vid.indexOf(QLatin1Char('?')); if (q != -1) vid = vid.left(q); int h = vid.indexOf(QLatin1Char('#')); if (h != -1) vid = vid.left(h);
+        if (url.host() == QStringLiteral("youtu.be")) {
+            vid = url.path().mid(1);
         } else {
-            int p = url.indexOf(QStringLiteral("v="));
-            if (p != -1) { vid = url.mid(p + 2); int amp = vid.indexOf(QLatin1Char('&')); if (amp != -1) vid = vid.left(amp); int hash = vid.indexOf(QLatin1Char('#')); if (hash != -1) vid = vid.left(hash); }
+            QUrlQuery query(url);
+            vid = query.queryItemValue(QStringLiteral("v"));
         }
         if (!vid.isEmpty()) return QStringLiteral("https://i.ytimg.com/vi/") + vid + QStringLiteral("/hqdefault.jpg");
     }

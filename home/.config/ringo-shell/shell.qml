@@ -89,11 +89,7 @@ ShellRoot {
   property string fg: Theme.fg
   property string fontFamily: Theme.fontFamily
   property int avatarSize: 48
-  property int buttonSize: 20
-  property string buttonBg: Theme.bg6
-  property string buttonHoverBg: Theme.focusFg1
-  property int buttonHoverSpeed: 120
-  property int buttonctlRadius: 6
+
 
   property bool notifFullscreenMode: false
   readonly property bool fullscreenActive: NiriController.fullscreenActive
@@ -189,7 +185,7 @@ ShellRoot {
 
       property string accent: Theme.accent
 
-      // control center UI
+
       property real ccButtonBorderWidth: 1
       property string ccButtonBorderColor: Theme.cardBorder
       property real ccButtonWidth: 85.3
@@ -219,18 +215,15 @@ ShellRoot {
           heightAnim.start()
       }
 
-      readonly property int trayBump: (SystemTray.items.values && SystemTray.items.values.length > 0) ? 46 : 0
-      readonly property int notifBump: notificationModule.notifications.length > 0
-        ? Math.min(notifList.contentHeight + 40, 130) : 0
+
 
       // adjust box shape conditionally
       readonly property real dpi: Config.dpiScale
 
       property bool cliphistPreviewing: false
 
-      // keep Clock truly centered and symmetric
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
-      readonly property real sideWidth: Math.max(leftGroup.implicitWidth, rightGroup.implicitWidth)
+
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : (notificationModule.active && !notifFullscreenMode) ? 320
                      : controlCenter ? 410
@@ -241,14 +234,12 @@ ShellRoot {
                      : miniDashboard ? 410
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                        : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
+                        : leftWing.implicitWidth + centerClock.implicitWidth + rightWing.implicitWidth + (hovered ? 68 : 58) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : (notificationModule.active && !notifFullscreenMode) ? 52
-                  : controlCenter && MprisController.hasPlayer
-                      ? (278 + notifBump + trayBump)
                   : controlCenter
-                      ? (156 + notifBump + trayBump)
+                      ? (ccColumn.implicitHeight + 24)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
                    : miniDashboard ? 160
@@ -256,7 +247,7 @@ ShellRoot {
                     : wallpaperSwitcherOpen ? 308
                     : powerMenuOpen ? 90
                     : recordMenuOpen ? 90
-                    : (Math.max(leftGroup.implicitHeight, centerGroup.implicitHeight, rightGroup.implicitHeight) * Config.pillScale) + 10
+                    : (Math.max(batMod.implicitHeight, volumeModule.implicitHeight, centerClock.implicitHeight, barBrightnessRow.implicitHeight, barWeatherIndicator.implicitHeight) * Config.pillScale) + 10
 
       readonly property real baseRadius: 20 * Config.pillScale
 
@@ -268,18 +259,6 @@ ShellRoot {
 
       border.width: 1
       border.color: Theme.pillBorder
-
-      // top sheen line for physical glass refraction
-      Rectangle {
-        anchors.top: parent.top
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.margins: 1
-        height: 1
-        radius: box.radius
-        color: Theme.pillHighlight
-        z: 99
-      }
 
       Behavior on radius {
           NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
@@ -376,44 +355,21 @@ ShellRoot {
           }
       }
 
-      // modules in bar - symmetric layout
-      RowLayout {
+
+      Item {
         id: centerGroup
-        anchors.centerIn: parent
-        spacing: 6 * Config.paddingScale
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: -5 * Config.paddingScale
+        anchors.verticalCenter: parent.verticalCenter
+        width: centerClock.implicitWidth
+        height: centerClock.implicitHeight
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
-        // Live Audio Equalizer Wave when playing music
-        Row {
-          id: eqWave
-          visible: MprisController.hasPlayer && MprisController.playbackStatus === "Playing"
-          spacing: 2
-          Layout.alignment: Qt.AlignVCenter
-
-          Repeater {
-            model: 3
-            Rectangle {
-              width: 2
-              height: 4 + (index === 1 ? 7 : 4)
-              radius: 1
-              color: Theme.accent
-              anchors.verticalCenter: parent.verticalCenter
-
-              SequentialAnimation on height {
-                running: eqWave.visible
-                loops: Animation.Infinite
-                NumberAnimation { to: (index === 1 ? 11 : 8); duration: 240 + index * 70; easing.type: Easing.InOutQuad }
-                NumberAnimation { to: 3; duration: 240 + index * 70; easing.type: Easing.InOutQuad }
-              }
-            }
-          }
-        }
-
         Clock {
           id: centerClock
-          Layout.alignment: Qt.AlignVCenter
+          anchors.centerIn: parent
         }
 
         WheelHandler {
@@ -428,16 +384,21 @@ ShellRoot {
         }
       }
 
+
       RowLayout {
-        id: leftGroup
+        id: leftWing
         anchors.right: centerGroup.left
-        anchors.rightMargin: (box.hovered ? 18 : 14) * Config.paddingScale
+        anchors.rightMargin: (box.hovered ? 16 : 13) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 12 * Config.paddingScale
+        spacing: (box.hovered ? 14 : 11) * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
-        Battery {}
+
+        Battery {
+          id: batMod
+        }
+
         Volume {
           id: volumeModule
           onVolumeChanged: {
@@ -448,17 +409,19 @@ ShellRoot {
         }
       }
 
+
       RowLayout {
-        id: rightGroup
+        id: rightWing
         anchors.left: centerGroup.right
-        anchors.leftMargin: (box.hovered ? 18 : 14) * Config.paddingScale
+        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 12 * Config.paddingScale
+        spacing: (box.hovered ? 13 : 10) * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
         RowLayout {
+          id: barBrightnessRow
           spacing: 4 * Config.paddingScale
           Text {
             text: brightnessModule.icon
@@ -712,7 +675,9 @@ ShellRoot {
       // control center opens on left click
       Item {
         id: controlCenterPanel
-        anchors.centerIn: parent
+        anchors.top: parent.top
+        anchors.topMargin: 12
+        anchors.horizontalCenter: parent.horizontalCenter
         width: box.implicitWidth - 24
         Keys.onEscapePressed: box.controlCenter = false
         Connections {
@@ -723,7 +688,7 @@ ShellRoot {
         }
         opacity: box.controlCenter && box.activeOsd === "" && !notificationModule.active ? 1 : 0
         visible: opacity > 0
-        height: box.controlCenter && box.activeOsd === "" ? box.implicitHeight - 25 : 0
+        height: ccColumn.implicitHeight
 
         Behavior on opacity {
           SequentialAnimation {
@@ -734,19 +699,16 @@ ShellRoot {
 
         ColumnLayout {
           id: ccColumn
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.topMargin: 2
-          spacing: 7
+          width: parent.width
+          spacing: 6
 
-          // 1. Hero Media Pod
+
           MediaPlayer {
             id: ccMediaPlayer
             Layout.fillWidth: true
           }
 
-          // 2. Bento Quick Toggles 2x2
+
           CcButtons {
             id: ccButtons
             Layout.fillWidth: true
@@ -754,438 +716,432 @@ ShellRoot {
             hasPlayer: MprisController.hasPlayer
           }
 
-          // 3. Classic Sliders
-          ColumnLayout {
-            id: sliderColumn
+
+          Rectangle {
+            id: sliderCard
             Layout.fillWidth: true
-            Layout.leftMargin: 8
-            Layout.rightMargin: 8
-            spacing: 8
+            implicitHeight: sliderCol.implicitHeight + 16
+            radius: 12
+            color: Theme.cardBg
+            border.width: 1
+            border.color: Theme.cardBorder
 
-            RowLayout {
-              Layout.fillWidth: true
-              spacing: 12
+            ColumnLayout {
+              id: sliderCol
+              anchors.fill: parent
+              anchors.leftMargin: 12
+              anchors.rightMargin: 12
+              anchors.topMargin: 8
+              anchors.bottomMargin: 8
+              spacing: 8
 
-              Text {
-                id: volIcon
-                text: volumeModule.icon
-                color: volumeModule.muted ? "#fd2222" : Theme.fg
-                font.family: Theme.nerdFontFamily
-                font.pixelSize: 13
-                Behavior on color { ColorAnimation { duration: 100 } }
-
-                onTextChanged: volPulse.restart()
-                scale: 1.0
-                SequentialAnimation {
-                    id: volPulse
-                    NumberAnimation { target: volIcon; property: "scale"; to: 1.15; duration: 60 }
-                    NumberAnimation { target: volIcon; property: "scale"; to: 1.0; duration: 100 }
-                }
-              }
-
-              Rectangle {
+              RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: box.sliderHeight
-                radius: box.sliderRadius
-                color: Theme.cardBg
-                border.width: 1
-                border.color: Theme.cardBorder
+                spacing: 12
+
+                Text {
+                  id: volIcon
+                  text: volumeModule.icon
+                  color: volumeModule.muted ? "#fd2222" : Theme.fg
+                  font.family: Theme.nerdFontFamily
+                  font.pixelSize: 13
+                  Behavior on color { ColorAnimation { duration: 100 } }
+
+                  onTextChanged: volPulse.restart()
+                  scale: 1.0
+                  SequentialAnimation {
+                      id: volPulse
+                      NumberAnimation { target: volIcon; property: "scale"; to: 1.15; duration: 60 }
+                      NumberAnimation { target: volIcon; property: "scale"; to: 1.0; duration: 100 }
+                  }
+                }
 
                 Rectangle {
-                  width: parent.width * (volumeModule.vol / 100)
-                  height: parent.height
+                  Layout.fillWidth: true
+                  Layout.preferredHeight: box.sliderHeight
                   radius: box.sliderRadius
-                  color: box.sliderColor
-                  Behavior on width {
-                    SpringAnimation {
-                      spring: 15.5
-                      damping: 1.8
-                      epsilon: 0.40
+                  color: Theme.bgD
+                  border.width: 1
+                  border.color: Theme.cardBorder
+
+                  Rectangle {
+                    width: parent.width * (volumeModule.vol / 100)
+                    height: parent.height
+                    radius: box.sliderRadius
+                    color: box.sliderColor
+                    Behavior on width {
+                      SpringAnimation {
+                        spring: 15.5
+                        damping: 1.8
+                        epsilon: 0.40
+                      }
                     }
                   }
-                }
 
-                MouseArea {
-                  anchors.fill: parent
-                  anchors.topMargin: -box.sliderHitSlop
-                  anchors.bottomMargin: -box.sliderHitSlop
-                  onClicked: (mouse) => {
-                    volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
-                  }
-                  onPositionChanged: (mouse) => {
-                    if (pressed)
+                  MouseArea {
+                    anchors.fill: parent
+                    anchors.topMargin: -box.sliderHitSlop
+                    anchors.bottomMargin: -box.sliderHitSlop
+                    onClicked: (mouse) => {
                       volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
-                  }
-                }
-              }
-
-              Text {
-                id: volVal
-                text: volumeModule.muted ? "muted" : volumeModule.vol + "%"
-                color: Theme.fg
-                font.family: Theme.fontFamily
-                font.pixelSize: 10
-                font.weight: 600
-                Layout.minimumWidth: 35
-                horizontalAlignment: Text.AlignRight
-                onTextChanged: valPulse.restart()
-                SequentialAnimation {
-                  id: valPulse
-                  NumberAnimation { target: volVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                  NumberAnimation { target: volVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
-                }
-              }
-            }
-
-            RowLayout {
-              Layout.fillWidth: true
-              spacing: 12
-
-              Text {
-                id: blIcon
-                text: brightnessModule.icon
-                color: Theme.fg
-                font.family: Theme.nerdFontFamily
-                font.pixelSize: 13
-
-                onTextChanged: blPulse.restart()
-                scale: 1.0
-                SequentialAnimation {
-                    id: blPulse
-                    NumberAnimation { target: blIcon; property: "scale"; to: 1.15; duration: 60 }
-                    NumberAnimation { target: blIcon; property: "scale"; to: 1.0; duration: 100 }
-                }
-              }
-
-              Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: box.sliderHeight
-                radius: box.sliderRadius
-                color: Theme.cardBg
-                border.width: 1
-                border.color: Theme.cardBorder
-
-                Rectangle {
-                  width: parent.width * brightnessModule.percent
-                  height: parent.height
-                  radius: box.sliderRadius
-                  color: box.sliderColor
-                  Behavior on width {
-                    SpringAnimation {
-                      spring: 15.5
-                      damping: 1.8
-                      epsilon: 0.40
+                    }
+                    onPositionChanged: (mouse) => {
+                      if (pressed)
+                        volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
                     }
                   }
                 }
 
-                MouseArea {
-                  anchors.fill: parent
-                  anchors.topMargin: -box.sliderHitSlop
-                  anchors.bottomMargin: -box.sliderHitSlop
-                  onClicked: (mouse) => {
-                    let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
-                    BrightnessController.setPercent(pct)
+                Text {
+                  id: volVal
+                  text: volumeModule.muted ? "muted" : volumeModule.vol + "%"
+                  color: Theme.fg
+                  font.family: Theme.fontFamily
+                  font.pixelSize: 10
+                  font.weight: 600
+                  Layout.minimumWidth: 35
+                  horizontalAlignment: Text.AlignRight
+                  onTextChanged: valPulse.restart()
+                  SequentialAnimation {
+                    id: valPulse
+                    NumberAnimation { target: volVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: volVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
                   }
-                  onPositionChanged: (mouse) => {
-                    if (pressed) {
+                }
+              }
+
+              RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Text {
+                  id: blIcon
+                  text: brightnessModule.icon
+                  color: Theme.fg
+                  font.family: Theme.nerdFontFamily
+                  font.pixelSize: 13
+
+                  onTextChanged: blPulse.restart()
+                  scale: 1.0
+                  SequentialAnimation {
+                      id: blPulse
+                      NumberAnimation { target: blIcon; property: "scale"; to: 1.15; duration: 60 }
+                      NumberAnimation { target: blIcon; property: "scale"; to: 1.0; duration: 100 }
+                  }
+                }
+
+                Rectangle {
+                  Layout.fillWidth: true
+                  Layout.preferredHeight: box.sliderHeight
+                  radius: box.sliderRadius
+                  color: Theme.bgD
+                  border.width: 1
+                  border.color: Theme.cardBorder
+
+                  Rectangle {
+                    width: parent.width * brightnessModule.percent
+                    height: parent.height
+                    radius: box.sliderRadius
+                    color: box.sliderColor
+                    Behavior on width {
+                      SpringAnimation {
+                        spring: 15.5
+                        damping: 1.8
+                        epsilon: 0.40
+                      }
+                    }
+                  }
+
+                  MouseArea {
+                    anchors.fill: parent
+                    anchors.topMargin: -box.sliderHitSlop
+                    anchors.bottomMargin: -box.sliderHitSlop
+                    onClicked: (mouse) => {
                       let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
                       BrightnessController.setPercent(pct)
                     }
+                    onPositionChanged: (mouse) => {
+                      if (pressed) {
+                        let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
+                        BrightnessController.setPercent(pct)
+                      }
+                    }
                   }
                 }
-              }
 
-              Text {
-                id: btVal
-                text: Math.round(brightnessModule.percent * 100) + "%"
-                color: Theme.fg
-                font.family: Theme.fontFamily
-                font.pixelSize: 10
-                font.weight: 600
-                Layout.minimumWidth: 35
-                horizontalAlignment: Text.AlignRight
-                onTextChanged: btPulse.restart()
-                SequentialAnimation {
-                    id: btPulse
-                    NumberAnimation { target: btVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: btVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
+                Text {
+                  id: btVal
+                  text: Math.round(brightnessModule.percent * 100) + "%"
+                  color: Theme.fg
+                  font.family: Theme.fontFamily
+                  font.pixelSize: 10
+                  font.weight: 600
+                  Layout.minimumWidth: 35
+                  horizontalAlignment: Text.AlignRight
+                  onTextChanged: btPulse.restart()
+                  SequentialAnimation {
+                      id: btPulse
+                      NumberAnimation { target: btVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
+                      NumberAnimation { target: btVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
+                  }
                 }
               }
             }
           }
 
-          // 4. Background apps (systray) card in control center
+
           TrayModule {
             id: ccTrayModule
             parentWindow: panelWindow
             Layout.fillWidth: true
           }
-        }
 
-      // notifications stack popped header
-      Rectangle {
-        id: headerBar
-        anchors.top: notifBox.top
-        anchors.topMargin: -20
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 6
-        height: 20
-        topLeftRadius: 10
-        topRightRadius: 10
-        bottomLeftRadius: 0
-        bottomRightRadius: 0
-        color: Theme.bg5
-        visible: notifBox.visible
-        z: 0
-
-        Item {
-          anchors.fill: parent
-
-          Text {
-            text: "Notifications (" + notificationModule.notifications.length + ")"
-            color: Theme.fg2
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
-            anchors.left: parent.left
-            anchors.leftMargin: 16
-            anchors.verticalCenter: parent.verticalCenter
-            verticalAlignment: Text.AlignVCenter
-          }
-
+          // 5. Bento Notifications Pod
           Rectangle {
-            width: 60
-            height: 16
-            radius: 10
-            color: clearAllHover.containsMouse ? Theme.bg : Theme.bg1
-            Behavior on color { ColorAnimation { duration: 100 } }
-            anchors.right: parent.right
-            anchors.rightMargin: 8
-            anchors.verticalCenter: parent.verticalCenter
-
-            Text {
-              text: "Clear all"
-              color: Theme.fg3
-              font { family: Theme.fontFamily; pixelSize: 8; weight: 300 }
-              anchors.centerIn: parent
-            }
-
-            MouseArea {
-              id: clearAllHover
-              anchors.fill: parent
-              hoverEnabled: true
-              cursorShape: Qt.PointingHandCursor
-              onClicked: notificationModule.clearAll()
-            }
-          }
-        }
-      }
-
-      // notifications list stack
-      Rectangle {
-        id: notifBox
-        anchors.top: ccColumn.bottom
-        anchors.topMargin: 26
-        anchors.bottomMargin: 10
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 6
-        height: Math.min(notifList.contentHeight + 7, notifMaxHeight)
-        topLeftRadius: 0
-        topRightRadius: 0
-        bottomLeftRadius: 13
-        bottomRightRadius: 13
-        color: Theme.bgD
-        visible: notificationModule.notifications.length > 0 && box.controlCenter
-        clip: true
-        border.width: 1
-        border.color: Theme.bg2
-        z: 1
-
-        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
-
-        ListView {
-          id: notifList
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.topMargin: 5
-          anchors.leftMargin: 5
-          anchors.rightMargin: 5
-          height: Math.min(contentHeight, notifMaxHeight)
-          spacing: 6
-          model: notificationModule.notificationsReversed
-          clip: true
-          interactive: contentHeight > height
-          flickDeceleration: 3000
-          maximumFlickVelocity: 2500
-          boundsBehavior: Flickable.StopAtBounds
-
-          // cache delegates instead of recreating on scroll
-          cacheBuffer: 200
-          reuseItems: true
-
-          ScrollBar.vertical: ScrollBar {
-            id: notifScrollBar
-            policy: ScrollBar.AlwaysOff
-            visible: notifList.contentHeight > notifList.height
-            width: 10
-            anchors.rightMargin: 10
-            z: 20
-            contentItem: Rectangle {
-              implicitWidth: 8
-              radius: 10
-              color: notifScrollBar.pressed ? "#888"
-                   : scrollHover.hovered ? "#6f6f6f"
-                   : "#3a3a3a"
-              Behavior on color { ColorAnimation { duration: 100 } }
-              HoverHandler { id: scrollHover }
-            }
-          }
-
-          // add/append notifications in the stack
-          delegate: Item {
-            id: notifDelegate
-            width: ListView.view.width
-            height: contentColumn.implicitHeight + 7
-
-            // glyph (nerd font) bell icon
-            Text {
-              id: bellIcon
-              text: String.fromCodePoint(0xf0f3)
-              color: Theme.fg
-              font { family: Theme.nerdFontFamily; pixelSize: 16 }
-              visible: notifIcon.status !== Image.Ready
-              anchors.left: parent.left
-              anchors.top: parent.top
-              anchors.topMargin: 10
-              anchors.leftMargin: 16
-            }
-
-            // custom appicon
-            Image {
-              id: notifIcon
-              width: 22
-              height: 22
-              fillMode: Image.PreserveAspectFit
-              asynchronous: true
-              source: {
-                // Only show the app icon. Attached images (e.g. screenshots)
-                // are hidden: a dark 16:9 image in a 22x22 box renders as a
-                // broken-looking black square.
-                if (modelData.appIcon) {
-                  if (modelData.appIcon.startsWith("/")) return "file://" + modelData.appIcon
-                  // iconPath(icon, true) returns "" if the icon is missing
-                  // from the theme, so we never see the black/purple
-                  // "missing texture" block.
-                  return Quickshell.iconPath(modelData.appIcon, true)
-                }
-                return ""
-              }
-              enabled: true
-              smooth: true
-              // cap decode size so big icons don't burn VRAM at thumbnail size
-              sourceSize: Qt.size(64, 64)
-              visible: status === Image.Ready
-              onStatusChanged: if (status === Image.Error) visible = false
-              anchors.top: parent.top
-              anchors.left: parent.left
-              anchors.topMargin: 10
-              anchors.leftMargin: 15
-            }
-
-            ColumnLayout {
-              id: contentColumn
-              anchors.fill: parent
-              anchors.leftMargin: 50
-              anchors.rightMargin: 3
-              anchors.bottomMargin: 20
-              spacing: 1
-
-              Item {
-                Layout.fillHeight: true
-                Layout.topMargin: 8
-                visible: !bodyText.visible
-              }
-
-              // heading / summary
-              RowLayout {
-                Layout.fillWidth: true
-
-                Text {
-                  text: modelData.summary
-                  textFormat: Text.PlainText
-                  color: Theme.fg
-                  font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
-                  elide: Text.ElideRight
-                  Layout.fillWidth: true
-                }
-
-                Text {
-                  text: modelData.receivedTime ? Qt.formatTime(modelData.receivedTime, "hh:mm") : ""
-                  color: Theme.fg5
-                  font { family: Theme.fontFamily; pixelSize: 8 }
-                  Layout.bottomMargin: 5
-                }
-
-                // close button
-                Rectangle {
-                  Layout.preferredWidth: 22
-                  Layout.preferredHeight: 22
-                  radius: 99
-                  color: dismissHover.containsMouse ? Theme.focusBgL : "transparent"
-                  Behavior on color { ColorAnimation { duration: 100 } }
-
-                  Text {
-                    text: ""
-                    color: dismissHover.containsMouse ? Theme.focusFg1 : Theme.fg7
-                    anchors.centerIn: parent
-                    font.pixelSize: 11
-                    Behavior on color { ColorAnimation { duration: 150 } }
-                  }
-
-                  MouseArea {
-                    id: dismissHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: notificationModule.dismiss(modelData._id)
-                  }
-                }
-              }
-
-              // description / body
-              Text {
-                id: bodyText
-                text: modelData.body ? modelData.body.replace(
-                  /\[([^\]]+)\]\(["']?([^)"']+)["']?\)/g,
-                  '<a href="$2">$1</a>'
-                ) : ""
-                textFormat: Text.StyledText
-                linkColor: Theme.accent
-                color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
-                wrapMode: Text.WordWrap
-                Layout.fillWidth: true
-                Layout.bottomMargin: 2
-                visible: text !== ""
-              }
-
-              Item {
-                Layout.fillHeight: true
-                Layout.bottomMargin: 6
-                visible: !bodyText.visible
-              }
-            }
+            id: notifCard
+            Layout.fillWidth: true
+            radius: 12
+            color: Theme.cardBg
+            border.width: 1
+            border.color: Theme.cardBorder
+            clip: true
+            visible: notificationModule.notifications.length > 0 && box.controlCenter
+            readonly property real notifContentH: notifList.contentHeight > 0 ? notifList.contentHeight : (notificationModule.notifications.length * 48)
+            implicitHeight: visible ? (headerBar.height + Math.min(notifContentH, notifMaxHeight) + 4) : 0
 
             Rectangle {
-              anchors.bottom: parent.bottom
-              width: parent.width
-              height: 1
-              color: Theme.bg5
-              visible: index < notificationModule.notifications.length - 1
+              id: headerBar
+              anchors.top: parent.top
+              anchors.left: parent.left
+              anchors.right: parent.right
+              height: 24
+              color: "transparent"
+
+              Text {
+                text: "Notifications (" + notificationModule.notifications.length + ")"
+                color: Theme.fg2
+                font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.verticalCenter: parent.verticalCenter
+              }
+
+              Rectangle {
+                width: 54
+                height: 16
+                radius: 8
+                color: clearAllHover.containsMouse ? Theme.focusBgL : Theme.bg1
+                Behavior on color { ColorAnimation { duration: 100 } }
+                anchors.right: parent.right
+                anchors.rightMargin: 8
+                anchors.verticalCenter: parent.verticalCenter
+
+                Text {
+                  text: "Clear all"
+                  color: clearAllHover.containsMouse ? Theme.focusFg1 : Theme.fg3
+                  font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+                  anchors.centerIn: parent
+                }
+
+                MouseArea {
+                  id: clearAllHover
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: notificationModule.clearAll()
+                }
+              }
+
+              Rectangle {
+                anchors.bottom: parent.bottom
+                anchors.left: parent.left
+                anchors.right: parent.right
+                height: 1
+                color: Theme.cardBorder
+              }
+            }
+
+            ListView {
+              id: notifList
+              anchors.top: headerBar.bottom
+              anchors.left: parent.left
+              anchors.right: parent.right
+              anchors.topMargin: 2
+              anchors.leftMargin: 4
+              anchors.rightMargin: 4
+              anchors.bottomMargin: 2
+              height: Math.min(contentHeight > 0 ? contentHeight : (notificationModule.notifications.length * 48), notifMaxHeight)
+              spacing: 4
+              model: notificationModule.notificationsReversed
+              clip: true
+              interactive: contentHeight > height
+              flickDeceleration: 3000
+              maximumFlickVelocity: 2500
+              boundsBehavior: Flickable.StopAtBounds
+
+              cacheBuffer: 200
+              reuseItems: true
+
+              ScrollBar.vertical: ScrollBar {
+                id: notifScrollBar
+                policy: ScrollBar.AlwaysOff
+                visible: notifList.contentHeight > notifList.height
+                width: 6
+                anchors.rightMargin: 4
+                z: 20
+                contentItem: Rectangle {
+                  implicitWidth: 6
+                  radius: 3
+                  color: notifScrollBar.pressed ? "#888"
+                       : scrollHover.hovered ? "#6f6f6f"
+                       : "#3a3a3a"
+                  Behavior on color { ColorAnimation { duration: 100 } }
+                  HoverHandler { id: scrollHover }
+                }
+              }
+
+              // add/append notifications in the stack
+              delegate: Item {
+                id: notifDelegate
+                width: ListView.view.width
+                height: contentColumn.implicitHeight + 7
+
+                // glyph (nerd font) bell icon
+                Text {
+                  id: bellIcon
+                  text: String.fromCodePoint(0xf0f3)
+                  color: Theme.fg
+                  font { family: Theme.nerdFontFamily; pixelSize: 16 }
+                  visible: notifIcon.status !== Image.Ready
+                  anchors.left: parent.left
+                  anchors.top: parent.top
+                  anchors.topMargin: 10
+                  anchors.leftMargin: 12
+                }
+
+                // custom appicon
+                Image {
+                  id: notifIcon
+                  width: 22
+                  height: 22
+                  fillMode: Image.PreserveAspectFit
+                  asynchronous: true
+                  source: {
+                    if (modelData.appIcon) {
+                      if (modelData.appIcon.startsWith("/")) return "file://" + modelData.appIcon
+                      return Quickshell.iconPath(modelData.appIcon, true)
+                    }
+                    return ""
+                  }
+                  enabled: true
+                  smooth: true
+                  sourceSize: Qt.size(64, 64)
+                  visible: status === Image.Ready
+                  onStatusChanged: if (status === Image.Error) visible = false
+                  anchors.top: parent.top
+                  anchors.left: parent.left
+                  anchors.topMargin: 10
+                  anchors.leftMargin: 12
+                }
+
+                ColumnLayout {
+                  id: contentColumn
+                  anchors.fill: parent
+                  anchors.leftMargin: 44
+                  anchors.rightMargin: 3
+                  anchors.bottomMargin: 16
+                  spacing: 1
+
+                  Item {
+                    Layout.fillHeight: true
+                    Layout.topMargin: 8
+                    visible: !bodyText.visible
+                  }
+
+                  // heading / summary
+                  RowLayout {
+                    Layout.fillWidth: true
+
+                    Text {
+                      text: modelData.summary
+                      textFormat: Text.PlainText
+                      color: Theme.fg
+                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                      elide: Text.ElideRight
+                      Layout.fillWidth: true
+                    }
+
+                    Text {
+                      text: modelData.receivedTime ? Qt.formatTime(modelData.receivedTime, "hh:mm") : ""
+                      color: Theme.fg5
+                      font { family: Theme.fontFamily; pixelSize: 8 }
+                      Layout.bottomMargin: 5
+                    }
+
+                    // close button
+                    Rectangle {
+                      Layout.preferredWidth: 22
+                      Layout.preferredHeight: 22
+                      radius: 99
+                      color: dismissHover.containsMouse ? Theme.focusBgL : "transparent"
+                      Behavior on color { ColorAnimation { duration: 100 } }
+
+                      Text {
+                        text: ""
+                        color: dismissHover.containsMouse ? Theme.focusFg1 : Theme.fg7
+                        anchors.centerIn: parent
+                        font.pixelSize: 11
+                        Behavior on color { ColorAnimation { duration: 150 } }
+                      }
+
+                      MouseArea {
+                        id: dismissHover
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: notificationModule.dismiss(modelData._id)
+                      }
+                    }
+                  }
+
+                  // description / body
+                  Text {
+                    id: bodyText
+                    text: modelData.body ? modelData.body.replace(
+                      /\[([^\]]+)\]\(["']?([^)"']+)["']?\)/g,
+                      '<a href="$2">$1</a>'
+                    ) : ""
+                    textFormat: Text.StyledText
+                    linkColor: Theme.accent
+                    color: Theme.fg4
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+                    wrapMode: Text.WordWrap
+                    Layout.fillWidth: true
+                    Layout.bottomMargin: 2
+                    visible: text !== ""
+                  }
+
+                  Item {
+                    Layout.fillHeight: true
+                    Layout.bottomMargin: 6
+                    visible: !bodyText.visible
+                  }
+                }
+
+                Rectangle {
+                  anchors.bottom: parent.bottom
+                  anchors.left: parent.left
+                  anchors.right: parent.right
+                  anchors.leftMargin: 8
+                  anchors.rightMargin: 8
+                  height: 1
+                  color: Theme.cardBorder
+                  visible: index < notificationModule.notifications.length - 1
+                }
+              }
             }
           }
         }
-      }
       }
 
       // mini dashboard opens on right click
@@ -1232,7 +1188,7 @@ ShellRoot {
           anchors.fill: parent
           spacing: 8
 
-          // 1. Profile squircle + uptime + Battery HUD
+
           RowLayout {
             Layout.fillWidth: true
             spacing: 10
@@ -1313,24 +1269,10 @@ ShellRoot {
 
             Item { Layout.fillWidth: true }
 
-            // Battery Capsule Pod
-            Rectangle {
-              implicitHeight: 24
-              implicitWidth: dashBatRow.implicitWidth + 14
-              radius: 12
-              color: Theme.cardBg
-              border.width: 1
-              border.color: Theme.cardBorder
+            // Battery Indicator
+            Battery {
+              fontSize: 10
               Layout.alignment: Qt.AlignVCenter
-
-              RowLayout {
-                id: dashBatRow
-                anchors.centerIn: parent
-                spacing: 6
-                Battery {
-                  fontSize: 10
-                }
-              }
             }
           }
 
