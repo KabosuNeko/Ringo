@@ -241,7 +241,7 @@ ShellRoot {
                      : miniDashboard ? 430
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                       : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 68 : 56) * Config.paddingScale
+                        : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : (notificationModule.active && !notifFullscreenMode) ? 52
@@ -428,101 +428,63 @@ ShellRoot {
         }
       }
 
-      Rectangle {
+      RowLayout {
         id: leftGroup
         anchors.right: centerGroup.left
-        anchors.rightMargin: (box.hovered ? 14 : 10) * Config.paddingScale
+        anchors.rightMargin: (box.hovered ? 18 : 14) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
-        implicitWidth: leftRow.implicitWidth + 14 * Config.paddingScale
-        implicitHeight: Math.max(leftRow.implicitHeight + 4, 20 * Config.pillScale)
-        radius: height / 2
-        color: Theme.chipBg
-        border.width: 1
-        border.color: Theme.chipBorder
+        spacing: 12 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
-
-        RowLayout {
-          id: leftRow
-          anchors.centerIn: parent
-          spacing: 7 * Config.paddingScale
-
-          Battery {}
-
-          Rectangle {
-            width: 1
-            height: 9
-            color: Theme.pillBorder
-            opacity: 0.5
-          }
-
-          Volume {
-            id: volumeModule
-            onVolumeChanged: {
-              if (!box.controlCenter) box.activeOsd = "volume"
-              osdHideTimer.interval = Config.osdDuration
-              osdHideTimer.restart()
-            }
+        Battery {}
+        Volume {
+          id: volumeModule
+          onVolumeChanged: {
+            if (!box.controlCenter) box.activeOsd = "volume"
+            osdHideTimer.interval = Config.osdDuration
+            osdHideTimer.restart()
           }
         }
       }
 
-      Rectangle {
+      RowLayout {
         id: rightGroup
         anchors.left: centerGroup.right
-        anchors.leftMargin: (box.hovered ? 14 : 10) * Config.paddingScale
+        anchors.leftMargin: (box.hovered ? 18 : 14) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
-        implicitWidth: rightRow.implicitWidth + 14 * Config.paddingScale
-        implicitHeight: Math.max(rightRow.implicitHeight + 4, 20 * Config.pillScale)
-        radius: height / 2
-        color: Theme.chipBg
-        border.width: 1
-        border.color: Theme.chipBorder
+        spacing: 12 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
         RowLayout {
-          id: rightRow
-          anchors.centerIn: parent
-          spacing: 7 * Config.paddingScale
-
-          RowLayout {
-            spacing: 4 * Config.paddingScale
-            Text {
-              text: brightnessModule.icon
-              color: Theme.fg
-              font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-            }
-            Text {
-              text: Math.round(brightnessModule.percent * 100) + "%"
-              color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
-            }
-
-            WheelHandler {
-              orientation: Qt.Vertical
-              onWheel: (event) => {
-                const step = 0.05
-                const delta = event.angleDelta.y > 0 ? step : -step
-                BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
-              }
-            }
+          spacing: 4 * Config.paddingScale
+          Text {
+            text: brightnessModule.icon
+            color: Theme.fg
+            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+          }
+          Text {
+            text: Math.round(brightnessModule.percent * 100) + "%"
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
           }
 
-          Rectangle {
-            width: 1
-            height: 9
-            color: Theme.pillBorder
-            opacity: 0.5
+          WheelHandler {
+            orientation: Qt.Vertical
+            onWheel: (event) => {
+              const step = 0.05
+              const delta = event.angleDelta.y > 0 ? step : -step
+              BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
+            }
           }
+        }
 
-          WeatherIndicator {
-            id: barWeatherIndicator
-            weatherFg: Theme.fg
-            clickable: false
-          }
+        WeatherIndicator {
+          id: barWeatherIndicator
+          weatherFg: Theme.fg
+          clickable: false
         }
       }
 

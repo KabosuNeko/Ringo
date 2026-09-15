@@ -9,6 +9,8 @@ Rectangle {
     property int cpuPercent: 0
     property int ramPercent: 0
     property string ramDetail: "-- / -- GB"
+    property real prevTotal: 0
+    property real prevIdle: 0
     property bool active: true
 
     radius: 10
@@ -18,13 +20,26 @@ Rectangle {
 
     Process {
         id: statProc
-        command: ["awk", "/cpu /{printf \"%.0f\\n\", 100 - ($5*100/($2+$3+$4+$5+$6+$7+$8))} /MemTotal/{t=$2} /MemAvailable/{a=$2} END{u=t-a; printf \"%.0f %.1f %.1f\\n\", (u/t)*100, u/1048576, t/1048576}", "/proc/stat", "/proc/meminfo"]
+        command: ["awk", "/cpu /{print $2+$3+$4+$5+$6+$7+$8, $5} /MemTotal/{t=$2} /MemAvailable/{a=$2} END{u=t-a; printf \"%.0f %.1f %.1f\\n\", (u/t)*100, u/1048576, t/1048576}", "/proc/stat", "/proc/meminfo"]
         running: false
         stdout: StdioCollector {
             onStreamFinished: {
                 let lines = text.trim().split("\n")
                 if (lines.length >= 2) {
-                    root.cpuPercent = Math.max(0, Math.min(100, parseInt(lines[0]) || 0))
+                    let cpuParts = lines[0].trim().split(" ")
+                    if (cpuParts.length >= 2) {
+                        let total = parseFloat(cpuParts[0]) || 0
+                        let idle = parseFloat(cpuParts[1]) || 0
+                        if (root.prevTotal > 0 && total > root.prevTotal) {
+                            let dTotal = total - root.prevTotal
+                            let dIdle = idle - root.prevIdle
+                            let usage = Math.round(100 * (1.0 - (dIdle / dTotal)))
+                            root.cpuPercent = Math.max(0, Math.min(100, usage))
+                        }
+                        root.prevTotal = total
+                        root.prevIdle = idle
+                    }
+
                     let ramParts = lines[1].trim().split(" ")
                     if (ramParts.length >= 3) {
                         root.ramPercent = Math.max(0, Math.min(100, parseInt(ramParts[0]) || 0))
@@ -37,12 +52,13 @@ Rectangle {
 
     Timer {
         id: pollTimer
-        interval: 2000
+        interval: 1500
         running: root.active && root.visible
         repeat: true
         triggeredOnStart: true
         onTriggered: {
-            if (!statProc.running) statProc.running = true
+            statProc.running = false
+            statProc.running = true
         }
     }
 
