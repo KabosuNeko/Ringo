@@ -9,11 +9,12 @@
 #include <QVariantMap>
 #include <QRegularExpression>
 #include <cmath>
+#include <algorithm>
 
 SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
-    m_bwTimer.setInterval(1000);
-    m_bwTimer.setSingleShot(false);
-    connect(&m_bwTimer, &QTimer::timeout, this, &SystemMonitor::pollBandwidth);
+    m_telemetryTimer.setInterval(1000);
+    m_telemetryTimer.setSingleShot(false);
+    connect(&m_telemetryTimer, &QTimer::timeout, this, &SystemMonitor::pollTelemetry);
 
     m_netTimer.setInterval(30000);
     m_netTimer.setSingleShot(false);
@@ -35,19 +36,54 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
         QStringLiteral("PropertiesChanged"),
         this, SLOT(handleUPowerPropertiesChanged(QString,QVariantMap,QStringList)));
 
-    // initial poll
-    pollBandwidth();
+    // initial poll (low frequency network, uptime, battery)
     pollNetwork();
     pollUptime();
     pollBattery();
 
-    m_bwTimer.start();
     m_netTimer.start();
     m_uptimeTimer.start();
     m_batTimer.start();
 }
 
-void SystemMonitor::refresh() { pollBandwidth(); pollNetwork(); pollUptime(); pollBattery(); }
+void SystemMonitor::setTelemetryActive(bool active) {
+    if (m_telemetryActive == active) return;
+    m_telemetryActive = active;
+    emit telemetryActiveChanged();
+
+    if (m_telemetryActive) {
+        // Immediate baseline sampling and instant RAM reading
+        pollRam();
+        pollBandwidth();
+        pollCpu();
+        m_telemetryTimer.start();
+    } else {
+        m_telemetryTimer.stop();
+        m_prevRx = -1;
+        m_prevTx = -1;
+        m_prevCpuTotal = 0;
+        m_prevCpuIdle = 0;
+        setRxRate(QStringLiteral("0 B/s"));
+        setTxRate(QStringLiteral("0 B/s"));
+    }
+}
+
+void SystemMonitor::pollTelemetry() {
+    pollBandwidth();
+    pollCpu();
+    pollRam();
+}
+
+void SystemMonitor::refreshTelemetry() {
+    pollTelemetry();
+}
+
+void SystemMonitor::refresh() {
+    if (m_telemetryActive) pollTelemetry();
+    pollNetwork();
+    pollUptime();
+    pollBattery();
+}
 void SystemMonitor::refreshBandwidth() { pollBandwidth(); }
 void SystemMonitor::refreshNetwork() { pollNetwork(); }
 void SystemMonitor::refreshBattery() { pollBattery(); }
@@ -119,6 +155,80 @@ void SystemMonitor::pollBandwidth() {
     m_prevRx = rx; m_prevTx = tx;
     setRxRate(fmtRate(dRx));
     setTxRate(fmtRate(dTx));
+}
+
+void SystemMonitor::pollCpu() {
+    QFile f(QStringLiteral("/proc/stat"));
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+    QByteArray line = f.readLine();
+    if (!line.startsWith("cpu ")) return;
+
+    const auto parts = line.simplified().split(' ');
+    if (parts.size() < 5) return;
+
+    quint64 user = parts[1].toULongLong();
+    quint64 nice = parts[2].toULongLong();
+    quint64 system = parts[3].toULongLong();
+    quint64 idle = parts[4].toULongLong();
+    quint64 iowait = parts.size() > 5 ? parts[5].toULongLong() : 0;
+    quint64 irq = parts.size() > 6 ? parts[6].toULongLong() : 0;
+    quint64 softirq = parts.size() > 7 ? parts[7].toULongLong() : 0;
+    quint64 steal = parts.size() > 8 ? parts[8].toULongLong() : 0;
+
+    quint64 total = user + nice + system + idle + iowait + irq + softirq + steal;
+    quint64 idleAll = idle + iowait;
+
+    if (m_prevCpuTotal > 0 && total > m_prevCpuTotal) {
+        quint64 dTotal = total - m_prevCpuTotal;
+        quint64 dIdle = idleAll > m_prevCpuIdle ? (idleAll - m_prevCpuIdle) : 0;
+        int usage = std::clamp(static_cast<int>(std::round(100.0 * (1.0 - double(dIdle) / double(dTotal)))), 0, 100);
+        if (m_cpuPercent != usage) {
+            m_cpuPercent = usage;
+            emit cpuPercentChanged();
+        }
+    }
+    m_prevCpuTotal = total;
+    m_prevCpuIdle = idleAll;
+}
+
+void SystemMonitor::pollRam() {
+    QFile f(QStringLiteral("/proc/meminfo"));
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
+    quint64 memTotal = 0;
+    quint64 memAvailable = 0;
+    int found = 0;
+    while (found < 2) {
+        QByteArray line = f.readLine();
+        if (line.isEmpty()) break;
+        if (line.startsWith("MemTotal:")) {
+            const auto parts = line.simplified().split(' ');
+            if (parts.size() >= 2) {
+                memTotal = parts[1].toULongLong();
+                found++;
+            }
+        } else if (line.startsWith("MemAvailable:")) {
+            const auto parts = line.simplified().split(' ');
+            if (parts.size() >= 2) {
+                memAvailable = parts[1].toULongLong();
+                found++;
+            }
+        }
+    }
+    if (memTotal > 0) {
+        quint64 memUsed = (memTotal > memAvailable) ? (memTotal - memAvailable) : 0;
+        int pct = std::clamp(static_cast<int>(std::round(100.0 * double(memUsed) / double(memTotal))), 0, 100);
+        if (m_ramPercent != pct) {
+            m_ramPercent = pct;
+            emit ramPercentChanged();
+        }
+        double usedGb = double(memUsed) / 1048576.0;
+        double totalGb = double(memTotal) / 1048576.0;
+        QString detail = QString::number(usedGb, 'f', 1) + QStringLiteral("/") + QString::number(totalGb, 'f', 1) + QStringLiteral("G");
+        if (m_ramDetail != detail) {
+            m_ramDetail = detail;
+            emit ramDetailChanged();
+        }
+    }
 }
 
 void SystemMonitor::pollNetwork() {

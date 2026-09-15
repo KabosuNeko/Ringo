@@ -25,6 +25,12 @@ class SystemMonitor final : public QObject {
     Q_PROPERTY(bool hasBatteryInternal READ hasBatteryInternal NOTIFY hasBatteryChanged)
     Q_PROPERTY(QString username READ username CONSTANT)
     Q_PROPERTY(QString hostname READ hostname CONSTANT)
+    Q_PROPERTY(int cpuPercent READ cpuPercent NOTIFY cpuPercentChanged)
+    Q_PROPERTY(int cpuUsage READ cpuPercent NOTIFY cpuPercentChanged)
+    Q_PROPERTY(int ramPercent READ ramPercent NOTIFY ramPercentChanged)
+    Q_PROPERTY(int ramUsage READ ramPercent NOTIFY ramPercentChanged)
+    Q_PROPERTY(QString ramDetail READ ramDetail NOTIFY ramDetailChanged)
+    Q_PROPERTY(bool telemetryActive READ telemetryActive WRITE setTelemetryActive NOTIFY telemetryActiveChanged)
 
 public:
     explicit SystemMonitor(QObject *parent = nullptr);
@@ -47,9 +53,15 @@ public:
     QString batteryIcon() const { return m_batteryIcon; }
     QString batteryIconColor() const { return m_batteryIconColor; }
     QString uptime() const { return m_uptime; }
+    int cpuPercent() const { return m_cpuPercent; }
+    int ramPercent() const { return m_ramPercent; }
+    QString ramDetail() const { return m_ramDetail; }
+    bool telemetryActive() const { return m_telemetryActive; }
+    void setTelemetryActive(bool active);
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void refreshBandwidth();
+    Q_INVOKABLE void refreshTelemetry();
     Q_INVOKABLE void refreshNetwork();
     Q_INVOKABLE void refreshBattery();
     Q_INVOKABLE void refreshUptime();
@@ -66,8 +78,13 @@ signals:
     void batteryIconChanged();
     void batteryIconColorChanged();
     void uptimeChanged();
+    void cpuPercentChanged();
+    void ramPercentChanged();
+    void ramDetailChanged();
+    void telemetryActiveChanged();
 
 private slots:
+    void pollTelemetry();
     void pollBandwidth();
     void pollNetwork();
     void pollUptime();
@@ -78,6 +95,8 @@ private:
     static QString fmtRate(double bps);
     static QString fmtUptime(double seconds);
     void updateBatteryIcon();
+    void pollCpu();
+    void pollRam();
     void setRxRate(const QString &v);
     void setTxRate(const QString &v);
     void setIp(const QString &v);
@@ -100,10 +119,18 @@ private:
     QString m_batteryIconColor = QStringLiteral("#4bd25c");
     QString m_uptime = QStringLiteral("...");
 
+    int m_cpuPercent = 0;
+    int m_ramPercent = 0;
+    QString m_ramDetail = QStringLiteral("-- / -- GB");
+    bool m_telemetryActive = false;
+
+    quint64 m_prevCpuTotal = 0;
+    quint64 m_prevCpuIdle = 0;
+
     double m_prevRx = -1;
     double m_prevTx = -1;
 
-    QTimer m_bwTimer;
+    QTimer m_telemetryTimer;
     QTimer m_netTimer;
     QTimer m_uptimeTimer;
     QTimer m_batTimer;

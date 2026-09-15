@@ -1194,6 +1194,11 @@ ShellRoot {
         anchors.centerIn: parent
         width: box.implicitWidth - 28
         Keys.onEscapePressed: box.miniDashboard = false
+        Binding {
+          target: SystemMonitor
+          property: "telemetryActive"
+          value: box.miniDashboard
+        }
         Connections {
           target: box
           function onMiniDashboardChanged() {
