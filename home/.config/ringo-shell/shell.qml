@@ -233,25 +233,25 @@ ShellRoot {
       readonly property real sideWidth: Math.max(leftGroup.implicitWidth, rightGroup.implicitWidth)
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : (notificationModule.active && !notifFullscreenMode) ? 320
-                     : controlCenter ? 390
-                     : appLauncher ? 390
+                     : controlCenter ? 410
+                     : appLauncher ? 420
                      : wallpaperSwitcherOpen ? 600
                      : powerMenuOpen ? 400
                      : recordMenuOpen ? 360
-                     : miniDashboard ? 420
+                     : miniDashboard ? 430
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                       : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 72 : 64) * Config.paddingScale
+                       : (sideWidth * 2) + centerGroup.implicitWidth + (hovered ? 68 : 56) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : (notificationModule.active && !notifFullscreenMode) ? 52
                   : controlCenter && MprisController.hasPlayer
-                      ? (240 + notifBump + trayBump)
+                      ? (308 + notifBump + trayBump)
                   : controlCenter
-                      ? (118 + notifBump + trayBump)
+                      ? (186 + notifBump + trayBump)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
-                   : miniDashboard ? 155
+                   : miniDashboard ? 176
                    : appLauncher ? 410
                     : wallpaperSwitcherOpen ? 308
                     : powerMenuOpen ? 90
@@ -380,10 +380,36 @@ ShellRoot {
       RowLayout {
         id: centerGroup
         anchors.centerIn: parent
-        spacing: 5 * Config.paddingScale
+        spacing: 6 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
+
+        // Live Audio Equalizer Wave when playing music
+        Row {
+          id: eqWave
+          visible: MprisController.hasPlayer && MprisController.playbackStatus === "Playing"
+          spacing: 2
+          Layout.alignment: Qt.AlignVCenter
+
+          Repeater {
+            model: 3
+            Rectangle {
+              width: 2
+              height: 4 + (index === 1 ? 7 : 4)
+              radius: 1
+              color: Theme.accent
+              anchors.verticalCenter: parent.verticalCenter
+
+              SequentialAnimation on height {
+                running: eqWave.visible
+                loops: Animation.Infinite
+                NumberAnimation { to: (index === 1 ? 11 : 8); duration: 240 + index * 70; easing.type: Easing.InOutQuad }
+                NumberAnimation { to: 3; duration: 240 + index * 70; easing.type: Easing.InOutQuad }
+              }
+            }
+          }
+        }
 
         Clock {
           id: centerClock
@@ -402,63 +428,101 @@ ShellRoot {
         }
       }
 
-      RowLayout {
+      Rectangle {
         id: leftGroup
         anchors.right: centerGroup.left
-        anchors.rightMargin: (box.hovered ? 18 : 14) * Config.paddingScale
+        anchors.rightMargin: (box.hovered ? 14 : 10) * Config.paddingScale
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 12 * Config.paddingScale
-        opacity: box.barContentOpacity
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
-        Battery {}
-        Volume {
-          id: volumeModule
-          onVolumeChanged: {
-            if (!box.controlCenter) box.activeOsd = "volume"
-            osdHideTimer.interval = Config.osdDuration
-            osdHideTimer.restart()
-          }
-        }
-      }
-
-      RowLayout {
-        id: rightGroup
-        anchors.left: centerGroup.right
-        anchors.leftMargin: (box.hovered ? 18 : 14) * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: 12 * Config.paddingScale
+        implicitWidth: leftRow.implicitWidth + 14 * Config.paddingScale
+        implicitHeight: Math.max(leftRow.implicitHeight + 4, 20 * Config.pillScale)
+        radius: height / 2
+        color: Theme.chipBg
+        border.width: 1
+        border.color: Theme.chipBorder
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
         RowLayout {
-          spacing: 4 * Config.paddingScale
-          Text {
-            text: brightnessModule.icon
-            color: Theme.fg
-            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-          }
-          Text {
-            text: Math.round(brightnessModule.percent * 100) + "%"
-            color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
+          id: leftRow
+          anchors.centerIn: parent
+          spacing: 7 * Config.paddingScale
+
+          Battery {}
+
+          Rectangle {
+            width: 1
+            height: 9
+            color: Theme.pillBorder
+            opacity: 0.5
           }
 
-          WheelHandler {
-            orientation: Qt.Vertical
-            onWheel: (event) => {
-              const step = 0.05
-              const delta = event.angleDelta.y > 0 ? step : -step
-              BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
+          Volume {
+            id: volumeModule
+            onVolumeChanged: {
+              if (!box.controlCenter) box.activeOsd = "volume"
+              osdHideTimer.interval = Config.osdDuration
+              osdHideTimer.restart()
             }
           }
         }
+      }
 
-        WeatherIndicator {
-          id: barWeatherIndicator
-          weatherFg: Theme.fg
-          clickable: false
+      Rectangle {
+        id: rightGroup
+        anchors.left: centerGroup.right
+        anchors.leftMargin: (box.hovered ? 14 : 10) * Config.paddingScale
+        anchors.verticalCenter: parent.verticalCenter
+        implicitWidth: rightRow.implicitWidth + 14 * Config.paddingScale
+        implicitHeight: Math.max(rightRow.implicitHeight + 4, 20 * Config.pillScale)
+        radius: height / 2
+        color: Theme.chipBg
+        border.width: 1
+        border.color: Theme.chipBorder
+        opacity: box.barContentOpacity
+        visible: opacity > 0
+        Behavior on opacity { NumberAnimation { duration: 100 } }
+
+        RowLayout {
+          id: rightRow
+          anchors.centerIn: parent
+          spacing: 7 * Config.paddingScale
+
+          RowLayout {
+            spacing: 4 * Config.paddingScale
+            Text {
+              text: brightnessModule.icon
+              color: Theme.fg
+              font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+            }
+            Text {
+              text: Math.round(brightnessModule.percent * 100) + "%"
+              color: Theme.fg
+              font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
+            }
+
+            WheelHandler {
+              orientation: Qt.Vertical
+              onWheel: (event) => {
+                const step = 0.05
+                const delta = event.angleDelta.y > 0 ? step : -step
+                BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
+              }
+            }
+          }
+
+          Rectangle {
+            width: 1
+            height: 9
+            color: Theme.pillBorder
+            opacity: 0.5
+          }
+
+          WeatherIndicator {
+            id: barWeatherIndicator
+            weatherFg: Theme.fg
+            clickable: false
+          }
         }
       }
 
@@ -654,8 +718,8 @@ ShellRoot {
       // app launcher opens through IPC
       Item {
           anchors.centerIn: parent
-          width: box.implicitWidth - 26
-          height: box.appLauncher ? 384 : 0
+          width: box.implicitWidth - 24
+          height: box.appLauncher ? 386 : 0
           opacity: box.appLauncher
                    && !notificationModule.active
                    && box.activeOsd === ""
@@ -706,201 +770,64 @@ ShellRoot {
           }
         }
 
-        // media player
-        MediaPlayer {}
-
-        // control center buttons
-        CcButtons {
-          id: ccButtons
-          buttonBorderColor: box.ccButtonBorderColor
-          buttonBorderWidth: box.ccButtonBorderWidth
-          buttonWidth: box.ccButtonWidth
-          buttonHeight: box.ccButtonHeight
-          buttonRadius: box.ccButtonRadius
-          buttonBgOff: box.ccButtonBgOff
-          buttonFgOff: box.ccButtonFgOff
-          controlCenterOpen: box.controlCenter
-          hasPlayer: MprisController.hasPlayer
-          playerHeight: box.ccButtonHeight
-          notificationPopup: notificationModule.active
-        } 
-
-        // control center sliders
-        Column {
-          id: sliderColumn
+        ColumnLayout {
+          id: ccColumn
           anchors.top: parent.top
           anchors.left: parent.left
           anchors.right: parent.right
-          anchors.topMargin: MprisController.hasPlayer ? box.ccButtonHeight + 137 : 50
-          anchors.leftMargin: 15
-          anchors.rightMargin: 2
-          spacing: 5
+          anchors.topMargin: 2
+          spacing: 7
 
-          RowLayout {
-            width: parent.width
-            spacing: 14
+          // 1. Hero Media Pod
+          MediaPlayer {
+            id: ccMediaPlayer
+            Layout.fillWidth: true
+          }
 
-            Text {
-              id: volIcon
-              text: volumeModule.icon
-              color: volumeModule.muted ? "#fd2222" : Theme.fg
-              font.family: Theme.nerdFontFamily
-              font.pixelSize: 13
-              Behavior on color { ColorAnimation { duration: 100 } }
+          // 2. Bento Quick Toggles 2x2
+          CcButtons {
+            id: ccButtons
+            Layout.fillWidth: true
+            controlCenterOpen: box.controlCenter
+            hasPlayer: MprisController.hasPlayer
+          }
 
-              // fade + scale pulse on every text change
-              onTextChanged: volPulse.restart()
-              scale: 1.0
-              SequentialAnimation {
-                  id: volPulse
-                  NumberAnimation { target: volIcon; property: "scale"; to: 1.15; duration: 60 }
-                  NumberAnimation { target: volIcon; property: "scale"; to: 1.0; duration: 100 }
-              }
-            }
+          // 3. Tactile 32px Capsule Sliders
+          ColumnLayout {
+            id: sliderColumn
+            Layout.fillWidth: true
+            spacing: 6
 
-            Rectangle {
+            CapsuleSlider {
               Layout.fillWidth: true
-              Layout.preferredHeight: box.sliderHeight
-              radius: box.sliderRadius
-              color: Theme.cardBg
-              border.width: 1
-              border.color: Theme.cardBorder
-
-              Rectangle {
-                width: parent.width * (volumeModule.vol / 100)
-                height: parent.height
-                radius: box.sliderRadius
-                color: box.sliderColor
-                Behavior on width {
-                  SpringAnimation {
-                    spring: 15.5
-                    damping: 1.8
-                    epsilon: 0.40
-                  }
-                }
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                // negative margins extend the clickable area beyond the thin bar
-                anchors.topMargin: -box.sliderHitSlop
-                anchors.bottomMargin: -box.sliderHitSlop
-                onClicked: (mouse) => {
-                  volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
-                }
-                onPositionChanged: (mouse) => {
-                  if (pressed)
-                    volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
-                }
+              icon: volumeModule.icon
+              title: "Volume"
+              muted: volumeModule.muted
+              value: volumeModule.vol / 100
+              valueText: volumeModule.muted ? "Muted" : volumeModule.vol + "%"
+              onSliderMoved: (val) => {
+                volumeModule.sink.audio.volume = val
               }
             }
 
-            Text {
-              id: volVal
-              text: volumeModule.muted ? "muted" : volumeModule.vol + "%"
-              color: Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 10
-              font.weight: 600
-              Layout.minimumWidth: 35
-              horizontalAlignment: Text.AlignRight
-              onTextChanged: valPulse.restart()
-              SequentialAnimation {
-                id: valPulse
-                NumberAnimation { target: volVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                NumberAnimation { target: volVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
+            CapsuleSlider {
+              Layout.fillWidth: true
+              icon: brightnessModule.icon
+              title: "Display"
+              value: brightnessModule.percent
+              valueText: Math.round(brightnessModule.percent * 100) + "%"
+              onSliderMoved: (val) => {
+                BrightnessController.setPercent(val)
               }
             }
           }
 
-          RowLayout {
-            width: parent.width
-            spacing: 14
-
-            Text {
-              id: blIcon
-              text: brightnessModule.icon
-              color: Theme.fg
-              font.family: Theme.nerdFontFamily
-              font.pixelSize: 13
-
-              // fade+scale pulse on every text change
-              onTextChanged: blPulse.restart()
-              scale: 1.0
-              SequentialAnimation {
-                  id: blPulse
-                  NumberAnimation { target: blIcon; property: "scale"; to: 1.15; duration: 60 }
-                  NumberAnimation { target: blIcon; property: "scale"; to: 1.0; duration: 100 }
-              }
-            }
-
-            Rectangle {
-              Layout.fillWidth: true
-              Layout.preferredHeight: box.sliderHeight
-              radius: box.sliderRadius
-              color: Theme.cardBg
-              border.width: 1
-              border.color: Theme.cardBorder
-
-              Rectangle {
-                width: parent.width * brightnessModule.percent
-                height: parent.height
-                radius: box.sliderRadius
-                color: box.sliderColor
-                Behavior on width {
-                  SpringAnimation {
-                    spring: 15.5
-                    damping: 1.8
-                    epsilon: 0.40
-                  }
-                }
-              }
-
-              MouseArea {
-                anchors.fill: parent
-                // negative margins extend the clickable area beyond the thin bar
-                anchors.topMargin: -box.sliderHitSlop
-                anchors.bottomMargin: -box.sliderHitSlop
-                onClicked: (mouse) => {
-                  let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
-                  BrightnessController.setPercent(pct)
-                }
-                onPositionChanged: (mouse) => {
-                  if (pressed) {
-                    let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
-                    BrightnessController.setPercent(pct)
-                  }
-                }
-              }
-            }
-
-            Text {
-              id: btVal
-              text: Math.round(brightnessModule.percent * 100) + "%"
-              color: Theme.fg
-              font.family: Theme.fontFamily
-              font.pixelSize: 10
-              font.weight: 600
-              Layout.minimumWidth: 35
-              horizontalAlignment: Text.AlignRight
-              onTextChanged: btPulse.restart()
-              SequentialAnimation {
-                  id: btPulse
-                  NumberAnimation { target: btVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                  NumberAnimation { target: btVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
-              }
-            }
+          // 4. Background apps (systray) card in control center
+          TrayModule {
+            id: ccTrayModule
+            parentWindow: panelWindow
+            Layout.fillWidth: true
           }
-        } 
-
-        // background apps (systray) card in control center
-        TrayModule {
-          id: ccTrayModule
-          parentWindow: panelWindow
-          anchors.top: sliderColumn.bottom
-          anchors.topMargin: 10
-          anchors.horizontalCenter: parent.horizontalCenter
-          width: parent.width - 6
         }
 
       // notifications stack popped header
@@ -909,10 +836,10 @@ ShellRoot {
         anchors.top: notifBox.top
         anchors.topMargin: -20
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 10
+        width: parent.width - 6
         height: 20
-        topLeftRadius: 13
-        topRightRadius: 13
+        topLeftRadius: 10
+        topRightRadius: 10
         bottomLeftRadius: 0
         bottomRightRadius: 0
         color: Theme.bg5
@@ -963,11 +890,11 @@ ShellRoot {
       // notifications list stack
       Rectangle {
         id: notifBox
-        anchors.top: (ccTrayModule.itemCount > 0) ? ccTrayModule.bottom : sliderColumn.bottom
-        anchors.topMargin: (ccTrayModule.itemCount > 0) ? 28 : 32
-        anchors.bottomMargin: 12
+        anchors.top: ccColumn.bottom
+        anchors.topMargin: 26
+        anchors.bottomMargin: 10
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width - 10
+        width: parent.width - 6
         height: Math.min(notifList.contentHeight + 7, notifMaxHeight)
         topLeftRadius: 0
         topRightRadius: 0
@@ -1172,7 +1099,7 @@ ShellRoot {
       Item {
         id: miniDashboardPanel
         anchors.centerIn: parent
-        width: box.implicitWidth - 30
+        width: box.implicitWidth - 28
         Keys.onEscapePressed: box.miniDashboard = false
         Connections {
           target: box
@@ -1180,7 +1107,7 @@ ShellRoot {
             if (box.miniDashboard) miniDashboardPanel.forceActiveFocus()
           }
         }
-        height: box.miniDashboard ? box.implicitHeight - 30 : 0  // don't fight the animation
+        height: box.miniDashboard ? box.implicitHeight - 24 : 0
         opacity: box.miniDashboard
                  && !notificationModule.active
                  && box.activeOsd === ""
@@ -1195,166 +1122,238 @@ ShellRoot {
         }
 
         MouseArea {
-            anchors.fill: parent
-            acceptedButtons: Qt.LeftButton | Qt.RightButton
-            onClicked: (mouse) => {
-                if (mouse.button === Qt.RightButton)
-                    box.miniDashboard = !box.miniDashboard
-            }
+          anchors.fill: parent
+          acceptedButtons: Qt.LeftButton | Qt.RightButton
+          onClicked: (mouse) => {
+            if (mouse.button === Qt.RightButton)
+              box.miniDashboard = !box.miniDashboard
+          }
         }
 
-        RowLayout {
+        ColumnLayout {
+          anchors.fill: parent
           spacing: 8
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.topMargin: 4
 
-          // profile picture (squircle display picture)
-          ClippingRectangle {
-            id: avatarClip
-            Layout.preferredWidth: 42
-            Layout.preferredHeight: 42
-            radius: 10
-            property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
-            color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
-            border.width: 1
-            border.color: Theme.accentSoft
-            layer.enabled: true
-            layer.smooth: true
-            layer.mipmap: true
-            layer.textureSize: Qt.size(42, 42)
+          // 1. Profile squircle + uptime + Battery HUD
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 10
 
-            Image {
-              id: avatarImg
-              anchors.fill: parent
-              source: avatarClip.imgPath
-              fillMode: Image.PreserveAspectCrop
-              asynchronous: false
-              smooth: true
-              mipmap: true
-              sourceSize: Qt.size(42, 42)
+            ClippingRectangle {
+              id: avatarClip
+              Layout.preferredWidth: 38
+              Layout.preferredHeight: 38
+              radius: 9
+              property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
+              color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
+              border.width: 1
+              border.color: Theme.cardBorder
+              layer.enabled: true
+              layer.smooth: true
+              layer.mipmap: true
+              layer.textureSize: Qt.size(38, 38)
+
+              Image {
+                id: avatarImg
+                anchors.fill: parent
+                source: avatarClip.imgPath
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: false
+                smooth: true
+                mipmap: true
+                sourceSize: Qt.size(38, 38)
+              }
             }
-          }
 
-          // username + hostname badge + uptime stacked
-          ColumnLayout {
-            spacing: 3
-            Layout.alignment: Qt.AlignVCenter
+            ColumnLayout {
+              spacing: 3
+              Layout.alignment: Qt.AlignVCenter
 
-            RowLayout {
-              spacing: 6
-              Text {
-                id: whoamiText
-                text: SystemMonitor.username
-                color: Theme.fg
-                Layout.leftMargin: 4
-                font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+              RowLayout {
+                spacing: 6
+                Text {
+                  id: whoamiText
+                  text: SystemMonitor.username
+                  color: Theme.fg
+                  font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+                }
+
+                Rectangle {
+                  radius: 5
+                  color: Theme.chipBg
+                  border.width: 1
+                  border.color: Theme.chipBorder
+                  implicitHeight: 16
+                  implicitWidth: hostText.implicitWidth + 8
+                  Layout.alignment: Qt.AlignVCenter
+
+                  Text {
+                    id: hostText
+                    anchors.centerIn: parent
+                    text: "@" + SystemMonitor.hostname
+                    color: Theme.accent
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                  }
+                }
               }
 
-              Rectangle {
-                radius: 5
-                color: Theme.chipBg
-                border.width: 1
-                border.color: Theme.chipBorder
-                implicitHeight: 16
-                implicitWidth: hostText.implicitWidth + 8
-                Layout.alignment: Qt.AlignVCenter
-
+              RowLayout {
+                spacing: 4
                 Text {
-                  id: hostText
-                  anchors.centerIn: parent
-                  text: "@" + SystemMonitor.hostname
-                  color: Theme.accent
-                  font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                  text: "\uf017"
+                  color: Theme.fg5
+                  font { family: Theme.nerdFontFamily; pixelSize: 9 }
+                }
+                Text {
+                  id: uptimeText
+                  text: "up " + SystemMonitor.uptime
+                  color: Theme.fg4
+                  font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
                 }
               }
             }
 
+            Item { Layout.fillWidth: true }
+
+            // Battery Capsule Pod
+            Rectangle {
+              implicitHeight: 24
+              implicitWidth: dashBatRow.implicitWidth + 14
+              radius: 12
+              color: Theme.cardBg
+              border.width: 1
+              border.color: Theme.cardBorder
+              Layout.alignment: Qt.AlignVCenter
+
+              RowLayout {
+                id: dashBatRow
+                anchors.centerIn: parent
+                spacing: 6
+                Battery {
+                  fontSize: 10
+                }
+              }
+            }
+          }
+
+          // 2. Dual Bento Telemetry Pods (Network Radar & Resource Gauge)
+          RowLayout {
+            Layout.fillWidth: true
+            Layout.preferredHeight: 52
+            spacing: 8
+
+            // Left Pod: Network Radar
+            Rectangle {
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+              radius: 10
+              color: Theme.cardBg
+              border.width: 1
+              border.color: Theme.cardBorder
+
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 8
+
+                IpStatus {
+                  Layout.alignment: Qt.AlignVCenter
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Bandwidth {
+                  Layout.alignment: Qt.AlignVCenter
+                }
+              }
+            }
+
+            // Right Pod: Resource Gauge (CPU & RAM)
+            ResourceGauge {
+              Layout.fillWidth: true
+              Layout.fillHeight: true
+            }
+          }
+
+          // 3. Cockpit Footer: Datetime / Weather card & Quick Session controls
+          RowLayout {
+            Layout.fillWidth: true
+            spacing: 6
+
+            // Datetime & Weather Card
+            Rectangle {
+              Layout.fillWidth: true
+              implicitHeight: 30
+              radius: 8
+              color: Theme.cardBg
+              border.width: 1
+              border.color: Theme.cardBorder
+
+              RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 10
+                anchors.rightMargin: 10
+                spacing: 8
+
+                Datetime {
+                  id: datetimeItem
+                  dateFg: Theme.fg3
+                  Layout.alignment: Qt.AlignVCenter
+                }
+
+                Item { Layout.fillWidth: true }
+
+                WeatherIndicator {
+                  id: weatherIndicatorItem
+                  Layout.alignment: Qt.AlignVCenter
+                }
+              }
+            }
+
+            // Session Buttons Bar
             RowLayout {
-              Layout.leftMargin: 4
               spacing: 4
-              Text {
-                text: "\uf017"
-                color: Theme.fg5
-                font { family: Theme.nerdFontFamily; pixelSize: 9 }
+
+              Repeater {
+                model: [
+                  { icon: "󰌾", tip: "Lock", action: () => LockController.lock() },
+                  { icon: "󰒲", tip: "Sleep", action: () => NiriController.suspend() },
+                  { icon: "󰑓", tip: "Reboot", action: () => NiriController.reboot() },
+                  { icon: "󰐥", tip: "Power", action: () => NiriController.powerOff() }
+                ]
+
+                delegate: Rectangle {
+                  width: 28
+                  height: 28
+                  radius: 7
+                  color: sBtnHover.containsMouse ? Theme.cardHoverBg : Theme.cardBg
+                  border.width: 1
+                  border.color: sBtnHover.containsMouse ? Theme.cardHoverBorder : Theme.cardBorder
+                  Behavior on color { ColorAnimation { duration: 100 } }
+
+                  Text {
+                    anchors.centerIn: parent
+                    text: modelData.icon
+                    font.family: Theme.nerdFontFamily
+                    font.pixelSize: 12
+                    color: sBtnHover.containsMouse ? (modelData.tip === "Power" ? "#fd2222" : Theme.accent) : Theme.fg3
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                  }
+
+                  MouseArea {
+                    id: sBtnHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                      box.miniDashboard = false
+                      modelData.action()
+                    }
+                  }
+                }
               }
-              Text {
-                id: uptimeText
-                text: "up " + SystemMonitor.uptime
-                color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
-              }
             }
-          }
-        }
-
-        // show battery in mini dashboard
-        Battery {
-          fontSize: 12
-          anchors.top: parent.top
-          anchors.right: parent.right
-          anchors.topMargin: 6
-          anchors.rightMargin: 8
-        }
-
-        // network stats card (IP + Bandwidth)
-        Rectangle {
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.topMargin: 54
-          height: 32
-          radius: 8
-          color: Theme.cardBg
-          border.width: 1
-          border.color: Theme.cardBorder
-
-          RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-
-            IpStatus {
-              Layout.alignment: Qt.AlignVCenter
-            }
-
-            Item { Layout.fillWidth: true }
-
-            Bandwidth {
-              Layout.alignment: Qt.AlignVCenter
-            }
-          }
-        }
-
-        // datetime & weather card
-        Rectangle {
-          color: Theme.cardBg
-          border.width: 1
-          border.color: Theme.cardBorder
-          implicitWidth: 15
-          implicitHeight: 28
-          radius: 8
-
-          anchors.top: parent.top
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.topMargin: 92
-
-          RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 14
-            anchors.rightMargin: 14
-            anchors.verticalCenter: parent.verticalCenter
-
-            Item { Layout.fillWidth: true }
-
-            Datetime { id: datetimeItem; dateFg: Theme.fg4; }
-
-            Item { Layout.fillWidth: true }
-
-            WeatherIndicator { id: weatherIndicatorItem }
-
-            Item { Layout.fillWidth: true }
           }
         }
       }

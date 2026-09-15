@@ -17,8 +17,8 @@ Item {
 
     // bar adjustments
     property int barWidth: 110
-    property real barHeight: 6
-    property int barRadius: 3
+    property real barHeight: 8
+    property int barRadius: 4
     property int fillSpeed: 80
 
     anchors.centerIn: parent

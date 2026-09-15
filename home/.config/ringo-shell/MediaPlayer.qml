@@ -1,23 +1,18 @@
 import Quickshell.Widgets
 import QtQuick
+import QtQuick.Layouts
 import IslandBackend
 
 Rectangle {
     id: mediaCard
-    anchors.top: parent.top
-    anchors.left: parent.left
-    anchors.right: parent.right
-    height: MprisController.hasPlayer ? 118 : 0
+    Layout.fillWidth: true
+    implicitHeight: MprisController.hasPlayer ? 116 : 0
     radius: 14
     color: Theme.cardBg
     visible: MprisController.hasPlayer
     clip: true
     border.color: Theme.cardBorder
     border.width: 1
-
-    property int artistFontSize: 10
-    property string artistFontColor: Theme.fg4
-    property int artistFontWeight: 400
 
     property real mprisProgress: MprisController.progress
     property string mprisTimePlayed: formatMprisTime(MprisController.polledPosition)
@@ -31,110 +26,137 @@ Rectangle {
         return m + ":" + (s < 10 ? "0" : "") + s
     }
 
-     Column {
+    ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 14
-        spacing: 14
+        anchors.margins: 12
+        spacing: 10
 
-        Row {
-            width: parent.width
-            height: 48
+        RowLayout {
+            Layout.fillWidth: true
             spacing: 12
 
-            ClippingRectangle {
-                width: 48; height: 48
-                radius: 10
-                color: Theme.bg4
-                anchors.verticalCenter: parent.verticalCenter
-                border.width: 1
-                border.color: Theme.pillBorder
-                clip: true
+            // Squircle album art with glow
+            Item {
+                Layout.preferredWidth: 54
+                Layout.preferredHeight: 54
 
-                Image {
-                    id: artImg
-                    anchors.fill: parent
-                    source: MprisController.artUrl
-                    fillMode: Image.PreserveAspectCrop
-                    visible: MprisController.artUrl !== "" && status !== Image.Error
-                    asynchronous: true
-                    cache: true
-                    sourceSize: Qt.size(96 * Config.dpiScale, 96 * Config.dpiScale)
+                // Ambient glow behind art
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width + 4
+                    height: parent.height + 4
+                    radius: 14
+                    color: Theme.accentSoft
+                    opacity: 0.6
                 }
 
-                Text {
-                    anchors.centerIn: parent
-                    visible: MprisController.artUrl === "" || artImg.status === Image.Error || artImg.status === Image.Null
-                    text: "\uf001"
-                    font.family: Theme.nerdFontFamily
-                    font.pixelSize: 18
-                    color: Theme.fg4
+                ClippingRectangle {
+                    anchors.fill: parent
+                    radius: 12
+                    color: Theme.bgD
+                    border.width: 1
+                    border.color: Theme.cardBorder
+                    clip: true
+
+                    Image {
+                        id: artImg
+                        anchors.fill: parent
+                        source: MprisController.artUrl
+                        fillMode: Image.PreserveAspectCrop
+                        visible: MprisController.artUrl !== "" && status !== Image.Error
+                        asynchronous: true
+                        cache: true
+                        sourceSize: Qt.size(108 * Config.dpiScale, 108 * Config.dpiScale)
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        visible: MprisController.artUrl === "" || artImg.status === Image.Error || artImg.status === Image.Null
+                        text: "\uf001"
+                        font.family: Theme.nerdFontFamily
+                        font.pixelSize: 20
+                        color: Theme.accent
+                    }
                 }
             }
 
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 48 - 96 - 16
+            // Track details
+            ColumnLayout {
+                Layout.fillWidth: true
                 spacing: 3
 
-                Text {
-                    width: parent.width
-                    text: MprisController.track !== "" ? MprisController.track : "Nothing playing"
-                    color: Theme.fg
-                    font.pixelSize: 12
-                    font.weight: 600
-                    font.family: Theme.fontFamily
-                    elide: Text.ElideRight
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+
+                    Text {
+                        text: MprisController.track !== "" ? MprisController.track : "Nothing playing"
+                        color: Theme.fg
+                        font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    Rectangle {
+                        radius: 4
+                        color: Theme.chipBg
+                        implicitHeight: 16
+                        implicitWidth: tagText.implicitWidth + 8
+                        visible: MprisController.playing
+
+                        Text {
+                            id: tagText
+                            anchors.centerIn: parent
+                            text: "PLAYING"
+                            color: Theme.accent
+                            font { family: Theme.fontFamily; pixelSize: 8; weight: 700 }
+                        }
+                    }
                 }
 
                 Text {
-                    width: parent.width
-                    text: MprisController.artist
-                    color: artistFontColor
-                    font.pixelSize: artistFontSize
-                    font.weight: artistFontWeight
-                    font.family: Theme.fontFamily
+                    text: MprisController.artist !== "" ? MprisController.artist : "Unknown Artist"
+                    color: Theme.fg4
+                    font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
                     elide: Text.ElideRight
+                    Layout.fillWidth: true
                 }
             }
 
-            Row {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
+            // Transport controls
+            RowLayout {
+                spacing: 8
+                Layout.alignment: Qt.AlignVCenter
 
                 Text {
                     text: "⏮"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 16
-                    color: prevHover.hovered ? Theme.fg : Theme.fg4
-                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: 15
+                    color: prevHover.hovered ? Theme.fg : Theme.fg5
                     Behavior on color { ColorAnimation { duration: 100 } }
                     HoverHandler { id: prevHover }
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { MprisController.prev() }
+                        onClicked: MprisController.prev()
                     }
                 }
 
+                // Elevated Play/Pause disc
                 Rectangle {
-                    width: 30; height: 30
-                    radius: 15
-                    color: playHover.hovered ? Theme.accentSoft : Theme.chipBg
-                    border.width: 1
-                    border.color: playHover.hovered ? Theme.accent : Theme.chipBorder
-                    anchors.verticalCenter: parent.verticalCenter
-                    scale: playMouse.pressed ? 0.92 : 1.0
-                    Behavior on color { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    Layout.preferredWidth: 34
+                    Layout.preferredHeight: 34
+                    radius: 17
+                    color: Theme.accent
+                    scale: playMouse.pressed ? 0.92 : (playHover.hovered ? 1.05 : 1.0)
                     Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
 
                     Text {
                         anchors.centerIn: parent
                         text: MprisController.playing ? "󰏤" : "󰐊"
                         font.family: Theme.nerdFontFamily
-                        font.pixelSize: 14
-                        color: playHover.hovered ? Theme.accent : Theme.fg
-                        Behavior on color { ColorAnimation { duration: 120 } }
+                        font.pixelSize: 15
+                        color: Theme.bg
                     }
 
                     HoverHandler { id: playHover }
@@ -149,38 +171,40 @@ Rectangle {
                 Text {
                     text: "⏭"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 16
-                    color: nextHover.hovered ? Theme.fg : Theme.fg4
-                    anchors.verticalCenter: parent.verticalCenter
+                    font.pixelSize: 15
+                    color: nextHover.hovered ? Theme.fg : Theme.fg5
                     Behavior on color { ColorAnimation { duration: 100 } }
                     HoverHandler { id: nextHover }
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: { MprisController.next() }
+                        onClicked: MprisController.next()
                     }
                 }
             }
         }
 
-        Column {
-            width: parent.width
-            spacing: 6
+        // Scrub capsule bar
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 4
 
             Rectangle {
-                width: parent.width
-                height: barMouse.containsMouse ? 5 : 3
+                Layout.fillWidth: true
+                Layout.preferredHeight: barMouse.containsMouse ? 6 : 4
                 radius: 3
-                color: Theme.bg4
+                color: Theme.bgD
+                border.width: 1
+                border.color: Theme.cardBorder
 
-                Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on Layout.preferredHeight { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                 Rectangle {
                     width: parent.width * mediaCard.mprisProgress
                     height: parent.height
                     radius: 3
                     color: Theme.accent
-                    Behavior on width { NumberAnimation { duration: 510; easing.type: Easing.Linear } }
+                    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.Linear } }
                 }
 
                 MouseArea {
@@ -197,26 +221,21 @@ Rectangle {
                 }
             }
 
-            Item {
-                width: parent.width
-                height: 10
+            RowLayout {
+                Layout.fillWidth: true
 
                 Text {
-                    anchors.left: parent.left
                     text: mediaCard.mprisTimePlayed
                     color: Theme.fg5
-                    font.pixelSize: 9
-                    font.weight: 500
-                    font.family: Theme.fontFamily
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
                 }
 
+                Item { Layout.fillWidth: true }
+
                 Text {
-                    anchors.right: parent.right
                     text: mediaCard.mprisTimeTotal
                     color: Theme.fg5
-                    font.pixelSize: 9
-                    font.weight: 500
-                    font.family: Theme.fontFamily
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
                 }
             }
         }

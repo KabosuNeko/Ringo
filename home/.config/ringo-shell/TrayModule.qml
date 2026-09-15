@@ -11,11 +11,11 @@ Rectangle {
   property string hoveredTitle: ""
 
   visible: itemCount > 0
-  height: itemCount > 0 ? 38 : 0
-  radius: 12
-  color: Theme.bgD
+  height: itemCount > 0 ? 36 : 0
+  radius: 10
+  color: Theme.cardBg
   border.width: 1
-  border.color: Theme.borderBg3
+  border.color: Theme.cardBorder
   clip: true
 
   Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
