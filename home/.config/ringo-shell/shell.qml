@@ -246,9 +246,9 @@ ShellRoot {
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : (notificationModule.active && !notifFullscreenMode) ? 52
                   : controlCenter && MprisController.hasPlayer
-                      ? (308 + notifBump + trayBump)
+                      ? (278 + notifBump + trayBump)
                   : controlCenter
-                      ? (186 + notifBump + trayBump)
+                      ? (156 + notifBump + trayBump)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
                    : miniDashboard ? 176
@@ -754,32 +754,163 @@ ShellRoot {
             hasPlayer: MprisController.hasPlayer
           }
 
-          // 3. Tactile 32px Capsule Sliders
+          // 3. Classic Sliders
           ColumnLayout {
             id: sliderColumn
             Layout.fillWidth: true
-            spacing: 6
+            Layout.leftMargin: 8
+            Layout.rightMargin: 8
+            spacing: 8
 
-            CapsuleSlider {
+            RowLayout {
               Layout.fillWidth: true
-              icon: volumeModule.icon
-              title: "Volume"
-              muted: volumeModule.muted
-              value: volumeModule.vol / 100
-              valueText: volumeModule.muted ? "Muted" : volumeModule.vol + "%"
-              onSliderMoved: (val) => {
-                volumeModule.sink.audio.volume = val
+              spacing: 12
+
+              Text {
+                id: volIcon
+                text: volumeModule.icon
+                color: volumeModule.muted ? "#fd2222" : Theme.fg
+                font.family: Theme.nerdFontFamily
+                font.pixelSize: 13
+                Behavior on color { ColorAnimation { duration: 100 } }
+
+                onTextChanged: volPulse.restart()
+                scale: 1.0
+                SequentialAnimation {
+                    id: volPulse
+                    NumberAnimation { target: volIcon; property: "scale"; to: 1.15; duration: 60 }
+                    NumberAnimation { target: volIcon; property: "scale"; to: 1.0; duration: 100 }
+                }
+              }
+
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: box.sliderHeight
+                radius: box.sliderRadius
+                color: Theme.cardBg
+                border.width: 1
+                border.color: Theme.cardBorder
+
+                Rectangle {
+                  width: parent.width * (volumeModule.vol / 100)
+                  height: parent.height
+                  radius: box.sliderRadius
+                  color: box.sliderColor
+                  Behavior on width {
+                    SpringAnimation {
+                      spring: 15.5
+                      damping: 1.8
+                      epsilon: 0.40
+                    }
+                  }
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  anchors.topMargin: -box.sliderHitSlop
+                  anchors.bottomMargin: -box.sliderHitSlop
+                  onClicked: (mouse) => {
+                    volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
+                  }
+                  onPositionChanged: (mouse) => {
+                    if (pressed)
+                      volumeModule.sink.audio.volume = Math.max(0, Math.min(1, mouse.x / width))
+                  }
+                }
+              }
+
+              Text {
+                id: volVal
+                text: volumeModule.muted ? "muted" : volumeModule.vol + "%"
+                color: Theme.fg
+                font.family: Theme.fontFamily
+                font.pixelSize: 10
+                font.weight: 600
+                Layout.minimumWidth: 35
+                horizontalAlignment: Text.AlignRight
+                onTextChanged: valPulse.restart()
+                SequentialAnimation {
+                  id: valPulse
+                  NumberAnimation { target: volVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
+                  NumberAnimation { target: volVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
+                }
               }
             }
 
-            CapsuleSlider {
+            RowLayout {
               Layout.fillWidth: true
-              icon: brightnessModule.icon
-              title: "Display"
-              value: brightnessModule.percent
-              valueText: Math.round(brightnessModule.percent * 100) + "%"
-              onSliderMoved: (val) => {
-                BrightnessController.setPercent(val)
+              spacing: 12
+
+              Text {
+                id: blIcon
+                text: brightnessModule.icon
+                color: Theme.fg
+                font.family: Theme.nerdFontFamily
+                font.pixelSize: 13
+
+                onTextChanged: blPulse.restart()
+                scale: 1.0
+                SequentialAnimation {
+                    id: blPulse
+                    NumberAnimation { target: blIcon; property: "scale"; to: 1.15; duration: 60 }
+                    NumberAnimation { target: blIcon; property: "scale"; to: 1.0; duration: 100 }
+                }
+              }
+
+              Rectangle {
+                Layout.fillWidth: true
+                Layout.preferredHeight: box.sliderHeight
+                radius: box.sliderRadius
+                color: Theme.cardBg
+                border.width: 1
+                border.color: Theme.cardBorder
+
+                Rectangle {
+                  width: parent.width * brightnessModule.percent
+                  height: parent.height
+                  radius: box.sliderRadius
+                  color: box.sliderColor
+                  Behavior on width {
+                    SpringAnimation {
+                      spring: 15.5
+                      damping: 1.8
+                      epsilon: 0.40
+                    }
+                  }
+                }
+
+                MouseArea {
+                  anchors.fill: parent
+                  anchors.topMargin: -box.sliderHitSlop
+                  anchors.bottomMargin: -box.sliderHitSlop
+                  onClicked: (mouse) => {
+                    let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
+                    BrightnessController.setPercent(pct)
+                  }
+                  onPositionChanged: (mouse) => {
+                    if (pressed) {
+                      let pct = Math.max(0.01, Math.min(1.0, mouse.x / width))
+                      BrightnessController.setPercent(pct)
+                    }
+                  }
+                }
+              }
+
+              Text {
+                id: btVal
+                text: Math.round(brightnessModule.percent * 100) + "%"
+                color: Theme.fg
+                font.family: Theme.fontFamily
+                font.pixelSize: 10
+                font.weight: 600
+                Layout.minimumWidth: 35
+                horizontalAlignment: Text.AlignRight
+                onTextChanged: btPulse.restart()
+                SequentialAnimation {
+                    id: btPulse
+                    NumberAnimation { target: btVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
+                    NumberAnimation { target: btVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
+                }
               }
             }
           }
