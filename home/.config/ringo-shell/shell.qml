@@ -117,7 +117,7 @@ ShellRoot {
     visible: !LockController.locked && !root.barHidden
     WlrLayershell.layer: WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
-    WlrLayershell.keyboardFocus: (box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+    WlrLayershell.keyboardFocus: (box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
     // Height follows the actual content: pill box capsule.
     implicitWidth: Math.ceil(box.width * box.dpi)
     implicitHeight: Math.ceil(box.y + box.height * box.dpi)
@@ -150,7 +150,7 @@ ShellRoot {
       clip: true
       focus: true
 
-      Keys.onEscapePressed: {
+      Keys.onEscapePressed: (event) => {
           box.controlCenter = false
           box.miniDashboard = false
           box.cliphistOpen = false
@@ -159,6 +159,7 @@ ShellRoot {
           box.powerMenuOpen = false
           box.recordMenuOpen = false
           box.activeOsd = ""
+          event.accepted = true
       }
 
       property bool appLauncher: false
@@ -679,7 +680,8 @@ ShellRoot {
         anchors.topMargin: 12
         anchors.horizontalCenter: parent.horizontalCenter
         width: box.implicitWidth - 24
-        Keys.onEscapePressed: box.controlCenter = false
+        focus: true
+        Keys.onEscapePressed: (event) => { box.controlCenter = false; event.accepted = true }
         Connections {
           target: box
           function onControlCenterChanged() {
@@ -1149,7 +1151,8 @@ ShellRoot {
         id: miniDashboardPanel
         anchors.centerIn: parent
         width: box.implicitWidth - 28
-        Keys.onEscapePressed: box.miniDashboard = false
+        focus: true
+        Keys.onEscapePressed: (event) => { box.miniDashboard = false; event.accepted = true }
         Binding {
           target: SystemMonitor
           property: "telemetryActive"

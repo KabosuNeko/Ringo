@@ -75,9 +75,26 @@ Item {
 
     function loadApps() {
         let list = []
-        let entries = DesktopEntries.applications.values
+        let seenIds = {}
+        let seenNames = {}
+        let entries = DesktopEntries.applications.values || []
+
         for (let i = 0; i < entries.length; i++) {
             let e = entries[i]
+            if (!e || !e.name || e.name.trim().length === 0) continue
+            if (e.noDisplay) continue
+
+            // Deduplicate by entry ID (e.g. "antigravity", "futon", "xfce4-about")
+            let idKey = e.id ? e.id.toLowerCase().trim() : ""
+            if (idKey.length > 0 && seenIds[idKey]) continue
+
+            // Deduplicate by Name (e.g. across user/system dirs or quickshell live reloads)
+            let nameKey = e.name.toLowerCase().trim()
+            if (seenNames[nameKey]) continue
+
+            if (idKey.length > 0) seenIds[idKey] = true
+            seenNames[nameKey] = true
+
             list.push({
                 name: e.name,
                 comment: e.comment || "",
