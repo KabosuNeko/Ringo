@@ -13,12 +13,10 @@ Item {
     property color mutedFg: fg
     property bool muted: false
     property int spacing: 10
-    property int defaultSpacing: spacing !== 0 ? spacing : 10
 
     property int barWidth: 110
     property real barHeight: 8
     property int barRadius: 4
-    property int fillSpeed: 80
 
     anchors.centerIn: parent
     opacity: active ? 1 : 0
@@ -27,7 +25,7 @@ Item {
 
     RowLayout {
         anchors.centerIn: parent
-        spacing: defaultSpacing
+        spacing: root.spacing
 
         Text {
             id: valIcon
@@ -57,10 +55,9 @@ Item {
                 radius: root.barRadius
                 color: Theme.accent
                 Behavior on width {
-                    SpringAnimation {
-                        spring: 18.0
-                        damping: 1.8
-                        epsilon: 0.25
+                    NumberAnimation {
+                        duration: 80
+                        easing.type: Easing.OutCubic
                     }
                 }
             }

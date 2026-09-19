@@ -18,8 +18,6 @@ Singleton {
       property int pillBottomMargin: 26
       property string textFontFamily: "JetBrainsMono Nerd Font"
       property string nerdFontFamily: "JetBrainsMono Nerd Font Propo"
-      property var timerPresets: [1, 5, 10, 15, 30]
-      property int mediaPopupDuration: 3000
       property int maxWorkspaces: 5
       property int notificationDisplayTime: 3000
       property int maxNotificationsInStack: 20
@@ -44,8 +42,6 @@ Singleton {
   readonly property alias pillBottomMargin: adapter.pillBottomMargin
   readonly property alias textFontFamily: adapter.textFontFamily
   readonly property alias nerdFontFamily: adapter.nerdFontFamily
-  readonly property alias timerPresets: adapter.timerPresets
-  readonly property alias mediaPopupDuration: adapter.mediaPopupDuration
   readonly property alias maxWorkspaces: adapter.maxWorkspaces
   readonly property alias notificationDisplayTime: adapter.notificationDisplayTime
   readonly property alias maxNotificationsInStack: adapter.maxNotificationsInStack

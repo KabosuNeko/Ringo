@@ -34,6 +34,14 @@ qt_add_qml_module(IslandBackend
         backend/BrightnessController.cpp
         backend/NiriController.h
         backend/NiriController.cpp
+        backend/PowerProfileController.h
+        backend/PowerProfileController.cpp
+        backend/SoundController.h
+        backend/SoundController.cpp
+        backend/FuzzySearch.h
+        backend/FuzzySearch.cpp
+        backend/CliphistModel.h
+        backend/CliphistModel.cpp
 )
 
 target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend)

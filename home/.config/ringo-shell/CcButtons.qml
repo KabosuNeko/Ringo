@@ -13,8 +13,6 @@ Item {
   property bool controlCenterOpen: false
   property bool wifiPanelOpened: false
   property bool btPanelOpened: false
-  property bool hasPlayer: false
-  property real playerHeight: 0
 
   implicitHeight: bentoGrid.implicitHeight
 
@@ -22,8 +20,6 @@ Item {
     if (!controlCenterOpen) {
       root.wifiPanelOpened = false
       root.btPanelOpened = false
-    } else {
-      ppBtn.refresh()
     }
   }
 
@@ -198,9 +194,8 @@ Item {
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
-      property string currentProfile: ""
-      readonly property bool isCustomProfile: ppBtn.currentProfile !== "balanced" && ppBtn.currentProfile !== ""
-      readonly property var profiles: ["power-saver", "balanced", "performance"]
+      readonly property string currentProfile: PowerProfileController.activeProfile
+      readonly property bool isCustomProfile: currentProfile !== "balanced" && currentProfile !== ""
 
       color: isCustomProfile
              ? (ppHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
@@ -212,11 +207,6 @@ Item {
       Behavior on border.color { ColorAnimation { duration: 120 } }
       Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
 
-      function refresh() {
-        ppGetProc.running = false
-        ppGetProc.running = true
-      }
-
       RowLayout {
         anchors.fill: parent
         anchors.margins: 8
@@ -226,7 +216,7 @@ Item {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
           radius: 8
-          color: isCustomProfile ? Theme.accent : Theme.chipBg
+          color: ppBtn.isCustomProfile ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: 120 } }
 
           Text {
@@ -234,7 +224,7 @@ Item {
             text: ppBtn.currentProfile === "performance" ? String.fromCodePoint(0xf135)
                 : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a)
                 : String.fromCodePoint(0xf029a)
-            color: isCustomProfile ? Theme.bg : Theme.fg4
+            color: ppBtn.isCustomProfile ? Theme.bg : Theme.fg4
             font { family: Theme.nerdFontFamily; pixelSize: 13 }
           }
         }
@@ -254,7 +244,7 @@ Item {
           Text {
             text: ppBtn.currentProfile === "" ? "Balanced"
                 : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
-            color: isCustomProfile ? Theme.fg : Theme.fg5
+            color: ppBtn.isCustomProfile ? Theme.fg : Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -267,31 +257,7 @@ Item {
         id: ppMouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-          const idx = ppBtn.profiles.indexOf(ppBtn.currentProfile)
-          const next = ppBtn.profiles[(idx + 1) % ppBtn.profiles.length]
-          ppSetProc.command = ["powerprofilesctl", "set", next]
-          ppSetProc.running = false
-          ppSetProc.running = true
-        }
-      }
-
-      Process {
-        id: ppGetProc
-        command: ["powerprofilesctl", "get"]
-        running: true
-        stdout: StdioCollector {
-          onStreamFinished: ppBtn.currentProfile = text.trim()
-        }
-      }
-
-      Process {
-        id: ppSetProc
-        command: ["powerprofilesctl", "set", "balanced"]
-        running: false
-        stdout: StdioCollector {
-          onStreamFinished: ppBtn.refresh()
-        }
+        onClicked: PowerProfileController.cycleNext()
       }
     }
 
@@ -358,6 +324,151 @@ Item {
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: notificationModule.dndEnabled = !notificationModule.dndEnabled
+      }
+    }
+
+    Rectangle {
+      id: focusBtn
+      Layout.fillWidth: true
+      Layout.preferredHeight: 44
+      radius: 12
+      color: FocusTimer.running
+              ? (focusHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
+              : (focusHover.hovered ? Theme.chipBgHover : Theme.cardBg)
+      border.width: 1
+      border.color: FocusTimer.running ? Theme.accent : Theme.cardBorder
+      scale: focusMouse.pressed ? 0.96 : (focusHover.hovered ? 1.01 : 1.0)
+      Behavior on color { ColorAnimation { duration: 120 } }
+      Behavior on border.color { ColorAnimation { duration: 120 } }
+      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+
+      RowLayout {
+        anchors.fill: parent
+        anchors.margins: 8
+        spacing: 8
+
+        Rectangle {
+          Layout.preferredWidth: 28
+          Layout.preferredHeight: 28
+          radius: 8
+          color: FocusTimer.running ? Theme.accent : Theme.chipBg
+          Behavior on color { ColorAnimation { duration: 120 } }
+
+          Text {
+            anchors.centerIn: parent
+            text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
+            color: FocusTimer.running ? Theme.bg : Theme.fg4
+            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+          }
+        }
+
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: 1
+
+          Text {
+            text: FocusTimer.mode === "work" ? "Focus" : "Break"
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+          }
+
+          Text {
+            text: FocusTimer.running
+                ? FocusTimer.formattedTime
+                : (FocusTimer.mode === "work" ? (Math.floor(FocusTimer.workDuration / 60) + " min") : (Math.floor(FocusTimer.breakDuration / 60) + " min"))
+            color: FocusTimer.running ? Theme.accent : Theme.fg5
+            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+          }
+        }
+      }
+
+      HoverHandler { id: focusHover }
+      MouseArea {
+        id: focusMouse
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        cursorShape: Qt.PointingHandCursor
+        onClicked: (mouse) => {
+          if (mouse.button === Qt.RightButton) {
+            if (!FocusTimer.running) {
+              let currentMins = Math.floor(FocusTimer.workDuration / 60)
+              let nextMins = currentMins === 45 ? 60 : (currentMins === 60 ? 25 : 45)
+              FocusTimer.setWorkDuration(nextMins)
+            } else {
+              FocusTimer.skip()
+            }
+          } else {
+            FocusTimer.toggle()
+          }
+        }
+      }
+    }
+
+    Rectangle {
+      id: colorPickerBtn
+      Layout.fillWidth: true
+      Layout.preferredHeight: 44
+      radius: 12
+      color: colorPickerHover.hovered ? Theme.chipBgHover : Theme.cardBg
+      border.width: 1
+      border.color: Theme.cardBorder
+      scale: colorPickerMouse.pressed ? 0.96 : (colorPickerHover.hovered ? 1.01 : 1.0)
+      Behavior on color { ColorAnimation { duration: 120 } }
+      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+
+      RowLayout {
+        anchors.fill: parent
+        anchors.margins: 8
+        spacing: 8
+
+        Rectangle {
+          Layout.preferredWidth: 28
+          Layout.preferredHeight: 28
+          radius: 8
+          color: Theme.chipBg
+
+          Text {
+            anchors.centerIn: parent
+            text: "\uf1fb"
+            color: Theme.fg4
+            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+          }
+        }
+
+        ColumnLayout {
+          Layout.fillWidth: true
+          spacing: 1
+
+          Text {
+            text: "Pick Color"
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+          }
+
+          Text {
+            text: "Sample screen"
+            color: Theme.fg5
+            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            elide: Text.ElideRight
+            Layout.fillWidth: true
+          }
+        }
+      }
+
+      HoverHandler { id: colorPickerHover }
+      MouseArea {
+        id: colorPickerMouse
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: {
+          Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/color-picker.sh"])
+        }
       }
     }
   }

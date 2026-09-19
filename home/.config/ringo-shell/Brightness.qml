@@ -8,9 +8,6 @@ RowLayout {
 
     signal brightnessUpdated()
 
-    readonly property int brightness: BrightnessController.brightness
-    readonly property int maxBrightness: BrightnessController.maxBrightness
-    readonly property string backlightDevice: BrightnessController.device
     readonly property real percent: BrightnessController.percent
 
     Connections {

@@ -2,6 +2,7 @@ import Quickshell
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
+import IslandBackend
 
 Item {
     id: root
@@ -10,6 +11,7 @@ Item {
     property bool shown: false
     property int selectedIndex: 0
     property string searchQuery: ""
+    property string initialQuery: ""
     property var appsCache: []
     property var categories: ["All", "Internet", "Dev", "Media", "System"]
     property string activeCategory: "All"
@@ -20,34 +22,100 @@ Item {
     height: 384
     visible: opacity > 0
     opacity: shown ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-    scale: shown ? 1 : 0.96
-    Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
-    property var filteredApps: appsCache.filter(a => {
-        let q = searchQuery.toLowerCase()
-        let matchesSearch = q.length === 0 ||
-            a.name.toLowerCase().includes(q) ||
-            a.comment.toLowerCase().includes(q)
+    property var filteredApps: FuzzySearch.filterAndSort(appsCache, searchQuery, activeCategory)
 
-        if (!matchesSearch) return false
-        if (activeCategory === "All") return true
+    readonly property var mathResult: evaluateMath(searchQuery)
+    readonly property var specialAction: getSpecialAction(searchQuery)
+    readonly property bool hasSpecialCard: mathResult !== null || specialAction !== null
 
-        let cat = (a.entry.categories || []).join(" ").toLowerCase()
-        if (activeCategory === "Dev") {
-            return cat.includes("development") || cat.includes("programming") || a.name.toLowerCase().includes("code") || a.name.toLowerCase().includes("git")
+    function evaluateMath(text) {
+        if (!text) return null
+        let t = text.trim()
+        if (t.length < 2) return null
+        if (t.startsWith("?")) return null
+
+        let isExplicit = t.startsWith("=")
+        let expr = isExplicit ? t.slice(1).trim() : t
+        if (expr.length === 0) return null
+
+        // Quick rejection for paths/URLs
+        if (/^[a-zA-Z]+:\/\//.test(expr) || expr.startsWith("/") || expr.startsWith("~")) return null
+
+        // Must have at least one math operator or starts with '='
+        let hasMathOp = /[+\-*/%^]/.test(expr) || /^(sqrt|abs|sin|cos|tan|log|pow)\b/i.test(expr)
+        if (!isExplicit && !hasMathOp) return null
+
+        let clean = expr
+            .replace(/×/g, "*")
+            .replace(/÷/g, "/")
+            .replace(/\^/g, "**")
+            .replace(/\bpi\b/gi, "Math.PI")
+            .replace(/\be\b/gi, "Math.E")
+            .replace(/\bsqrt\(([^)]+)\)/gi, "Math.sqrt($1)")
+            .replace(/\babs\(([^)]+)\)/gi, "Math.abs($1)")
+            .replace(/\bround\(([^)]+)\)/gi, "Math.round($1)")
+            .replace(/\bpow\(([^,]+),([^)]+)\)/gi, "Math.pow($1,$2)")
+            .replace(/(\d+(?:\.\d+)?)\s*%\s*(?:of)?\s*(\d+(?:\.\d+)?)/gi, "($1/100 * $2)")
+            .replace(/(\d+(?:\.\d+)?)\s*%/g, "($1/100)")
+
+        let check = clean.replace(/Math\.(PI|E|sqrt|abs|round|pow|sin|cos|tan|log)/g, "")
+        if (/[^0-9.+\-*/%(),\s]/.test(check)) return null
+
+        try {
+            let res = Function('"use strict"; return (' + clean + ')')()
+            if (typeof res === 'number' && !isNaN(res) && isFinite(res)) {
+                let formatted = (Math.round(res * 1000000) / 1000000).toString()
+                return {
+                    expression: expr,
+                    result: formatted
+                }
+            }
+        } catch (e) {
+            return null
         }
-        if (activeCategory === "Internet") {
-            return cat.includes("network") || cat.includes("webbrowser") || cat.includes("chat") || a.name.toLowerCase().includes("browser") || a.name.toLowerCase().includes("discord")
+        return null
+    }
+
+    function getSpecialAction(text) {
+        if (!text) return null
+        let t = text.trim()
+        if (t.length === 0) return null
+
+        if (t.startsWith("?")) {
+            let q = t.slice(1).trim()
+            return {
+                type: "search",
+                title: "Search Web: " + (q.length > 0 ? "\"" + q + "\"" : "..."),
+                subtitle: "Press Enter to search in browser",
+                icon: "\uf002",
+                target: "https://www.google.com/search?q=" + encodeURIComponent(q)
+            }
         }
-        if (activeCategory === "Media") {
-            return cat.includes("audiovideo") || cat.includes("audio") || cat.includes("video") || cat.includes("player") || cat.includes("graphics")
+
+        if (/^https?:\/\//i.test(t) || /^[a-zA-Z0-9.-]+\.(com|org|net|io|dev|app|edu|gov|vn)(:[0-9]+)?(\/.*)?$/i.test(t) || /^localhost(:[0-9]+)?(\/.*)?$/i.test(t)) {
+            let url = /^https?:\/\//i.test(t) ? t : "http://" + t
+            return {
+                type: "url",
+                title: "Open URL: " + t,
+                subtitle: "Press Enter to open in browser",
+                icon: "\uf0c1",
+                target: url
+            }
         }
-        if (activeCategory === "System") {
-            return cat.includes("system") || cat.includes("utility") || cat.includes("settings") || cat.includes("terminal")
+
+        if (filteredApps.length === 0 && evaluateMath(text) === null) {
+            return {
+                type: "search",
+                title: "Search Web: \"" + t + "\"",
+                subtitle: "No local apps found - press Enter to search",
+                icon: "\uf002",
+                target: "https://www.google.com/search?q=" + encodeURIComponent(t)
+            }
         }
-        return true
-    })
+
+        return null
+    }
 
     onFilteredAppsChanged: selectedIndex = 0
 
@@ -64,13 +132,19 @@ Item {
 
     onShownChanged: {
         if (shown) {
-            loadApps()
-            searchQuery = ""
+            if (appsCache.length === 0) loadApps()
+            searchQuery = initialQuery
             activeCategory = "All"
-            searchInput.text = ""
+            searchInput.text = initialQuery
+            initialQuery = ""
             selectedIndex = 0
             searchInput.forceActiveFocus()
         }
+    }
+
+    function setSearchText(t) {
+        searchInput.text = t
+        root.searchQuery = t
     }
 
     function loadApps() {
@@ -107,6 +181,19 @@ Item {
     }
 
     function launchSelected() {
+      if (mathResult !== null) {
+        Quickshell.execDetached(["sh", "-c", "printf '%s' '" + mathResult.result + "' | wl-copy"])
+        Quickshell.execDetached(["notify-send", "-i", "accessories-calculator", "-a", "Ringo Calculator", "Calculated: " + mathResult.result, mathResult.expression + " = " + mathResult.result + " (copied to clipboard)"])
+        root.closeRequested()
+        return
+      }
+
+      if (specialAction !== null && (filteredApps.length === 0 || searchQuery.startsWith("?") || searchQuery.startsWith("http"))) {
+        Quickshell.execDetached(["xdg-open", specialAction.target])
+        root.closeRequested()
+        return
+      }
+
       if (filteredApps.length === 0) return
       const app = filteredApps[selectedIndex].entry
       if (app.runInTerminal) {
@@ -211,8 +298,10 @@ Item {
                     Text {
                         id: countText
                         anchors.centerIn: parent
-                        text: (filteredApps.length === 0 ? "0" : (root.selectedIndex + 1)) + " / " + root.filteredApps.length
-                        color: Theme.fg4
+                        text: root.mathResult !== null ? "Math"
+                            : (root.specialAction && root.filteredApps.length === 0 ? "Web"
+                            : ((filteredApps.length === 0 ? "0" : (root.selectedIndex + 1)) + " / " + root.filteredApps.length))
+                        color: root.mathResult !== null ? Theme.accent : Theme.fg4
                         font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
                     }
                 }
@@ -222,6 +311,7 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: 5
+            visible: !root.hasSpecialCard
 
             Repeater {
                 model: root.categories
@@ -252,6 +342,85 @@ Item {
                         onClicked: root.activeCategory = modelData
                     }
                 }
+            }
+        }
+
+        // Special Action Card (Inline Math Calculator / Web Search / Direct URL)
+        Rectangle {
+            id: specialCard
+            Layout.fillWidth: true
+            Layout.preferredHeight: root.hasSpecialCard ? 50 : 0
+            visible: root.hasSpecialCard
+            radius: 10
+            color: root.mathResult !== null ? Theme.accentSoft : Theme.chipBgHover
+            border.width: 1
+            border.color: root.mathResult !== null ? Theme.accent : Theme.cardBorder
+            clip: true
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 10
+
+                Rectangle {
+                    Layout.preferredWidth: 30
+                    Layout.preferredHeight: 30
+                    radius: 8
+                    color: root.mathResult !== null ? Theme.accent : Theme.chipBg
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: root.mathResult !== null ? "\uf1ec" : (root.specialAction ? root.specialAction.icon : "\uf002")
+                        color: root.mathResult !== null ? Theme.bg : Theme.accent
+                        font { family: Theme.nerdFontFamily; pixelSize: 14 }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 2
+
+                    Text {
+                        text: root.mathResult !== null ? root.mathResult.expression : (root.specialAction ? root.specialAction.title : "")
+                        color: root.mathResult !== null ? Theme.fg4 : Theme.fg
+                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? 10 : 11; weight: root.mathResult !== null ? 500 : 600 }
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+
+                    Text {
+                        text: root.mathResult !== null ? ("= " + root.mathResult.result) : (root.specialAction ? root.specialAction.subtitle : "")
+                        color: root.mathResult !== null ? Theme.accent : Theme.fg5
+                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? 14 : 9; weight: root.mathResult !== null ? 700 : 400 }
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                }
+
+                Rectangle {
+                    radius: 5
+                    color: root.mathResult !== null ? Theme.accent : Theme.chipBg
+                    border.width: root.mathResult !== null ? 0 : 1
+                    border.color: Theme.cardBorder
+                    implicitHeight: 22
+                    implicitWidth: actionBtnText.implicitWidth + 12
+
+                    Text {
+                        id: actionBtnText
+                        anchors.centerIn: parent
+                        text: root.mathResult !== null ? "↵ Copy" : (root.specialAction && root.specialAction.type === "url" ? "↵ Open" : "↵ Search")
+                        color: root.mathResult !== null ? Theme.bg : Theme.fg
+                        font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    }
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.launchSelected()
             }
         }
 
@@ -303,7 +472,7 @@ Item {
                         source: Quickshell.iconPath(modelData.icon, true)
                         asynchronous: true
                         scale: index === root.selectedIndex ? 1.08 : (rowHover.hovered ? 1.05 : 1)
-                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
                     }
 
                     Text {
@@ -355,7 +524,7 @@ Item {
 
             Text {
                 anchors.centerIn: parent
-                visible: appList.count === 0
+                visible: appList.count === 0 && !root.hasSpecialCard
                 text: "No applications found"
                 color: Theme.fg4
                 font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
@@ -378,7 +547,12 @@ Item {
                     implicitWidth: 18; implicitHeight: 14
                     Text { anchors.centerIn: parent; text: "↵"; color: Theme.fg4; font { pixelSize: 8; weight: 600 } }
                 }
-                Text { text: "Launch"; color: Theme.fg5; font { family: Theme.fontFamily; pixelSize: 8; weight: 500 } }
+                Text {
+                    text: root.mathResult !== null ? "Copy"
+                        : (root.specialAction && root.filteredApps.length === 0 ? "Open" : "Launch")
+                    color: Theme.fg5
+                    font { family: Theme.fontFamily; pixelSize: 8; weight: 500 }
+                }
             }
 
             RowLayout {

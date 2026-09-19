@@ -5,8 +5,6 @@
   "pillBottomMargin": 26,
   "textFontFamily": "JetBrainsMono Nerd Font",
   "nerdFontFamily": "JetBrainsMono Nerd Font Propo",
-  "timerPresets": [1, 5, 10, 15, 30],
-  "mediaPopupDuration": 3000,
   "maxWorkspaces": 5,
   "notificationDisplayTime": 3000,
   "maxNotificationsInStack": 20,

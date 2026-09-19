@@ -22,7 +22,7 @@ PanelWindow {
 
   // keyboard focus needed whenever the agent wants a PIN/passkey typed in
   WlrLayershell.keyboardFocus: (BluetoothPairingAgent.requestActive && BluetoothPairingAgent.requestRequiresInput)
-                                 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+                                 ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
 
   exclusionMode: ExclusionMode.Ignore
   implicitWidth: 238 * dpi

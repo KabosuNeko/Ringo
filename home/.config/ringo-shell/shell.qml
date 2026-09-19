@@ -14,52 +14,75 @@ ShellRoot {
   id: root
 
 
-  IpcHandler {
-      target: "cliphist"
-      function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = !box.cliphistOpen; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function hide(): void { box.cliphistOpen = false }
+  function closeOverlays(): void {
+    box.controlCenter = false
+    box.miniDashboard = false
+    box.cliphistOpen = false
+    box.appLauncher = false
+    box.wallpaperSwitcherOpen = false
+    box.powerMenuOpen = false
+    box.recordMenuOpen = false
   }
 
   IpcHandler {
-      target: "controlCenter"
-      function toggle(): void { box.controlCenter = !box.controlCenter; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function show(): void { box.controlCenter = true; box.miniDashboard = false; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function hide(): void { box.controlCenter = false }
+    target: "cliphist"
+    function toggle(): void { const next = !box.cliphistOpen; root.closeOverlays(); box.cliphistOpen = next }
+    function show(): void { root.closeOverlays(); box.cliphistOpen = true }
+    function hide(): void { box.cliphistOpen = false }
   }
 
   IpcHandler {
-      target: "miniDashboard"
-      function toggle(): void { box.controlCenter = false; box.miniDashboard = !box.miniDashboard; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function show(): void { box.controlCenter = false; box.miniDashboard = true; box.cliphistOpen = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-      function hide(): void { box.miniDashboard = false }
+    target: "controlCenter"
+    function toggle(): void { const next = !box.controlCenter; root.closeOverlays(); box.controlCenter = next }
+    function show(): void { root.closeOverlays(); box.controlCenter = true }
+    function hide(): void { box.controlCenter = false }
+  }
+
+  IpcHandler {
+    target: "miniDashboard"
+    function toggle(): void { const next = !box.miniDashboard; root.closeOverlays(); box.miniDashboard = next }
+    function show(): void { root.closeOverlays(); box.miniDashboard = true }
+    function hide(): void { box.miniDashboard = false }
   }
 
   IpcHandler {
     target: "appLauncher"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = !box.appLauncher; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = true; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = false }
-    function hide(): void { box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+    function toggle(): void { const next = !box.appLauncher; root.closeOverlays(); box.appLauncher = next }
+    function show(): void { root.closeOverlays(); box.appLauncher = true }
+    function hide(): void { box.appLauncher = false }
+    function search(text: string): void {
+      root.closeOverlays()
+      box.pendingLauncherQuery = text
+      box.appLauncher = true
+      if (appLauncherPanel) {
+        appLauncherPanel.setSearchText(text)
+      }
+    }
+    function launch(): void {
+      if (appLauncherPanel) {
+        appLauncherPanel.launchSelected()
+      }
+    }
   }
 
   IpcHandler {
     target: "wallpaperSwitcher"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = !box.wallpaperSwitcherOpen; box.powerMenuOpen = false; box.recordMenuOpen = false }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = true; box.powerMenuOpen = false; box.recordMenuOpen = false }
-    function hide(): void { box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false }
+    function toggle(): void { const next = !box.wallpaperSwitcherOpen; root.closeOverlays(); box.wallpaperSwitcherOpen = next }
+    function show(): void { root.closeOverlays(); box.wallpaperSwitcherOpen = true }
+    function hide(): void { box.wallpaperSwitcherOpen = false }
   }
 
   IpcHandler {
     target: "powerMenu"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = !box.powerMenuOpen; box.recordMenuOpen = false }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = true; box.recordMenuOpen = false }
+    function toggle(): void { const next = !box.powerMenuOpen; root.closeOverlays(); box.powerMenuOpen = next }
+    function show(): void { root.closeOverlays(); box.powerMenuOpen = true }
     function hide(): void { box.powerMenuOpen = false }
   }
 
   IpcHandler {
     target: "recordMenu"
-    function toggle(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = !box.recordMenuOpen }
-    function show(): void { box.controlCenter = false; box.miniDashboard = false; box.cliphistOpen = false; box.appLauncher = false; box.wallpaperSwitcherOpen = false; box.powerMenuOpen = false; box.recordMenuOpen = true }
+    function toggle(): void { const next = !box.recordMenuOpen; root.closeOverlays(); box.recordMenuOpen = next }
+    function show(): void { root.closeOverlays(); box.recordMenuOpen = true }
     function hide(): void { box.recordMenuOpen = false }
   }
 
@@ -84,11 +107,13 @@ ShellRoot {
     function hide(): void { weatherPopup.shown = false }
   }
 
-  property string bg: Theme.bg
+  IpcHandler {
+    target: "lock"
+    function unlock(): void { LockController.unlock() }
+    function lock(): void { LockController.lock() }
+  }
+
   property real barSurfaceOpacity: 0.5
-  property string fg: Theme.fg
-  property string fontFamily: Theme.fontFamily
-  property int avatarSize: 48
 
 
   property bool notifFullscreenMode: false
@@ -115,12 +140,19 @@ ShellRoot {
   PanelWindow {
     id: panelWindow
     visible: !LockController.locked && !root.barHidden
-    WlrLayershell.layer: WlrLayershell.Top
+    readonly property bool overlayActive: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen
+    readonly property bool popupsOpen: typeof ccButtons !== "undefined" && (ccButtons.wifiPanelOpened || ccButtons.btPanelOpened)
+    readonly property bool fullKeyboardOverlay: box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen
+    WlrLayershell.layer: overlayActive ? WlrLayershell.Overlay : WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
-    WlrLayershell.keyboardFocus: (box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen) ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
-    // Height follows the actual content: pill box capsule.
+    WlrLayershell.keyboardFocus: popupsOpen
+                                 ? WlrKeyboardFocus.None
+                                 : (fullKeyboardOverlay
+                                    ? WlrKeyboardFocus.Exclusive
+                                    : (box.controlCenter || box.miniDashboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None))
+    // Height and width follow the actual content: pill box capsule
     implicitWidth: Math.ceil(box.width * box.dpi)
-    implicitHeight: Math.ceil(box.y + box.height * box.dpi)
+    implicitHeight: Math.ceil((box.y + box.height) * box.dpi)
     onScreenChanged: { }
 
     anchors {
@@ -145,24 +177,19 @@ ShellRoot {
       id: box
       anchors.top: parent.top
       anchors.horizontalCenter: parent.horizontalCenter
-      opacity: (!fullscreenActive && !notifFullscreenMode && !LockController.locked) ? 1 : 0
+      opacity: ((!fullscreenActive || panelWindow.overlayActive) && !notifFullscreenMode && !LockController.locked) ? 1 : 0
       visible: opacity > 0
       clip: true
       focus: true
 
       Keys.onEscapePressed: (event) => {
-          box.controlCenter = false
-          box.miniDashboard = false
-          box.cliphistOpen = false
-          box.appLauncher = false
-          box.wallpaperSwitcherOpen = false
-          box.powerMenuOpen = false
-          box.recordMenuOpen = false
-          box.activeOsd = ""
-          event.accepted = true
+        root.closeOverlays()
+        box.activeOsd = ""
+        event.accepted = true
       }
 
       property bool appLauncher: false
+      property string pendingLauncherQuery: ""
       HoverHandler { id: boxHoverHandler; onHoveredChanged: box.hovered = hovered }
       property bool hovered: false
       property bool miniDashboard: false
@@ -184,23 +211,12 @@ ShellRoot {
         osdHideTimer.restart()
       }
 
-      property string accent: Theme.accent
-
-
-      property real ccButtonBorderWidth: 1
-      property string ccButtonBorderColor: Theme.cardBorder
-      property real ccButtonWidth: 85.3
-      property int ccButtonHeight: 35
-      property int ccButtonRadius: 11
-      property color ccButtonBgOff: Theme.cardBg
-      property color ccButtonFgOff: Theme.fg3
       property int sliderHeight: 6
       property int sliderRadius: 3
       property string sliderColor: Theme.accent
       // invisible extra clickable area above/below the thin slider bars
       // (proportional to the bar height, so it scales with sliderHeight)
       property int sliderHitSlop: 12
-      property int mprisControlsIconSize: 20
 
       property string activeOsd: "" // volume, brightness, battery
 
@@ -212,7 +228,7 @@ ShellRoot {
       onImplicitHeightChanged: {
           heightAnim.stop()
           heightAnim.to = implicitHeight
-          heightAnim.duration = 220
+          heightAnim.duration = 150
           heightAnim.start()
       }
 
@@ -262,7 +278,7 @@ ShellRoot {
       border.color: Theme.pillBorder
 
       Behavior on radius {
-          NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+          NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
       }
 
       color: controlCenter
@@ -276,8 +292,8 @@ ShellRoot {
           }
       }
 
-      Behavior on implicitWidth { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-      NumberAnimation { id: heightAnim; target: box; property: "height"; easing.type: Easing.OutExpo }
+      Behavior on implicitWidth { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+      NumberAnimation { id: heightAnim; target: box; property: "height"; duration: 150; easing.type: Easing.OutCubic }
 
       MouseArea {
         anchors.fill: parent
@@ -450,6 +466,23 @@ ShellRoot {
           weatherFg: Theme.fg
           clickable: false
         }
+
+        RowLayout {
+          id: barFocusRow
+          visible: FocusTimer.running
+          spacing: 4 * Config.paddingScale
+
+          Text {
+            text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
+            color: Theme.accent
+            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+          }
+          Text {
+            text: FocusTimer.formattedTime
+            color: Theme.accent
+            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
+          }
+        }
       }
 
       OsdBar {
@@ -500,10 +533,7 @@ ShellRoot {
         property real cliphistExtraHeight: 0
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.cliphistOpen ? 15 : 0 }
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
 
         Cliphist {
@@ -530,10 +560,7 @@ ShellRoot {
         visible: opacity > 0
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.wallpaperSwitcherOpen ? 15 : 0 }
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
         Loader {
           id: wallpaperLoader
@@ -572,10 +599,7 @@ ShellRoot {
         visible: opacity > 0
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.powerMenuOpen ? 15 : 0 }
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
         Loader {
           id: powerMenuLoader
@@ -615,10 +639,7 @@ ShellRoot {
         visible: opacity > 0
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.recordMenuOpen ? 15 : 0 }
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
         Loader {
           id: recordMenuLoader
@@ -655,21 +676,15 @@ ShellRoot {
           visible: opacity > 0
 
           Behavior on opacity {
-              SequentialAnimation {
-                  PauseAnimation { duration: box.appLauncher ? 15 : 0 }
-                  NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-              }
+              NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
           }
 
-          Loader {
+          AppLauncher {
+              id: appLauncherPanel
               anchors.fill: parent
-              active: box.appLauncher
-              asynchronous: true
-
-              sourceComponent: AppLauncher {
-                  shown: box.appLauncher
-                  onCloseRequested: box.appLauncher = false
-              }
+              shown: box.appLauncher
+              initialQuery: box.pendingLauncherQuery
+              onCloseRequested: box.appLauncher = false
           }
       }
 
@@ -693,10 +708,7 @@ ShellRoot {
         height: ccColumn.implicitHeight
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.controlCenter ? 15 : 0 }
-            NumberAnimation { duration: 100; easing.type: Easing.OutCubic }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
 
         ColumnLayout {
@@ -715,7 +727,6 @@ ShellRoot {
             id: ccButtons
             Layout.fillWidth: true
             controlCenterOpen: box.controlCenter
-            hasPlayer: MprisController.hasPlayer
           }
 
 
@@ -772,15 +783,13 @@ ShellRoot {
                     radius: box.sliderRadius
                     color: box.sliderColor
                     Behavior on width {
-                      SpringAnimation {
-                        spring: 15.5
-                        damping: 1.8
-                        epsilon: 0.40
-                      }
+                      enabled: !volMouse.pressed
+                      NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
                     }
                   }
 
                   MouseArea {
+                    id: volMouse
                     anchors.fill: parent
                     anchors.topMargin: -box.sliderHitSlop
                     anchors.bottomMargin: -box.sliderHitSlop
@@ -846,15 +855,13 @@ ShellRoot {
                     radius: box.sliderRadius
                     color: box.sliderColor
                     Behavior on width {
-                      SpringAnimation {
-                        spring: 15.5
-                        damping: 1.8
-                        epsilon: 0.40
-                      }
+                      enabled: !blMouse.pressed
+                      NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
                     }
                   }
 
                   MouseArea {
+                    id: blMouse
                     anchors.fill: parent
                     anchors.topMargin: -box.sliderHitSlop
                     anchors.bottomMargin: -box.sliderHitSlop
@@ -1008,7 +1015,6 @@ ShellRoot {
                 width: ListView.view.width
                 height: contentColumn.implicitHeight + 7
 
-                // glyph (nerd font) bell icon
                 Text {
                   id: bellIcon
                   text: String.fromCodePoint(0xf0f3)
@@ -1021,7 +1027,6 @@ ShellRoot {
                   anchors.leftMargin: 12
                 }
 
-                // custom appicon
                 Image {
                   id: notifIcon
                   width: 22
@@ -1060,7 +1065,6 @@ ShellRoot {
                     visible: !bodyText.visible
                   }
 
-                  // heading / summary
                   RowLayout {
                     Layout.fillWidth: true
 
@@ -1080,7 +1084,6 @@ ShellRoot {
                       Layout.bottomMargin: 5
                     }
 
-                    // close button
                     Rectangle {
                       Layout.preferredWidth: 22
                       Layout.preferredHeight: 22
@@ -1106,7 +1109,6 @@ ShellRoot {
                     }
                   }
 
-                  // description / body
                   Text {
                     id: bodyText
                     text: modelData.body ? modelData.body.replace(
@@ -1172,10 +1174,7 @@ ShellRoot {
         visible: opacity > 0
 
         Behavior on opacity {
-          SequentialAnimation {
-            PauseAnimation { duration: box.miniDashboard ? 1 : 0 }
-            NumberAnimation { duration: 300; easing.type: Easing.OutExpo }
-          }
+          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
         }
 
         MouseArea {
@@ -1408,6 +1407,22 @@ ShellRoot {
 
   NotificationModule { id: notificationModule; visible: false }
 
+  Connections {
+    target: FocusTimer
+    function onRunningChanged() {
+      if (FocusTimer.autoDnd) {
+        if (FocusTimer.running && FocusTimer.mode === "work") {
+          FocusTimer.dndWasEnabledBeforeFocus = notificationModule.dndEnabled
+          notificationModule.dndEnabled = true
+        } else if (!FocusTimer.running) {
+          if (!FocusTimer.dndWasEnabledBeforeFocus) {
+            notificationModule.dndEnabled = false
+          }
+        }
+      }
+    }
+  }
+
   FullscreenOsd {
     id: fsNotif
     active: notificationModule.active && notifFullscreenMode
@@ -1534,6 +1549,7 @@ ShellRoot {
     }
   }
 
+  Backdrop {}
   LockScreen {}
 
 }

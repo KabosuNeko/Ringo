@@ -37,7 +37,7 @@ PanelWindow {
   }
 
   // keyboard focus for password prompt
-  WlrLayershell.keyboardFocus: passwordPromptVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
+  WlrLayershell.keyboardFocus: passwordPromptVisible ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.OnDemand
 
   exclusionMode: ExclusionMode.Ignore
   implicitWidth: 245 * dpi
@@ -184,14 +184,18 @@ PanelWindow {
       onVisibleChanged: {
         if (visible) {
           passwordField.text = ""
+          wifiListWindow.requestActivate()
           focusTimer.restart()
         }
       }
 
       Timer {
         id: focusTimer
-        interval: 60
-        onTriggered: passwordField.forceActiveFocus()
+        interval: 100
+        onTriggered: {
+          wifiListWindow.requestActivate()
+          passwordField.forceActiveFocus()
+        }
       }
 
       MouseArea {
@@ -220,6 +224,17 @@ PanelWindow {
           border.color: passwordField.activeFocus ? Theme.accent : Theme.borderBg1
           border.width: passwordField.activeFocus ? 2 : 1
           Behavior on border.color { ColorAnimation { duration: 100 } }
+
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.IBeamCursor
+            acceptedButtons: Qt.LeftButton
+            onPressed: (mouse) => {
+              wifiListWindow.requestActivate()
+              passwordField.forceActiveFocus()
+              mouse.accepted = false
+            }
+          }
 
           TextInput {
             id: passwordField

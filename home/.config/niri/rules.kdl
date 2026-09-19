@@ -48,6 +48,13 @@ window-rule {
     min-height 600
 }
 
+window-rule {
+    match app-id=r#"foot-scratchpad"#
+    open-floating true
+    default-column-width { fixed 960; }
+    default-window-height { fixed 580; }
+}
+
 layer-rule {
     match namespace="^ringo-shell$"
     geometry-corner-radius 20
@@ -67,4 +74,9 @@ layer-rule {
         noise 0.05
         saturation 1
     }
+}
+
+layer-rule {
+    match namespace="^ringo-backdrop$"
+    place-within-backdrop true
 }

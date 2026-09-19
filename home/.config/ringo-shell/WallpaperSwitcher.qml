@@ -22,11 +22,12 @@ Rectangle {
   radius: 18
   visible: opacity > 0
   opacity: shown ? 1 : 0
-  Behavior on opacity { NumberAnimation { duration: 225; easing.type: Easing.OutExpo } }
   signal closeRequested()
 
   function applyWallpaper(path) {
     wallpaperPopup.selectedWallpaper = "file://" + path
+    // Generate blurred wallpaper for Niri Overview backdrop in background and reload backdrop
+    Quickshell.execDetached(["sh", "-c", "magick \"" + path + "\" -resize 25% -blur 0x6 -resize 400% \"$HOME/.cache/wal/wallpaper_blurred.jpg\" && qs ipc -p \"$HOME/.config/ringo-shell\" call backdrop reload || true"])
     // Use swaybg instead of awww (no transitions, but works)
     Quickshell.execDetached(["sh", "-c", "pkill swaybg 2>/dev/null; swaybg -i '" + path + "' -m fill &"])
     // wal regenerates ~/.cache/wal/ (colors.json, colors-foot-dark.ini, gtk-colors, ...)

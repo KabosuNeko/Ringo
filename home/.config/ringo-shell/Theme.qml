@@ -50,25 +50,15 @@ Singleton {
 
     property color fgL: Qt.lighter(root.walFg, 1.07)
 
-    // CC sliders
-    property color sliderBg: Qt.darker(root.walFg, 1.08)
-
-
-
     property color borderBg: Qt.darker(root.walFg, 2.06)
     property color borderBg1: Qt.darker(root.walFg, 3.03)
     property color borderBg2: Qt.darker(root.walFg, 4.36)
 
     property color borderBgFocus: Qt.darker(root.walFg, 2.56)
 
-
-    // focus bg
-    property color focusBg: surface(Qt.lighter(root.walBg, 1.82), root.surfaceOpacity)
     property color focusBg1: surface(Qt.lighter(root.walBg, 2.09), root.surfaceOpacity)
-
     property color focusBgL: surface(Qt.lighter(root.walBg, 2.41), root.surfaceOpacity) // L == lighter
 
-    property color focusFg: Qt.darker(root.walFg, 1.04)
     property color focusFg1: Qt.darker(root.walFg, 1.16)
 
 
@@ -99,6 +89,9 @@ Singleton {
         }
     }
 
+    property string currentWallpaper: ""
+    property int wallpaperVersion: 0
+
     function applyWal(): void {
         try {
             var text = walColors.text()
@@ -108,6 +101,8 @@ Singleton {
                     if (data.special && data.special.background) root.walBg = data.special.background
                     if (data.special && data.special.foreground) root.walFg = data.special.foreground
                     if (data.colors.color1) root.walAccent = data.colors.color1
+                    if (data.wallpaper) root.currentWallpaper = data.wallpaper
+                    root.wallpaperVersion++
                     return
                 }
             }
@@ -123,13 +118,7 @@ Singleton {
 
 
 
-    // Surface & Glassmorphism tokens
-    property color shadow: Qt.rgba(0, 0, 0, 0.55)
-    property real shadowOpacity: 0.5
-
-
     // Modern Pill & Card tokens
-
     property color pillBorder: Qt.alpha(root.walFg, 0.08)
     property color cardBg: surface(Qt.lighter(root.walBg, 1.25), root.surfaceOpacity * 0.95)
     property color cardBorder: Qt.alpha(root.walFg, 0.09)
@@ -137,7 +126,6 @@ Singleton {
     property color chipBgHover: Qt.alpha(root.walFg, 0.12)
     property color chipBorder: Qt.alpha(root.walFg, 0.08)
     property color accentSoft: surface(root.walAccent, 0.18)
-    property color accentGlow: surface(root.walAccent, 0.35)
 
     property int fontSizeBase: 13
     property int fontSize: Math.round(fontSizeBase * Config.pillScale)

@@ -2,6 +2,7 @@ import Quickshell
 import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
+import IslandBackend
 
 Item {
     id: root
@@ -9,7 +10,6 @@ Item {
 
     property bool shown: false
     property int selectedIndex: 0
-    property var allEntries: [] // raw source of: { id, label, imagePath }
     property string searchQuery: ""
     property string deletingId: ""
     property string collapsingId: ""
@@ -19,15 +19,12 @@ Item {
     signal closeRequested()
     signal previewToggled(bool active)
 
-    visible: shown
+    visible: opacity > 0
     opacity: shown ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 180 } }
-
-    ListModel { id: listModel }
 
     onShownChanged: {
         if (shown) {
-            refresh()
+            CliphistModel.refresh()
             searchQuery = ""
             searchInput.text = ""
             selectedIndex = 0
@@ -36,45 +33,30 @@ Item {
     }
 
     onSearchQueryChanged: {
-        rebuildFilteredModel()
+        CliphistModel.searchQuery = searchQuery
         selectedIndex = 0
     }
 
-    function rebuildFilteredModel() {
-        listModel.clear()
-        let list = searchQuery.length === 0 ? allEntries : allEntries.filter(e => e.label.toLowerCase().includes(searchQuery.toLowerCase()))
-        if (list.length > 0) listModel.append(list)
-    }
-
     function refresh() {
-        listProc.running = false
-        listProc.running = true
-        listCountProc.running = false
-        listCountProc.running = true
+        CliphistModel.refresh()
     }
 
     function copySelected() {
-        if (listModel.count === 0) return
-        let entry = listModel.get(selectedIndex)
-        copyProc.command = ["sh", "-c", "cliphist decode " + entry.id + " | wl-copy"]
-        copyProc.running = false
-        copyProc.running = true
+        if (CliphistModel.count === 0) return
+        CliphistModel.copyItem(selectedIndex)
         root.closeRequested()
     }
 
     function deleteSelected() {
-        if (listModel.count === 0) return
-        let entry = listModel.get(selectedIndex)
+        if (CliphistModel.count === 0) return
+        let entry = CliphistModel.get(selectedIndex)
         root.deletingId = entry.id
-        deleteProc.command = ["sh", "-c", "printf '%s\\t' \"$1\" | cliphist delete", "_", entry.id]
-        deleteProc.running = false
-        deleteProc.running = true
         holdRedTimer.entryId = entry.id
         holdRedTimer.restart()
     }
 
     function imgFullPreviewSelected() {
-        let entry = listModel.count > 0 ? listModel.get(root.selectedIndex) : null
+        let entry = CliphistModel.count > 0 ? CliphistModel.get(root.selectedIndex) : null
         if (!entry || !entry.imagePath) return
 
         imgFullPreview = !imgFullPreview
@@ -82,12 +64,12 @@ Item {
     }
 
     function findAdjacentImageIndex(direction) {
-        if (listModel.count === 0) return -1
+        if (CliphistModel.count === 0) return -1
         let idx = root.selectedIndex
-        for (let i = 0; i < listModel.count; i++) {
-            idx = (idx + direction + listModel.count) % listModel.count
-            let e = listModel.get(idx)
-            if (e.imagePath) return idx
+        for (let i = 0; i < CliphistModel.count; i++) {
+            idx = (idx + direction + CliphistModel.count) % CliphistModel.count
+            let e = CliphistModel.get(idx)
+            if (e && e.imagePath) return idx
         }
         return -1
     }
@@ -113,17 +95,12 @@ Item {
             let currentIdx = root.selectedIndex
             let savedContentY = listView.contentY
 
-            let idx = -1
-            for (let i = 0; i < listModel.count; i++) {
-                if (listModel.get(i).id === entryId) { idx = i; break }
-            }
-            if (idx !== -1) listModel.remove(idx)
-            root.allEntries = root.allEntries.filter(e => e.id !== entryId)
+            CliphistModel.deleteById(entryId)
 
             root.deletingId = ""
             root.collapsingId = ""
 
-            let newLength = listModel.count
+            let newLength = CliphistModel.count
             if (newLength === 0) root.selectedIndex = -1
             else if (currentIdx >= newLength) root.selectedIndex = newLength - 1
             else root.selectedIndex = currentIdx
@@ -134,56 +111,6 @@ Item {
                 listView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
             })
         }
-    }
-
-    Process {
-        id: listProc
-        command: ["bash", "-c", "$HOME/.config/ringo-shell/scripts/cliphist-img.sh"]
-        running: false
-        stdout: StdioCollector {
-            onStreamFinished: {
-                let lines = this.text.split("\n").filter(l => l.length > 0)
-                root.allEntries = lines.map(line => {
-                    let tabIdx = line.indexOf("\t")
-                    let id = line.substring(0, tabIdx)
-                    let rest = line.substring(tabIdx + 1)
-                    let nullIdx = rest.indexOf("\x00")
-                    if (nullIdx !== -1) {
-                        let label = rest.substring(0, nullIdx)
-                        let iconPart = rest.substring(nullIdx + 1)
-                        let imgPath = iconPart.split("\x1f")[1] || ""
-                        return { id, label, imagePath: imgPath }
-                    }
-                    return { id, label: rest, imagePath: "" }
-                })
-                rebuildFilteredModel()
-            }
-        }
-    }
-
-    Process {
-      id: listCountProc
-      command: ["sh", "-c", "cliphist list | wc -l"]
-      running: false
-      stdout: StdioCollector {
-        onStreamFinished: {
-          listCountText.total = this.text.trim();
-        }
-      }
-    }
-
-    Process {
-        id: deleteProc
-        running: false
-        onRunningChanged: if (!running) {
-            listCountProc.running = false
-            listCountProc.running = true
-        }
-    }
-
-    Process {
-        id: copyProc
-        running: false
     }
 
     Rectangle {
@@ -215,9 +142,8 @@ Item {
 
           Text {
             id: listCountText
-            property int total: 0
-            text: (listModel.count === 0 ? 0 : root.selectedIndex + 1)
-                   + " / " + listModel.count + " (" + total + ")"
+            text: (CliphistModel.count === 0 ? 0 : root.selectedIndex + 1)
+                   + " / " + CliphistModel.count + " (" + CliphistModel.totalCount + ")"
             color: Theme.fg4
             font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
             Layout.alignment: Qt.AlignRight
@@ -263,8 +189,8 @@ Item {
                                 root.previewSlideDir = 1
                                 root.selectedIndex = next
                             }
-                        } else if (listModel.count > 0) {
-                            root.selectedIndex = (root.selectedIndex + 1) % listModel.count
+                        } else if (CliphistModel.count > 0) {
+                            root.selectedIndex = (root.selectedIndex + 1) % CliphistModel.count
                         }
                         listView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
                         event.accepted = true
@@ -275,11 +201,9 @@ Item {
                                 root.previewSlideDir = -1
                                 root.selectedIndex = prev
                             }
-                        } else if (listModel.count > 0) {
-                            root.selectedIndex = root.selectedIndex <= 0 ? listModel.count - 1 : root.selectedIndex - 1
+                        } else if (CliphistModel.count > 0) {
+                            root.selectedIndex = root.selectedIndex <= 0 ? CliphistModel.count - 1 : root.selectedIndex - 1
                         }
-                        listView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
-                        event.accepted = true
                         listView.positionViewAtIndex(root.selectedIndex, ListView.Contain)
                         event.accepted = true
                     } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -320,8 +244,8 @@ Item {
 
                         readonly property string currentEntryId: {
                             let idx = root.selectedIndex
-                            if (idx < 0 || idx >= listModel.count) return ""
-                            return listModel.get(idx).id
+                            if (idx < 0 || idx >= CliphistModel.count) return ""
+                            return CliphistModel.get(idx).id
                         }
 
                         Image {
@@ -342,8 +266,8 @@ Item {
 
                             source: {
                                 let idx = root.selectedIndex
-                                if (idx < 0 || idx >= listModel.count) return ""
-                                let entry = listModel.get(idx)
+                                if (idx < 0 || idx >= CliphistModel.count) return ""
+                                let entry = CliphistModel.get(idx)
                                 return entry.imagePath ? ("file://" + entry.imagePath) : ""
                             }
 
@@ -389,7 +313,7 @@ Item {
                             anchors.bottom: parent.bottom
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.margins: 2
-                            text: (root.selectedIndex + 1) + " / " + listModel.count
+                            text: (root.selectedIndex + 1) + " / " + CliphistModel.count
                             color: Theme.fg4
                             font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
                         }
@@ -403,7 +327,7 @@ Item {
             width: parent.width
             height: parent.height - 67
             clip: true
-            model: listModel
+            model: CliphistModel
             currentIndex: root.selectedIndex
             highlightFollowsCurrentItem: false
             highlightMoveDuration: 80
@@ -413,12 +337,12 @@ Item {
 
             delegate: Rectangle {
                 width: listView.width
-                height: model.id === root.collapsingId ? 5 : (model.imagePath ? 55 : 30)
+                height: model.clipId === root.collapsingId ? 5 : (model.imagePath ? 55 : 30)
                 radius: 7
-                color: model.id === root.deletingId ? Theme.deleting : (index === root.selectedIndex ? Theme.focusBg1 : "transparent")
+                color: model.clipId === root.deletingId ? Theme.deleting : (index === root.selectedIndex ? Theme.focusBg1 : "transparent")
                 clip: true
-                opacity: model.id === root.collapsingId ? 0 : 1
-                scale: model.id === root.collapsingId ? 0.75 : 1
+                opacity: model.clipId === root.collapsingId ? 0 : 1
+                scale: model.clipId === root.collapsingId ? 0.75 : 1
 
                 Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
