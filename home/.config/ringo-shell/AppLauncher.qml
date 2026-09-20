@@ -122,7 +122,7 @@ Item {
     Connections {
         target: DesktopEntries
         function onApplicationsChanged() {
-            if (root.appsCache.length === 0 || root.shown) loadApps()
+            loadApps()
         }
     }
 
@@ -132,7 +132,7 @@ Item {
 
     onShownChanged: {
         if (shown) {
-            if (appsCache.length === 0) loadApps()
+            loadApps()
             searchQuery = initialQuery
             activeCategory = "All"
             searchInput.text = initialQuery
