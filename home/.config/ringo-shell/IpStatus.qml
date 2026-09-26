@@ -3,7 +3,6 @@ import QtQuick.Layouts
 import IslandBackend
 
 Item {
-    id: root
     implicitWidth: col.implicitWidth
     implicitHeight: col.implicitHeight
 

@@ -5,7 +5,6 @@ import QtQuick.Layouts
 import IslandBackend
 
 PanelWindow {
-  id: calendarWindow
 
   readonly property real dpi: Config.dpiScale
   property real anchorY: 0

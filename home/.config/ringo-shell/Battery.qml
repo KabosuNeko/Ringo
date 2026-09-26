@@ -2,7 +2,6 @@ import Quickshell
 import QtQuick
 import QtQuick.Layouts
 RowLayout {
-  id: root
   property string fg: Theme.fg
   property int fontSize: 10 * Config.pillScale
   property bool hasBattery: box.hasBattery

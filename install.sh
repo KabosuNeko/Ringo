@@ -114,6 +114,7 @@ else
     echo ":: Skipping Wallpapers clone."
 fi
 
+
 if command -v gsettings > /dev/null 2>&1; then
     printf "===> Apply GTK theme settings? (y/n): "
     read -r confirm
@@ -121,7 +122,7 @@ if command -v gsettings > /dev/null 2>&1; then
         gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
         gsettings set org.gnome.desktop.interface gtk-theme "Gruvbox-Orange-Dark"
         gsettings set org.gnome.desktop.interface icon-theme "Gruvbox-Plus-Dark"
-        gsettings set org.gnome.desktop.interface cursor-theme "Bibata-Modern-Amber"
+        gsettings set org.gnome.desktop.interface cursor-theme "Adwaita"
         gsettings set org.gnome.desktop.interface font-name "JetBrainsMono Nerd Font 16"
         gsettings set org.gnome.desktop.interface monospace-font-name "JetBrainsMono Nerd Font 16"
         echo ":: GTK settings applied."
@@ -147,10 +148,12 @@ if [ "$confirm" = y ] || [ "$confirm" = Y ]; then
     enable_svc "NetworkManager"
     enable_svc "bluetooth"
 
-    if systemctl list-unit-files "ly@tty1.service" > /dev/null 2>&1; then
-        if sudo systemctl enable ly@tty1.service; then
-            sudo systemctl disable getty@tty1.service 2>/dev/null || true
-            echo ":: ly display manager enabled (getty disabled)."
+    # ly@.service is a template; only "ly@.service" matches an installed unit file.
+    # Use tty2 and free it: ly@tty1 conflicts with the default getty@tty1 console.
+    if systemctl list-unit-files "ly@.service" > /dev/null 2>&1; then
+        if sudo systemctl enable ly@tty2.service; then
+            sudo systemctl disable getty@tty2.service 2>/dev/null || true
+            echo ":: ly display manager enabled on tty2 (getty@tty2 disabled, getty@tty1 kept)."
         fi
     else
         echo "!!! ly not installed. Skipping display manager setup."
@@ -169,6 +172,9 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
         echo ":: Checking ringo-shell build dependencies..."
         missing=""
         command -v cmake > /dev/null 2>&1 || missing="${missing}cmake "
+        command -v pkg-config > /dev/null 2>&1 || missing="${missing}pkgconf "
+        command -v wayland-scanner > /dev/null 2>&1 || missing="${missing}wayland "
+        pkg-config --exists wayland-client 2>/dev/null || missing="${missing}wayland "
         if [ -n "$missing" ]; then
             echo "XXX [MISSING] $missing"
             yay -S --noconfirm $missing
@@ -187,7 +193,13 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
 
         echo ":: Installing ringo-shell backend to ~/.config/ringo-shell/IslandBackend..."
         mkdir -p "$HOME/.config/ringo-shell/IslandBackend"
-        cp build/libIslandBackend.so build/libIslandBackendPlugin.so build/qmldir build/IslandBackend.qmltypes "$HOME/.config/ringo-shell/IslandBackend/"
+        # Copy beside the target and rename: a running shell must never load a
+        # half-written plugin.
+        for f in libIslandBackend.so libIslandBackendPlugin.so qmldir IslandBackend.qmltypes; do
+            cp -f "build/$f" "$HOME/.config/ringo-shell/IslandBackend/.$f.new" &&
+                mv -f "$HOME/.config/ringo-shell/IslandBackend/.$f.new" \
+                      "$HOME/.config/ringo-shell/IslandBackend/$f"
+        done
         chmod +x "$HOME/.local/bin/ringo-shell"
 
         if [ -f "$RINGO_DIR/assets/ringo.png" ]; then

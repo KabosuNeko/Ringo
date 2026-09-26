@@ -26,7 +26,6 @@ PanelWindow {
     }
 
     FileView {
-        id: blurWatcher
         path: Quickshell.env("HOME") + "/.cache/wal/wallpaper_blurred.jpg"
         watchChanges: true
         onFileChanged: {
@@ -49,6 +48,7 @@ PanelWindow {
         fillMode: Image.PreserveAspectCrop
         cache: false
         asynchronous: true
+        sourceSize: Qt.size(Screen.width, Screen.height)
         source: "file://" + Quickshell.env("HOME") + "/.cache/wal/wallpaper_blurred.jpg"
     }
 

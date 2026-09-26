@@ -4,13 +4,11 @@ import IslandBackend
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
-import Quickshell.Widgets
 
 // Fullscreen lock screen. Shown when LockController.locked becomes true.
 // Covers the whole output on the overlay layer, grabs exclusive keyboard
 // focus and authenticates the password against PAM via the backend.
 PanelWindow {
-  id: lockScreen
   visible: LockController.locked
   WlrLayershell.layer: WlrLayershell.Overlay
   WlrLayershell.namespace: "ringo-lock"
@@ -54,7 +52,10 @@ PanelWindow {
         Layout.topMargin: 24
         implicitWidth: 260
         implicitHeight: 44
-        placeholderText: "Password"
+        // Input is neutralised while a PAM conversation is in flight so a
+        // second Enter cannot queue another attempt.
+        enabled: !LockController.authenticating
+        placeholderText: LockController.authenticating ? "Checking…" : "Password"
         echoMode: TextInput.Password
         color: Theme.fg
         placeholderTextColor: Theme.fg5
@@ -70,13 +71,10 @@ PanelWindow {
 
         onAccepted: {
           if (passField.text.length === 0) return
-          if (LockController.tryUnlock(passField.text)) {
-            // success: LockController flips locked=false, panel hides itself
-          } else {
-            errorText.visible = true
-            shakeAnim.restart()
-            passField.clear()
-          }
+          errorText.visible = false
+          // Async: the outcome arrives via LockController.unlockResult().
+          LockController.tryUnlock(passField.text)
+          passField.clear()
         }
       }
 
@@ -171,6 +169,21 @@ PanelWindow {
   SystemClock {
     id: clock
     precision: SystemClock.Minutes
+  }
+
+  // PAM runs on a worker thread; the outcome lands here on the GUI thread.
+  Connections {
+    target: LockController
+    function onUnlockResult(success) {
+      if (success) {
+        // LockController flips locked=false, the panel hides itself.
+        errorText.visible = false
+      } else {
+        errorText.visible = true
+        shakeAnim.restart()
+        passField.forceActiveFocus()
+      }
+    }
   }
 
   SequentialAnimation {

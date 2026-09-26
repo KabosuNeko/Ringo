@@ -5,7 +5,6 @@ import QtQuick.Layouts
 import IslandBackend
 
 PanelWindow {
-  id: btListWindow
 
   readonly property real dpi: Config.dpiScale
 

@@ -1,6 +1,6 @@
 import Quickshell
 import Quickshell.Widgets
-import Quickshell.Io
+import IslandBackend
 import QtQuick
 import QtQuick.Layouts
 import Qt.labs.folderlistmodel
@@ -24,14 +24,18 @@ Rectangle {
   opacity: shown ? 1 : 0
   signal closeRequested()
 
+  function fileUrl(path: string): string {
+    // A local path is not a URL: '#' would be parsed as a fragment and '?' as a
+    // query, so the file would never open. Encode each segment instead.
+    // Qt.resolvedUrl() does not encode (verified: it leaves both raw).
+    return "file://" + path.split("/").map(encodeURIComponent).join("/")
+  }
+
   function applyWallpaper(path) {
-    wallpaperPopup.selectedWallpaper = "file://" + path
-    // Generate blurred wallpaper for Niri Overview backdrop in background and reload backdrop
-    Quickshell.execDetached(["sh", "-c", "magick \"" + path + "\" -resize 25% -blur 0x6 -resize 400% \"$HOME/.cache/wal/wallpaper_blurred.jpg\" && qs ipc -p \"$HOME/.config/ringo-shell\" call backdrop reload || true"])
-    // Use swaybg instead of awww (no transitions, but works)
-    Quickshell.execDetached(["sh", "-c", "pkill swaybg 2>/dev/null; swaybg -i '" + path + "' -m fill &"])
-    // wal regenerates ~/.cache/wal/ (colors.json, colors-foot-dark.ini, gtk-colors, ...)
-    Quickshell.execDetached(["wal", "-i", path, "-q", "-n", "-e"])
+    wallpaperPopup.selectedWallpaper = fileUrl(path)
+    // pywal palette, the blurred niri-overview backdrop and the ringo-wallpaper process are
+    // all owned by the backend controller.
+    WallpaperController.apply(path)
     // Reload foot so it picks up the new colors-foot-dark.ini
     Quickshell.execDetached(["sh", "-c", "sleep 0.5 && pkill -USR1 foot 2>/dev/null || true"])
   }
@@ -44,7 +48,7 @@ Rectangle {
 
   FolderListModel {
     id: wallpaperModel
-    folder: "file://" + Config.wallpapersDir.replace("~", Quickshell.env("HOME")) + "/"
+    folder: fileUrl(Config.wallpapersDir.replace("~", Quickshell.env("HOME"))) + "/"
     nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp"]
     showDirs: false
     caseSensitive: false
@@ -98,7 +102,7 @@ Rectangle {
         id: cell
         width: wallGrid.cellWidth
         height: wallGrid.cellHeight
-        property string wallUrl: "file://" + filePath
+        property string wallUrl: wallpaperPopup.fileUrl(filePath)
         property bool isCurrent: GridView.isCurrentItem
         property bool isSelected: wallpaperPopup.selectedWallpaper === wallUrl
 
@@ -129,7 +133,6 @@ Rectangle {
         }
 
         Rectangle {
-          id: thumbFrame
           anchors.fill: parent
           anchors.margins: 5
           radius: 10

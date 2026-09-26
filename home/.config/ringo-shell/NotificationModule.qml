@@ -60,34 +60,47 @@ Item {
           if (idx !== -1) notifications.splice(idx, 1)
           notifications.push(dup)
 
+          trimStack()
           syncReversed()
           notificationsChanged()
-          if (!dndEnabled) {
-            queue.push(dup)
-            if (!current) advance()
-          }
+          schedule(dup)
           return
         }
       }
 
     const entry = makeEntry(notif)
     notifications.push(entry)
-    if (notifications.length > maxStored) {
-      const old = notifications.shift()
-      if (old.notif) old.notif.tracked = false
-      old.tracked = false
-    }
+    trimStack()
     syncReversed()
     notificationsChanged()
-    if (dndEnabled) return
-    queue.push(entry)
-    if (!current) advance()
+    schedule(entry)
   }
 
   function advance(): void {
     if (queue.length === 0) { current = null; return }
     current = queue.shift()
     hideTimer.restart()
+  }
+
+  // Drop the oldest entries beyond the stack limit and forget them everywhere
+  // they are still referenced, so no toast can outlive its entry.
+  function trimStack(): void {
+    while (notifications.length > maxStored) {
+      const old = notifications.shift()
+      if (old.notif) old.notif.tracked = false
+      old.tracked = false
+      const qidx = queue.indexOf(old)
+      if (qidx !== -1) queue.splice(qidx, 1)
+    }
+  }
+
+  // Only stack entries are ever queued, and the pending queue is capped like
+  // the stack, so a burst cannot grow it without bound.
+  function schedule(entry): void {
+    if (dndEnabled) return
+    queue.push(entry)
+    while (queue.length > maxStored) queue.shift()
+    if (!current) advance()
   }
 
   function findEntry(target) {
@@ -119,6 +132,9 @@ Item {
     }
     notifications = []
     notificationsReversed = []
+    queue = []
+    current = null
+    hideTimer.stop()
     notificationsChanged()
   }
 

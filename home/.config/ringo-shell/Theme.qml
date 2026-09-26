@@ -126,7 +126,4 @@ Singleton {
     property color chipBgHover: Qt.alpha(root.walFg, 0.12)
     property color chipBorder: Qt.alpha(root.walFg, 0.08)
     property color accentSoft: surface(root.walAccent, 0.18)
-
-    property int fontSizeBase: 13
-    property int fontSize: Math.round(fontSizeBase * Config.pillScale)
 }

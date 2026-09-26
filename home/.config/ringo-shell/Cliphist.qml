@@ -1,5 +1,4 @@
 import Quickshell
-import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import IslandBackend
@@ -141,7 +140,6 @@ Item {
           }
 
           Text {
-            id: listCountText
             text: (CliphistModel.count === 0 ? 0 : root.selectedIndex + 1)
                    + " / " + CliphistModel.count + " (" + CliphistModel.totalCount + ")"
             color: Theme.fg4

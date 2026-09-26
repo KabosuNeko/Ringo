@@ -174,7 +174,6 @@ PanelWindow {
     }
 
     Rectangle {
-      id: passwordPromptRect
       visible: wifiListWindow.passwordPromptVisible
       anchors.fill: parent
       color: Theme.bg1
@@ -296,7 +295,6 @@ PanelWindow {
         Row {
           spacing: 8 * dpi
           Rectangle {
-            id: submitBtn
             width: 80 * dpi; height: 32 * dpi; radius: 9 * dpi
             color: submitBtnMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
             Text { anchors.centerIn: parent; text: "Join"; color: Theme.fgL; font { family: Theme.fontFamily; pixelSize: 12 * dpi } }

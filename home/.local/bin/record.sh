@@ -1,5 +1,5 @@
 #!/bin/sh
-# Ringo screen recorder — ported from Kumin (Mod+F11)
+# Ringo screen recorder — wl-screenrec based, bound to Mod+F11
 # Toggle: first press -> Quickshell menu -> start wl-screenrec
 #         second press -> stop (SIGINT) + notify
 # Modes: only-sound | micro | no-sound (args)
@@ -62,10 +62,10 @@ fi
 
 if [ -x "$HOME/.local/bin/ringo-shell" ]; then
     "$HOME/.local/bin/ringo-shell" call recordMenu toggle 2>/dev/null || \
-    "$HOME/.local/bin/ringo-shell" call recordMenu show 2>/dev/null || true
+    "$HOME/.local/bin/ringo-shell" call recordMenu open 2>/dev/null || true
 elif command -v qs > /dev/null 2>&1; then
     qs ipc -p "$HOME/.config/ringo-shell" call recordMenu toggle 2>/dev/null || \
-    qs ipc -p "$HOME/.config/ringo-shell" call recordMenu show 2>/dev/null || true
+    qs ipc -p "$HOME/.config/ringo-shell" call recordMenu open 2>/dev/null || true
     exit 0
 else
     start_recording "No Sound"

@@ -59,7 +59,18 @@ layer-rule {
     match namespace="^ringo-shell$"
     geometry-corner-radius 20
     background-effect {
-        xray true
+        xray false
+        blur true
+        noise 0.05
+        saturation 1
+    }
+}
+
+layer-rule {
+    match namespace="^ringo-popup$"
+    geometry-corner-radius 26
+    background-effect {
+        xray false
         blur true
         noise 0.05
         saturation 1

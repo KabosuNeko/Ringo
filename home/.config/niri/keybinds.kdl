@@ -2,7 +2,7 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     Mod+V hotkey-overlay-title="Clipboard Menu" { spawn-sh "ringo-shell call cliphist toggle"; }
-    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn-sh "cliphist wipe && notify-send -i edit-clear 'Clipboard' 'Clipboard cleared' -t 2000"; }
+    Mod+Shift+C hotkey-overlay-title="Wipe Clipboard" { spawn-sh "ringo-shell call cliphist wipe"; }
 
     Mod+Return hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
     Mod+grave hotkey-overlay-title="Scratchpad Terminal" { spawn-sh "scratchpad.sh"; }
@@ -129,12 +129,12 @@ binds {
     XF86AudioMute        allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"; }
     XF86AudioMicMute     allow-when-locked=true { spawn-sh "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"; }
 
-    XF86AudioPlay        allow-when-locked=true { spawn-sh "playerctl play-pause"; }
-    XF86AudioPause       allow-when-locked=true { spawn-sh "playerctl play-pause"; }
-    XF86AudioStop        allow-when-locked=true { spawn-sh "playerctl stop"; }
-    XF86AudioPrev        allow-when-locked=true { spawn-sh "playerctl previous"; }
-    XF86AudioNext        allow-when-locked=true { spawn-sh "playerctl next"; }
+    XF86AudioPlay        allow-when-locked=true { spawn-sh "ringo-shell call media playPause"; }
+    XF86AudioPause       allow-when-locked=true { spawn-sh "ringo-shell call media playPause"; }
+    XF86AudioStop        allow-when-locked=true { spawn-sh "ringo-shell call media stop"; }
+    XF86AudioPrev        allow-when-locked=true { spawn-sh "ringo-shell call media prev"; }
+    XF86AudioNext        allow-when-locked=true { spawn-sh "ringo-shell call media next"; }
 
-    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%+"; }
-    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "brightnessctl -e4 -n2 set 2%-"; }
+    XF86MonBrightnessUp allow-when-locked=true { spawn-sh "ringo-shell call brightness up"; }
+    XF86MonBrightnessDown allow-when-locked=true { spawn-sh "ringo-shell call brightness down"; }
 }

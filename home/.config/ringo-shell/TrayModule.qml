@@ -56,7 +56,6 @@ Rectangle {
         model: SystemTray.items
 
         delegate: Rectangle {
-          id: trayTile
           required property var modelData
           Layout.preferredWidth: 26
           Layout.preferredHeight: 26

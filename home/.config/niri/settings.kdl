@@ -12,7 +12,7 @@ overview {
 }
 
 cursor {
-    xcursor-theme "Bibata-Modern-Amber"
+    xcursor-theme "Adwaita"
     xcursor-size 24
     hide-when-typing
 }
