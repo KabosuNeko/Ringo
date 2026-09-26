@@ -11,6 +11,7 @@ Item {
   property string weatherFg: Theme.fg4
   property int fontSize: 10 * Config.pillScale
   property bool clickable: true
+  property bool showUnit: true
 
   Row {
     id: row
@@ -24,7 +25,9 @@ Item {
       anchors.verticalCenter: parent.verticalCenter
     }
     Text {
-      text: WeatherController.loading ? "--" : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
+      text: WeatherController.loading
+            ? "--"
+            : Math.round(WeatherController.temp) + "°" + (root.showUnit ? (Config.weatherUnits === "metric" ? "C" : "F") : "")
       color: weatherFg
       font { family: Theme.fontFamily; pixelSize: root.fontSize; weight: 500 }
       anchors.verticalCenter: parent.verticalCenter

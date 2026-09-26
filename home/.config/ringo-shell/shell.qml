@@ -440,7 +440,7 @@ function doctorReport(): string {
                      : miniDashboard ? 410
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                        : leftWing.implicitWidth + centerClock.implicitWidth + rightWing.implicitWidth + (hovered ? 68 : 58) * Config.paddingScale
+                        : barRow.implicitWidth + (hovered ? 68 : 58) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : notificationModule.active ? 52
@@ -454,7 +454,7 @@ function doctorReport(): string {
                     : wallpaperSwitcherOpen ? 308
                     : powerMenuOpen ? 90
                     : recordMenuOpen ? 90
-                    : (Math.max(batMod.implicitHeight, volumeModule.implicitHeight, centerClock.implicitHeight, barBrightnessRow.implicitHeight, barWeatherIndicator.implicitHeight) * Config.pillScale) + 10
+                    : (Math.max(barRow.implicitHeight, centerClock.implicitHeight) * Config.pillScale) + 10
 
       readonly property real baseRadius: 20 * Config.pillScale
 
@@ -567,107 +567,99 @@ function doctorReport(): string {
       }
 
 
-      Item {
-        id: centerGroup
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: -5 * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        width: centerClock.implicitWidth
-        height: centerClock.implicitHeight
+      // One compact line: time, date, weather, control center and
+      // notifications. Battery, volume and brightness live in the control
+      // center and the mini dashboard now, but their modules stay instantiated
+      // (invisible) because they drive the OSDs.
+      RowLayout {
+        id: barRow
+        anchors.centerIn: parent
+        spacing: 9 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 100 } }
 
         Clock {
           id: centerClock
-          anchors.centerIn: parent
+          fontSize: 11.5 * Config.pillScale
+          Layout.alignment: Qt.AlignVCenter
         }
 
-        WheelHandler {
-          orientation: Qt.Vertical
-          onWheel: (event) => {
-            if (event.angleDelta.y > 0) {
-              NiriController.action("FocusColumnLeft")
-            } else if (event.angleDelta.y < 0) {
-              NiriController.action("FocusColumnRight")
-            }
-          }
-        }
-      }
-
-
-      RowLayout {
-        id: leftWing
-        anchors.right: centerGroup.left
-        anchors.rightMargin: (box.hovered ? 16 : 13) * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: (box.hovered ? 14 : 11) * Config.paddingScale
-        opacity: box.barContentOpacity
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
-
-        Battery {
-          id: batMod
+        Rectangle {
+          Layout.preferredWidth: 4
+          Layout.preferredHeight: 4
+          radius: 2
+          color: Theme.accent
+          Layout.alignment: Qt.AlignVCenter
         }
 
-        Volume {
-          id: volumeModule
-          onVolumeChanged: {
-            if (!box.controlCenter) box.activeOsd = "volume"
-            osdHideTimer.interval = Config.osdDuration
-            osdHideTimer.restart()
-          }
-        }
-      }
-
-
-      RowLayout {
-        id: rightWing
-        anchors.left: centerGroup.right
-        anchors.leftMargin: (box.hovered ? 15 : 12) * Config.paddingScale
-        anchors.verticalCenter: parent.verticalCenter
-        spacing: (box.hovered ? 13 : 10) * Config.paddingScale
-        opacity: box.barContentOpacity
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
-
-        RowLayout {
-          id: barBrightnessRow
-          spacing: 4 * Config.paddingScale
-          Text {
-            text: brightnessModule.icon
-            color: Theme.fg
-            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-          }
-          Text {
-            text: Math.round(brightnessModule.percent * 100) + "%"
-            color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
-          }
-
-          WheelHandler {
-            orientation: Qt.Vertical
-            onWheel: (event) => {
-              const step = 0.05
-              const delta = event.angleDelta.y > 0 ? step : -step
-              BrightnessController.setPercent(Math.max(0.01, Math.min(1.0, BrightnessController.percent + delta)))
-            }
-          }
+        Text {
+          text: Qt.formatDateTime(clock.date, "ddd MMM d")
+          color: Theme.fg4
+          font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
+          Layout.alignment: Qt.AlignVCenter
         }
 
         WeatherIndicator {
           id: barWeatherIndicator
-          weatherFg: Theme.fg
-          clickable: false
+          weatherFg: Theme.fg4
+          showUnit: false
+          Layout.alignment: Qt.AlignVCenter
+          onToggleWeather: weatherPopup.shown = !weatherPopup.shown
+        }
+
+        Text {
+          text: "\uf1de"
+          color: ccButtonHover.hovered ? Theme.accent : Theme.fg4
+          font { family: Theme.nerdFontFamily; pixelSize: 11 * Config.pillScale }
+          Layout.alignment: Qt.AlignVCenter
+          Behavior on color { ColorAnimation { duration: 120 } }
+
+          HoverHandler { id: ccButtonHover }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: box.controlCenter = !box.controlCenter
+          }
+        }
+
+        Item {
+          Layout.preferredWidth: bellRow.implicitWidth
+          Layout.preferredHeight: bellRow.implicitHeight
+          Layout.alignment: Qt.AlignVCenter
+
+          RowLayout {
+            id: bellRow
+            anchors.fill: parent
+            spacing: 3 * Config.paddingScale
+
+            Text {
+              text: "\uf0f3"
+              color: bellHover.hovered ? Theme.accent : Theme.fg4
+              font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+              Behavior on color { ColorAnimation { duration: 120 } }
+            }
+
+            Text {
+              visible: notificationModule.notifications.length > 0
+              text: notificationModule.notifications.length
+              color: Theme.fg
+              font { family: Theme.fontFamily; pixelSize: 9 * Config.pillScale; weight: 600 }
+            }
+          }
+
+          HoverHandler { id: bellHover }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: box.controlCenter = !box.controlCenter
+          }
         }
 
         Item {
           visible: Recorder.active
-          // the weather module keeps its own right padding, so the dot pulls
-          // itself closer and sits on the text's optical centre, not the row's
           Layout.preferredWidth: 7
           Layout.preferredHeight: 12
-          Layout.leftMargin: -5
           Layout.alignment: Qt.AlignVCenter
 
           Rectangle {
@@ -689,6 +681,7 @@ function doctorReport(): string {
         RowLayout {
           visible: FocusTimer.running
           spacing: 4 * Config.paddingScale
+          Layout.alignment: Qt.AlignVCenter
 
           Text {
             text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
@@ -699,6 +692,25 @@ function doctorReport(): string {
             text: FocusTimer.formattedTime
             color: Theme.accent
             font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
+          }
+        }
+      }
+
+      // hidden, but they still report volume/battery changes for the OSDs
+      Item {
+        visible: false
+        anchors.fill: parent
+
+        Battery {
+          id: batMod
+        }
+
+        Volume {
+          id: volumeModule
+          onVolumeChanged: {
+            if (!box.controlCenter) box.activeOsd = "volume"
+            osdHideTimer.interval = Config.osdDuration
+            osdHideTimer.restart()
           }
         }
       }
