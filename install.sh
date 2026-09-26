@@ -196,7 +196,8 @@ else
 fi
 
 for folder in \
-    "$HOME/Pictures/Screenshots"
+    "$HOME/Pictures/Screenshots" \
+    "$HOME/Pictures/Wallpapers"
 do
     if [ ! -d "$folder" ]; then
         run mkdir -p "$folder"

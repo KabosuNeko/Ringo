@@ -19,8 +19,15 @@ StateStore &StateStore::instance() {
 }
 
 StateStore::StateStore(QObject *parent) : QObject(parent) {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::StateLocation)
-        + QStringLiteral("/ringo-shell");
+    // QStandardPaths::StateLocation only exists from Qt 6.9; below that, spell
+    // out what it returns so the file lands in the same place either way.
+#if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
+    const QString stateRoot = QStandardPaths::writableLocation(QStandardPaths::StateLocation);
+#else
+    const QString stateRoot = qEnvironmentVariable(
+        "XDG_STATE_HOME", QDir::homePath() + QStringLiteral("/.local/state"));
+#endif
+    const QString dir = stateRoot + QStringLiteral("/ringo-shell");
     m_path = dir + QStringLiteral("/state.json");
 
     m_saveTimer = new QTimer(this);
