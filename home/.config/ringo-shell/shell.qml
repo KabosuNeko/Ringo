@@ -195,7 +195,9 @@ ShellRoot {
     function step(delta: real): void { BrightnessController.step(delta) }
   }
 
-  property real barSurfaceOpacity: 0.5
+  // The pill has to be opaque enough for pywal's bg/fg pair to decide contrast:
+  // at 0.5 the wallpaper showed through and light text sat on a light pill.
+  property real barSurfaceOpacity: 0.85
 
 
   // Tools the shell drives; `needed: false` means the feature that uses them
@@ -423,7 +425,9 @@ function doctorReport(): string {
       }
 
       // adjust box shape conditionally
-      readonly property real dpi: Config.dpiScale
+      // 1080p is the reference: 1440p is 1.33x, a 4K logical desktop 2x,
+      // anything smaller stays 1x. Config.dpiScale remains the manual override.
+      readonly property real dpi: Config.dpiScale * Math.max(1, (panelWindow.screen ? panelWindow.screen.height : 1080) / 1080)
 
       property bool cliphistPreviewing: false
 
