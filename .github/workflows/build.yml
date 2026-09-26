@@ -1,0 +1,64 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: build IslandBackend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake \
+            build-essential \
+            pkg-config \
+            qt6-base-dev \
+            qt6-declarative-dev \
+            libpam0g-dev \
+            libwayland-dev \
+            wayland-protocols
+
+      - name: Configure
+        run: cmake -S ringo-shell -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+  scripts:
+    name: lint scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends shellcheck
+
+      - name: Parse install.sh
+        run: sh -n install.sh
+
+      - name: Shellcheck
+        run: |
+          # home/.local/bin/scratchpad.sh is Python behind a .sh name, so lint
+          # only files with a POSIX shell shebang. Warnings and errors fail the
+          # build; info-level findings such as SC2086 on install.sh's
+          # intentionally word-split package list are not actionable here.
+          grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* \
+            | xargs shellcheck --severity=warning
+
+      - name: Docs are in sync
+        run: |
+          if [ -x scripts/gen-keybinds-doc.sh ]; then
+            scripts/gen-keybinds-doc.sh --check
+          fi
