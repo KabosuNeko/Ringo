@@ -210,6 +210,20 @@ done
 if ask "===> Deploy dotfiles via GNU Stow (symlinks)?"; then
     echo ":: Deploying configs and scripts to \$HOME..."
     cd "$RINGO_DIR"
+
+    # stow walks the package tree by tree and aborts on the first target it does
+    # not own, so a conflict can leave part of the dotfiles already linked.
+    # Simulate first: -n reports every conflict, changes nothing, and exits
+    # non-zero. Anyone coming from a hand-written niri config hits this.
+    if ! run stow -n --restow --no-folding -t "$HOME" home; then
+        echo "XXX [ERROR] Stow would refuse to replace files already in \$HOME (listed above)." >&2
+        echo "    Nothing was changed. Move each one aside and re-run:" >&2
+        echo "      mv <file> <file>.before-ringo" >&2
+        echo "    Keep your version instead? Re-run the installer without the niri" >&2
+        echo "    and ringo-shell configs, then copy in only what you want." >&2
+        exit 1
+    fi
+
     if run stow --restow --no-folding -t "$HOME" home; then
         report ":: Stow deployment complete."
         for f in "$HOME/.local/bin"/*.sh; do
