@@ -322,6 +322,14 @@ function doctorReport(): string {
   // Weather is fetched on demand: the controller only runs its refresh timer
   // while the weather UI (mini dashboard or weather popup) is on screen.
   readonly property bool weatherUiVisible: weatherPopup.shown || box.miniDashboard
+  // The media widget lives in the control center: while it is closed nothing
+  // reads the playback position, so the controller's 500 ms timer stays off.
+  Binding {
+    target: MprisController
+    property: "active"
+    value: box.controlCenter
+  }
+
   Binding {
     target: WeatherController
     property: "active"

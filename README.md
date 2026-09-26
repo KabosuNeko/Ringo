@@ -135,16 +135,14 @@ ringo-shell call lock lock                         # or: unlock
 
 ## Credits
 
-Two engines are vendored and adapted to run inside the shell, together with the protocol definitions they speak:
+Two engines are vendored and adapted to run inside the shell:
 
 | Component | Author | License | Where |
 | :--- | :--- | :--- | :--- |
 | [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer |
 | [wlsunset](https://git.sr.ht/~kennylevinsen/wlsunset) | Kenny Levinsen | MIT | `ringo-shell/backend/engines/nightlight/` — gamma ramp and sun-position math |
-| [stb_image](https://github.com/nothings/stb) / stb_image_resize2 | Sean Barrett and contributors | Public domain / MIT | image decoding and resizing in the wallpaper engine |
-| [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols) / [wlr-protocols](https://gitlab.freedesktop.org/wlroots/wlr-protocols) | Kristian Høgsberg, Rafael Antognolli, Jasper St. Pierre, Intel, Samsung, Red Hat, Drew DeVault, Giulio Camuffo, Simon Ser | MIT | `xdg-shell`, `xdg-output`, `wlr-layer-shell`, `wlr-gamma-control` |
 
-Their license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`, `ringo-shell/backend/engines/nightlight/LICENSE`, the notices inside the `stb_*` headers, and the `<copyright>` blocks of the protocol XML files.
+Their license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE` and `ringo-shell/backend/engines/nightlight/LICENSE`.
 
 ## Related Configurations
 

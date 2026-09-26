@@ -36,6 +36,10 @@ class MprisController final : public QObject, protected QDBusContext {
     Q_PROPERTY(double polledPosition READ polledPosition NOTIFY polledPositionChanged)
     Q_PROPERTY(double polledLength READ polledLength NOTIFY polledLengthChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
+    // Set from QML while the media widget is on screen. The 500 ms position
+    // timer only runs then, so music does not keep the GUI thread awake behind
+    // a closed control center.
+    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
     explicit MprisController(QObject *parent = nullptr);
@@ -48,12 +52,14 @@ public:
     double polledPosition() const { return m_polledPosition; }
     double polledLength() const { return m_polledLength; }
     double progress() const { return m_polledLength > 0 ? m_polledPosition / m_polledLength : 0; }
+    bool active() const { return m_active; }
 
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
     Q_INVOKABLE void prev();
     Q_INVOKABLE void stop();
     Q_INVOKABLE void seek(double positionSeconds);
+    void setActive(bool v);
 
 signals:
     void trackChanged();
@@ -64,6 +70,7 @@ signals:
     void polledPositionChanged();
     void polledLengthChanged();
     void progressChanged();
+    void activeChanged();
     void nowPlaying();
 
 private slots:
@@ -106,6 +113,7 @@ private:
     bool m_wasPlaying = false;
 
     QTimer m_pollTimer;
+    bool m_active = false;
     QElapsedTimer m_elapsed;
     qint64 m_positionBaseUs = 0;
     double m_positionBaseSec = 0;

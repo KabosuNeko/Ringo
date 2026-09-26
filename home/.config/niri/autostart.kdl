@@ -2,8 +2,10 @@
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
 spawn-at-startup "systemctl" "--user" "import-environment" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
-spawn-at-startup "wl-paste" "--type" "text" "--watch" "cliphist" "store"
-spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
+# cliphist keeps 750 entries by default, which for screenshots is around a
+# gigabyte of history; 200 is plenty and keeps the store small.
+spawn-at-startup "wl-paste" "--type" "text" "--watch" "cliphist" "store" "-max-items" "200"
+spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store" "-max-items" "200"
 spawn-at-startup "sh" "-c" "$HOME/.local/bin/ringo-shell"
 
 spawn-at-startup "fcitx5" "-d"

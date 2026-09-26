@@ -29,6 +29,15 @@ static QVariantMap getAllProperties(const QString &service, const QString &path,
     return value.toMap();
 }
 
+void MprisController::setActive(bool v) {
+    if (m_active == v) return;
+    m_active = v;
+    emit activeChanged();
+    // Re-run the update so the position timer starts (or stops) right away
+    // instead of waiting for the next D-Bus event.
+    updateActivePlayer();
+}
+
 MprisController::MprisController(QObject *parent) : QObject(parent) {
     m_pollTimer.setInterval(500);
     m_pollTimer.setSingleShot(false);
@@ -265,7 +274,7 @@ void MprisController::updatePolledValues() {
     // position with elapsed
     qint64 baseUs = info.positionUs;
     double baseSec = baseUs / 1e6;
-    if (isPlaying) {
+    if (isPlaying && m_active) {
         if (!m_pollTimer.isActive()) { m_positionBaseUs = baseUs; m_positionBaseSec = baseSec; m_elapsed.restart(); m_pollTimer.start(); }
         else {
             // if base changed externally, reset elapsed
