@@ -608,21 +608,6 @@ function doctorReport(): string {
           onToggleWeather: weatherPopup.shown = !weatherPopup.shown
         }
 
-        Text {
-          text: "\uf1de"
-          color: ccButtonHover.hovered ? Theme.accent : Theme.fg4
-          font { family: Theme.nerdFontFamily; pixelSize: 11 * Config.pillScale }
-          Layout.alignment: Qt.AlignVCenter
-          Behavior on color { ColorAnimation { duration: 120 } }
-
-          HoverHandler { id: ccButtonHover }
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: box.controlCenter = !box.controlCenter
-          }
-        }
-
         Item {
           Layout.preferredWidth: bellRow.implicitWidth
           Layout.preferredHeight: bellRow.implicitHeight
