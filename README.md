@@ -171,7 +171,6 @@ The rest of the stack — Niri, Quickshell, Foot, pywal16, and the other tools t
 | `nightLightHighTemperature` | `6500` | Day temperature, K (`6500` is neutral) |
 | `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the night light's location; `0` follows `weatherLocation` |
 | `slideshowIntervalMinutes` | `30` | How often the slideshow rotates the wallpaper |
-| `barCollapseOnIdle` | `true` | Collapse the bar to the clock when the pointer is away; hover reveals battery, volume, brightness and weather |
 
 Toggles the UI changes (night light on/off, wallpaper mode, slideshow on/off) are runtime state, remembered in the XDG state directory rather than in this file.
 

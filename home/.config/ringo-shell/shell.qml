@@ -430,10 +430,6 @@ function doctorReport(): string {
 
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen && !box.keybindViewer ? 1 : 0
 
-      // Readings (battery, volume, brightness, weather) collapse away when
-      // nothing is happening; the clock and the status chips stay.
-      readonly property bool barExpanded: box.hovered || !Config.barCollapseOnIdle
-
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : notificationModule.active ? 320
                      : controlCenter ? 410
@@ -488,7 +484,7 @@ function doctorReport(): string {
       }
 
       Behavior on implicitHeight { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
-      Behavior on implicitWidth { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+      Behavior on implicitWidth { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
 
       MouseArea {
         anchors.fill: parent
@@ -613,12 +609,10 @@ function doctorReport(): string {
 
         Battery {
           id: batMod
-          visible: box.barExpanded
         }
 
         Volume {
           id: volumeModule
-          visible: box.barExpanded
           onVolumeChanged: {
             if (!box.controlCenter) box.activeOsd = "volume"
             osdHideTimer.interval = Config.osdDuration
@@ -640,7 +634,6 @@ function doctorReport(): string {
 
         RowLayout {
           id: barBrightnessRow
-          visible: box.barExpanded
           spacing: 4 * Config.paddingScale
           Text {
             text: brightnessModule.icon
@@ -665,7 +658,6 @@ function doctorReport(): string {
 
         WeatherIndicator {
           id: barWeatherIndicator
-          visible: box.barExpanded
           weatherFg: Theme.fg
           clickable: false
         }
@@ -717,7 +709,6 @@ function doctorReport(): string {
         }
 
         RowLayout {
-          // a running timer is a status, so it survives the collapse
           visible: FocusTimer.running
           spacing: 4 * Config.paddingScale
 

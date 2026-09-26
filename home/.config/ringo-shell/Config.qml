@@ -36,7 +36,6 @@ Singleton {
       property real nightLightLatitude: 0
       property real nightLightLongitude: 0
       property int slideshowIntervalMinutes: 30
-      property bool barCollapseOnIdle: true
     }
   }
 
@@ -65,5 +64,4 @@ Singleton {
   readonly property alias nightLightLatitude: adapter.nightLightLatitude
   readonly property alias nightLightLongitude: adapter.nightLightLongitude
   readonly property alias slideshowIntervalMinutes: adapter.slideshowIntervalMinutes
-  readonly property alias barCollapseOnIdle: adapter.barCollapseOnIdle
 }
