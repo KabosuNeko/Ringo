@@ -1,14 +1,9 @@
 
 spawn-at-startup "dbus-update-activation-environment" "--systemd" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
 spawn-at-startup "systemctl" "--user" "import-environment" "WAYLAND_DISPLAY" "XDG_CURRENT_DESKTOP"
-spawn-at-startup "xwayland-satellite"
 spawn-at-startup "/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1"
 spawn-at-startup "wl-paste" "--type" "text" "--watch" "cliphist" "store"
 spawn-at-startup "wl-paste" "--type" "image" "--watch" "cliphist" "store"
-spawn-at-startup "sway-audio-idle-inhibit"
 spawn-at-startup "sh" "-c" "$HOME/.local/bin/ringo-shell"
 
-spawn-at-startup "sh" "-c" "wall=$(jq -r .wallpaper ~/.cache/wal/colors.json 2>/dev/null) && [ -n \"$wall\" ] && [ -f \"$wall\" ] && { [ ! -f ~/.cache/wal/wallpaper_blurred.jpg ] && magick \"$wall\" -resize 25% -blur 0x6 -resize 400% ~/.cache/wal/wallpaper_blurred.jpg; pkill -x swaybg 2>/dev/null; exec swaybg -i \"$wall\" -m fill; } || true"
-
 spawn-at-startup "fcitx5" "-d"
-spawn-at-startup "wlsunset" "-l" "11.0" "-L" "105.0" "-t" "4000" "-T" "6500"
