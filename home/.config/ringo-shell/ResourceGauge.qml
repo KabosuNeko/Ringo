@@ -14,8 +14,9 @@ Rectangle {
     border.color: Theme.cardBorder
 
     // The shell pins this card to 52 px (shell.qml telemetry row), which leaves
-    // 32 px of content after the 10 px paddings: one 16 px bar row + the footer
-    // line. Stacking the two gauges vertically would need 38 px and squash them.
+    // 32 px of content after the 10 px paddings: the two gauges sit side by side
+    // in one 16 px row. The user and uptime live in the dashboard header, so
+    // this card does not repeat them.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 10
@@ -106,15 +107,6 @@ Rectangle {
                     font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
                 }
             }
-        }
-
-        Text {
-            Layout.fillWidth: true
-            text: SystemMonitor.username + "@" + SystemMonitor.hostname
-                  + " · up " + SystemMonitor.uptime + " · on Niri"
-            color: Theme.fg5
-            elide: Text.ElideRight
-            font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
         }
     }
 }
