@@ -196,6 +196,55 @@ The rest of the stack — Niri, Quickshell, Foot, pywal16, and the other tools t
 
 ---
 
+## Configuration
+
+`~/.config/ringo-shell/config.jsonc` is the shell's own configuration, and the only file you have to touch: it is watched, so saving applies immediately. Everything else lives in `~/.config/niri/` (compositor, keybinds, window rules) and reloads the same way.
+
+| Key | Default | What it does |
+| :--- | :--- | :--- |
+| `displayPicture` | `~/.pfp.png` | Avatar in the control center and lock screen |
+| `clockFormat` | `hh:mm` | Clock format on the bar |
+| `pillTopMargin` / `pillBottomMargin` | `9` / `26` | Vertical margins of the island |
+| `textFontFamily` | `JetBrainsMono Nerd Font` | UI font |
+| `nerdFontFamily` | `JetBrainsMono Nerd Font Propo` | Icon font |
+| `pillScale` | `1.0` | Island scale (padding follows sub-linearly) |
+| `dpiScale` | `1.4` | Global DPI multiplier |
+| `notificationDisplayTime` | `3000` | Toast duration, ms |
+| `maxNotificationsInStack` | `20` | Notification history depth |
+| `avoidDuplicateNotifications` | `true` | Collapse repeated notifications into `(n)` |
+| `osdDuration` | `800` | On-screen display duration, ms |
+| `weatherLocation` | `Ho Chi Minh City` | City for the weather widget — and the night light's coordinates |
+| `weatherUnits` | `metric` | `metric` or `imperial` |
+| `weatherRefreshInterval` | `3600000` | Weather refresh, ms |
+| `defaultTerminal` | `foot` | Terminal the launcher runs commands in |
+| `wallpapersDir` | `~/Pictures/Wallpapers` | Folder the wallpaper switcher and the slideshow read |
+| `wsCloseOnWallpaperSet` | `true` | Close the switcher after picking a wallpaper |
+| `wsAnimation` | `true` | Animate the switcher |
+| `nightLightLowTemperature` | `4000` | Night temperature, K |
+| `nightLightHighTemperature` | `6500` | Day temperature, K (`6500` is neutral) |
+| `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the night light's location; `0` follows `weatherLocation` |
+| `slideshowIntervalMinutes` | `30` | How often the slideshow rotates the wallpaper |
+
+Toggles the UI changes (night light on/off, wallpaper mode, slideshow on/off) are runtime state, remembered in the XDG state directory rather than in this file.
+
+### Commands
+
+Everything the shell can be told to do from a keybind or a script:
+
+```sh
+ringo-shell call doctor check                                          # health report
+ringo-shell call nightLight status|on|off|toggle                       # night light
+ringo-shell call nightLight force off|high|low                         # pin the temperature
+ringo-shell call wallpaper status|next|reload|setMode fill|tile        # wallpaper
+ringo-shell call wallpaper slideshow on|off|toggle|interval 30         # slideshow
+ringo-shell call notify post "Summary" "Body" "icon-name" 1            # notification
+ringo-shell call controlCenter|miniDashboard|appLauncher|wallpaperSwitcher|powerMenu|recordMenu|bar|calendar|weather toggle
+ringo-shell call cliphist toggle|wipe
+ringo-shell call brightness up|down|step 5
+ringo-shell call media playPause|next|prev|stop
+ringo-shell call lock lock|unlock
+```
+
 ## Related Configurations
 
 Additional configuration repositories from my personal setup:
