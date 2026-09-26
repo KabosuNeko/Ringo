@@ -14,10 +14,8 @@
 
 class IwdAgent;
 
-#include <QObject>
 #include <QString>
 #include <QStringList>
-#include <QVariant>
 #include <QAbstractListModel>
 #include <QtQml/qqml.h>
 

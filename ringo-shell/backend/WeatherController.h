@@ -16,10 +16,7 @@ class WeatherController final : public QObject {
     Q_PROPERTY(double feelsLike READ feelsLike NOTIFY feelsLikeChanged)
     Q_PROPERTY(int humidity READ humidity NOTIFY humidityChanged)
     Q_PROPERTY(double windSpeed READ windSpeed NOTIFY windSpeedChanged)
-    Q_PROPERTY(QString windDir READ windDir NOTIFY windDirChanged)
-    Q_PROPERTY(int uvIndex READ uvIndex NOTIFY uvIndexChanged)
     Q_PROPERTY(QString condition READ condition NOTIFY conditionChanged)
-    Q_PROPERTY(QString weatherCode READ weatherCode NOTIFY weatherCodeChanged)
     Q_PROPERTY(QString iconGlyph READ iconGlyph NOTIFY iconGlyphChanged)
     Q_PROPERTY(QString iconColor READ iconColor NOTIFY iconColorChanged)
     Q_PROPERTY(QString sunrise READ sunrise NOTIFY sunriseChanged)
@@ -33,7 +30,6 @@ class WeatherController final : public QObject {
     Q_PROPERTY(QString weatherLocation READ weatherLocation WRITE setWeatherLocation NOTIFY weatherLocationChanged)
     Q_PROPERTY(QString weatherUnits READ weatherUnits WRITE setWeatherUnits NOTIFY weatherUnitsChanged)
     Q_PROPERTY(int refreshInterval READ refreshInterval WRITE setRefreshInterval NOTIFY refreshIntervalChanged)
-    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
     explicit WeatherController(QObject *parent = nullptr);
@@ -42,10 +38,7 @@ public:
     double feelsLike() const { return m_feelsLike; }
     int humidity() const { return m_humidity; }
     double windSpeed() const { return m_windSpeed; }
-    QString windDir() const { return m_windDir; }
-    int uvIndex() const { return m_uvIndex; }
     QString condition() const { return m_condition; }
-    QString weatherCode() const { return m_weatherCode; }
     QString iconGlyph() const { return m_iconGlyph; }
     QString iconColor() const { return m_iconColor; }
     QString sunrise() const { return m_sunrise; }
@@ -59,25 +52,19 @@ public:
     QString weatherLocation() const { return m_weatherLocation; }
     QString weatherUnits() const { return m_weatherUnits; }
     int refreshInterval() const { return m_refreshInterval; }
-    bool active() const { return m_active; }
 
     void setWeatherLocation(const QString &v);
     void setWeatherUnits(const QString &v);
     void setRefreshInterval(int v);
-    void setActive(bool v);
 
     Q_INVOKABLE void refresh();
-    Q_INVOKABLE QVariantMap iconForCode(int code) const;
 
 signals:
     void tempChanged();
     void feelsLikeChanged();
     void humidityChanged();
     void windSpeedChanged();
-    void windDirChanged();
-    void uvIndexChanged();
     void conditionChanged();
-    void weatherCodeChanged();
     void iconGlyphChanged();
     void iconColorChanged();
     void sunriseChanged();
@@ -91,7 +78,6 @@ signals:
     void weatherLocationChanged();
     void weatherUnitsChanged();
     void refreshIntervalChanged();
-    void activeChanged();
 
 private slots:
     void onReplyFinished();
@@ -100,6 +86,7 @@ private slots:
 private:
     void setLoading(bool v);
     void setErrorMessage(const QString &v);
+    QVariantMap iconForCode(int code) const;
     void parseAndApply(const QByteArray &data);
     void loadCache();
     void saveCache(const QByteArray &data);
@@ -109,10 +96,7 @@ private:
     double m_feelsLike = 0;
     int m_humidity = 0;
     double m_windSpeed = 0;
-    QString m_windDir;
-    int m_uvIndex = 0;
     QString m_condition;
-    QString m_weatherCode;
     QString m_iconGlyph = QStringLiteral("\ue312");
     QString m_iconColor = QStringLiteral("#9aa0a6");
     QString m_sunrise;
@@ -127,7 +111,6 @@ private:
     QString m_weatherLocation = QStringLiteral("Hanoi");
     QString m_weatherUnits = QStringLiteral("metric");
     int m_refreshInterval = 3600000;
-    bool m_active = false;
 
     QNetworkAccessManager m_nam;
     QTimer m_timer;

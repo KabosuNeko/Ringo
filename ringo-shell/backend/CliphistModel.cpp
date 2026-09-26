@@ -265,8 +265,8 @@ void CliphistModel::copyById(const QString &id)
 {
     for (const auto &entry : m_allEntries) {
         if (entry.id == id) {
-            QProcess *decodeProc = new QProcess();
-            QProcess *wlCopyProc = new QProcess();
+            QProcess *decodeProc = new QProcess(this);
+            QProcess *wlCopyProc = new QProcess(this);
 
             decodeProc->setStandardOutputProcess(wlCopyProc);
             decodeProc->start(QStringLiteral("cliphist"), {QStringLiteral("decode")});
@@ -275,10 +275,15 @@ void CliphistModel::copyById(const QString &id)
             decodeProc->write((entry.rawLine + QLatin1Char('\n')).toUtf8());
             decodeProc->closeWriteChannel();
 
-            connect(wlCopyProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [decodeProc, wlCopyProc]() {
+            const auto cleanup = [decodeProc, wlCopyProc]() {
                 decodeProc->deleteLater();
                 wlCopyProc->deleteLater();
-            });
+            };
+            connect(wlCopyProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), cleanup);
+            // A start failure (or a dead peer) never reaches `finished` on the
+            // other process, which would leave it running for the shell's lifetime.
+            connect(decodeProc, &QProcess::errorOccurred, cleanup);
+            connect(wlCopyProc, &QProcess::errorOccurred, cleanup);
             break;
         }
     }
@@ -299,13 +304,14 @@ void CliphistModel::deleteById(const QString &id)
     }
 
     if (!rawLine.isEmpty()) {
-        QProcess *delProc = new QProcess();
+        QProcess *delProc = new QProcess(this);
         delProc->start(QStringLiteral("cliphist"), {QStringLiteral("delete")});
         delProc->write((rawLine + QLatin1Char('\n')).toUtf8());
         delProc->closeWriteChannel();
-        connect(delProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), [delProc]() {
-            delProc->deleteLater();
-        });
+        const auto cleanup = [delProc]() { delProc->deleteLater(); };
+        connect(delProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), cleanup);
+        // start() failing means `finished` never fires; the object must not linger.
+        connect(delProc, &QProcess::errorOccurred, cleanup);
 
         if (!imgPath.isEmpty() && QFileInfo::exists(imgPath)) {
             QFile::remove(imgPath);

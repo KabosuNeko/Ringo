@@ -11,6 +11,10 @@
 WeatherController::WeatherController(QObject *parent) : QObject(parent) {
     m_timer.setSingleShot(false);
     connect(&m_timer, &QTimer::timeout, this, &WeatherController::onTimerTriggered);
+    // Poll on the configured interval from the start: nothing else arms the
+    // timer, and QML re-assigning the default interval is a no-op.
+    m_timer.setInterval(m_refreshInterval);
+    if (m_refreshInterval > 0) m_timer.start();
     loadCache();
 }
 
@@ -29,28 +33,13 @@ void WeatherController::setRefreshInterval(int v) {
     m_refreshInterval = v;
     emit refreshIntervalChanged();
     m_timer.setInterval(m_refreshInterval);
-    // Never poll while inactive - the timer only runs while the weather UI is up.
-    if (!m_active || m_refreshInterval <= 0) {
+    if (m_refreshInterval <= 0) {
         m_timer.stop();
         return;
     }
     if (!m_timer.isActive()) m_timer.start();
 }
 
-void WeatherController::setActive(bool v) {
-    if (m_active == v) return;
-    m_active = v;
-    emit activeChanged();
-
-    if (!m_active) {
-        m_timer.stop();
-        return;
-    }
-    if (m_refreshInterval > 0 && !m_timer.isActive()) {
-        m_timer.setInterval(m_refreshInterval);
-        m_timer.start();
-    }
-}
 void WeatherController::setLoading(bool v) { if (m_loading==v) return; m_loading=v; emit loadingChanged(); }
 void WeatherController::setErrorMessage(const QString &v) { if (m_errorMessage==v) return; m_errorMessage=v; emit errorMessageChanged(); }
 
@@ -101,8 +90,7 @@ void WeatherController::refresh() {
     if (m_reply) { m_reply->abort(); m_reply->deleteLater(); }
     m_reply = m_nam.get(req);
     connect(m_reply, &QNetworkReply::finished, this, &WeatherController::onReplyFinished);
-    // Deliberately does NOT arm the refresh timer: a manual refresh must work
-    // while inactive, and enabling polling is the QML's job via `active`.
+    // A manual refresh never disturbs the polling timer.
 }
 
 void WeatherController::onReplyFinished() {
@@ -145,9 +133,9 @@ void WeatherController::parseAndApply(const QByteArray &data) {
     double feels = isMetric ? current.value(QStringLiteral("FeelsLikeC")).toString().toDouble() : current.value(QStringLiteral("FeelsLikeF")).toString().toDouble();
     int hum = current.value(QStringLiteral("humidity")).toString().toInt();
     double wind = isMetric ? current.value(QStringLiteral("windspeedKmph")).toString().toDouble() : current.value(QStringLiteral("windspeedMiles")).toString().toDouble();
-    QString windDir = current.value(QStringLiteral("winddir16Point")).toString();
-    int uv = current.value(QStringLiteral("uvIndex")).toString().toInt();
     QString cond = current.value(QStringLiteral("weatherDesc")).toArray().first().toObject().value(QStringLiteral("value")).toString();
+    // Upstream wttr.in field name, consumed only by iconForCode() below - not a
+    // property of this controller.
     QString code = current.value(QStringLiteral("weatherCode")).toString();
     QVariantMap iconData = iconForCode(code.toInt());
     QString glyph = iconData.value(QStringLiteral("glyph")).toString();
@@ -160,10 +148,7 @@ void WeatherController::parseAndApply(const QByteArray &data) {
     setD(m_feelsLike, feels, &WeatherController::feelsLikeChanged);
     setI(m_humidity, hum, &WeatherController::humidityChanged);
     setD(m_windSpeed, wind, &WeatherController::windSpeedChanged);
-    setS(m_windDir, windDir, &WeatherController::windDirChanged);
-    setI(m_uvIndex, uv, &WeatherController::uvIndexChanged);
     setS(m_condition, cond, &WeatherController::conditionChanged);
-    setS(m_weatherCode, code, &WeatherController::weatherCodeChanged);
     setS(m_iconGlyph, glyph, &WeatherController::iconGlyphChanged);
     setS(m_iconColor, color, &WeatherController::iconColorChanged);
     setS(m_sunrise, sunrise, &WeatherController::sunriseChanged);

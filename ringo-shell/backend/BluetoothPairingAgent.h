@@ -4,8 +4,6 @@
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QObject>
-
-#include <QDBusMessage>
 #include <QtQml/qqml.h>
 
 class BluetoothPairingAgent final : public QObject, protected QDBusContext {
