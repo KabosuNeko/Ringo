@@ -23,7 +23,18 @@ Item {
     visible: opacity > 0
     opacity: shown ? 1 : 0
 
-    property var filteredApps: FuzzySearch.filterAndSort(appsCache, searchQuery, activeCategory)
+    property var webApps: [
+        { key: "chatgpt", name: "ChatGPT", url: "https://chatgpt.com/" },
+        { key: "gemini", name: "Gemini", url: "https://gemini.google.com/app" },
+        { key: "claude", name: "Claude", url: "https://claude.ai/" },
+        { key: "youtube", name: "YouTube", url: "https://youtube.com/" },
+        { key: "github", name: "GitHub", url: "https://github.com/" },
+        { key: "gmail", name: "Gmail", url: "https://mail.google.com/" }
+    ]
+
+    readonly property var appMatches: FuzzySearch.filterAndSort(appsCache, searchQuery, activeCategory)
+    readonly property var webMatches: resolveWebApps(searchQuery)
+    property var filteredApps: rankResults(appMatches, webMatches, searchQuery)
 
     readonly property var mathResult: evaluateMath(searchQuery)
     readonly property var specialAction: getSpecialAction(searchQuery)
@@ -180,6 +191,71 @@ Item {
         appsCache = list
     }
 
+    function resolveWebApps(query) {
+        let q = query.trim().toLowerCase()
+        if (q.length < 2 || activeCategory !== "All") return []
+        let rows = []
+        for (let i = 0; i < webApps.length; i++) {
+            let w = webApps[i]
+            if (w.key.indexOf(q) < 0 && w.name.toLowerCase().indexOf(q) < 0) continue
+            let native = findNativeEntry(w.key)
+            rows.push({
+                name: w.name,
+                comment: w.name + (native !== null ? " (app)" : " (web)"),
+                icon: native !== null ? native.icon : "",
+                entry: null,
+                web: { url: w.url, native: native }
+            })
+        }
+        return rows
+    }
+
+    function findNativeEntry(key) {
+        let k = key.toLowerCase()
+        for (let i = 0; i < appsCache.length; i++) {
+            let entry = appsCache[i].entry
+            let id = entry.id ? entry.id.toLowerCase() : ""
+            if (id.indexOf(k) >= 0 || appsCache[i].name.toLowerCase().indexOf(k) >= 0) return entry
+        }
+        return null
+    }
+
+    // Exact name hits stay on top, then the web apps, then the fuzzy leftovers.
+    function rankResults(apps, webs, query) {
+        if (webs.length === 0) return apps
+        let q = query.trim().toLowerCase()
+        let exact = []
+        let rest = []
+        for (let i = 0; i < apps.length; i++) {
+            if (apps[i].name.toLowerCase() === q) exact.push(apps[i])
+            else rest.push(apps[i])
+        }
+        let rows = []
+        for (let i = 0; i < webs.length; i++) {
+            let native = webs[i].web.native
+            let shadowed = false
+            if (native !== null) {
+                for (let j = 0; j < exact.length; j++) {
+                    if (exact[j].entry.id === native.id) shadowed = true
+                }
+            }
+            if (!shadowed) rows.push(webs[i])
+        }
+        return exact.concat(rows, rest)
+    }
+
+    function launchEntry(app) {
+      if (app.runInTerminal) {
+         if (!Config.defaultTerminal || Config.defaultTerminal.length === 0) {
+             console.log("No defaultTerminal configured, cannot launch this terminal app:", app.name)
+             return
+         }
+         Quickshell.execDetached([Config.defaultTerminal, "-e", "sh", "-c", app.command.join(" ")])
+      } else {
+         app.execute()
+      }
+    }
+
     function launchSelected() {
       if (mathResult !== null) {
         Quickshell.execDetached(["sh", "-c", "printf '%s' '" + mathResult.result + "' | wl-copy"])
@@ -197,15 +273,12 @@ Item {
       }
 
       if (filteredApps.length === 0) return
-      const app = filteredApps[selectedIndex].entry
-      if (app.runInTerminal) {
-         if (!Config.defaultTerminal || Config.defaultTerminal.length === 0) {
-             console.log("No defaultTerminal configured, cannot launch this terminal app:", app.name)
-             return
-         }
-         Quickshell.execDetached([Config.defaultTerminal, "-e", "sh", "-c", app.command.join(" ")])
+      const row = filteredApps[selectedIndex]
+      if (row.web) {
+        if (row.web.native) launchEntry(row.web.native)
+        else Quickshell.execDetached(["xdg-open", row.web.url])
       } else {
-         app.execute()
+        launchEntry(row.entry)
       }
       root.closeRequested()
     }
@@ -476,7 +549,7 @@ Item {
 
                     Text {
                         visible: !Quickshell.iconPath(modelData.icon, true)
-                        text: "󰣆"
+                        text: modelData.web ? "\uf0ac" : "󰣆"
                         color: Theme.accent
                         font { family: Theme.nerdFontFamily; pixelSize: 20 }
                         Layout.alignment: Qt.AlignVCenter
