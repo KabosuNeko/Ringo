@@ -8,101 +8,113 @@ Rectangle {
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
 
-
     radius: 10
     color: Theme.cardBg
     border.width: 1
     border.color: Theme.cardBorder
 
+    // The shell pins this card to 52 px (shell.qml telemetry row), which leaves
+    // 32 px of content after the 10 px paddings: one 16 px bar row + the footer
+    // line. Stacking the two gauges vertically would need 38 px and squash them.
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 10
-        spacing: 6
+        spacing: 4
 
         RowLayout {
             Layout.fillWidth: true
-            spacing: 6
+            spacing: 14
 
-            Text {
-                text: "󰍛"
-                color: Theme.accent
-                font { family: Theme.nerdFontFamily; pixelSize: 12 }
-            }
-
-            Text {
-                text: "CPU"
-                color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 10; weight: 600 }
-                Layout.preferredWidth: 26
-            }
-
-            Rectangle {
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 6
-                radius: 3
-                color: Theme.bgD
-                border.width: 1
-                border.color: Theme.cardBorder
+                spacing: 5
 
                 Rectangle {
-                    width: parent.width * (root.cpuPercent / 100)
-                    height: parent.height
-                    radius: 3
-                    color: Theme.accent
-                    Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
+                    Layout.preferredWidth: 4
+                    Layout.preferredHeight: 16
+                    radius: 2
+                    color: Theme.chipBg
+
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: parent.height * (root.cpuPercent / 100)
+                        radius: 2
+                        color: Theme.accent
+                        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    }
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: "cpu"
+                    color: Theme.fg
+                    font {
+                        family: Theme.fontFamily
+                        pixelSize: 8
+                        weight: 600
+                        capitalization: Font.AllUppercase
+                        letterSpacing: 0.5
+                    }
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: root.cpuPercent + "%"
+                    color: Theme.fg4
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
                 }
             }
 
-            Text {
-                text: root.cpuPercent + "%"
-                color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
-                Layout.preferredWidth: 28
-                horizontalAlignment: Text.AlignRight
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 5
+
+                Rectangle {
+                    Layout.preferredWidth: 4
+                    Layout.preferredHeight: 16
+                    radius: 2
+                    color: Theme.chipBg
+
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: parent.height * (root.ramPercent / 100)
+                        radius: 2
+                        color: Theme.warning
+                        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                    }
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: "ram"
+                    color: Theme.fg
+                    font {
+                        family: Theme.fontFamily
+                        pixelSize: 8
+                        weight: 600
+                        capitalization: Font.AllUppercase
+                        letterSpacing: 0.5
+                    }
+                }
+
+                Text {
+                    Layout.alignment: Qt.AlignVCenter
+                    text: root.ramPercent + "%"
+                    color: Theme.fg4
+                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                }
             }
         }
 
-        RowLayout {
+        Text {
             Layout.fillWidth: true
-            spacing: 6
-
-            Text {
-                text: "󰘚"
-                color: Theme.accent
-                font { family: Theme.nerdFontFamily; pixelSize: 12 }
-            }
-
-            Text {
-                text: "RAM"
-                color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 10; weight: 600 }
-                Layout.preferredWidth: 26
-            }
-
-            Rectangle {
-                Layout.fillWidth: true
-                Layout.preferredHeight: 6
-                radius: 3
-                color: Theme.bgD
-                border.width: 1
-                border.color: Theme.cardBorder
-
-                Rectangle {
-                    width: parent.width * (root.ramPercent / 100)
-                    height: parent.height
-                    radius: 3
-                    color: Theme.accent
-                    Behavior on width { NumberAnimation { duration: 250; easing.type: Easing.OutQuad } }
-                }
-            }
-
-            Text {
-                text: root.ramPercent + "%"
-                color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
-                Layout.preferredWidth: 28
-                horizontalAlignment: Text.AlignRight
-            }
+            text: SystemMonitor.username + "@" + SystemMonitor.hostname
+                  + " · up " + SystemMonitor.uptime + " · on Niri"
+            color: Theme.fg5
+            elide: Text.ElideRight
+            font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
         }
     }
 }
