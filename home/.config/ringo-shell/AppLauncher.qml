@@ -183,7 +183,9 @@ Item {
     function launchSelected() {
       if (mathResult !== null) {
         Quickshell.execDetached(["sh", "-c", "printf '%s' '" + mathResult.result + "' | wl-copy"])
-        Quickshell.execDetached(["notify-send", "-i", "accessories-calculator", "-a", "Ringo Calculator", "Calculated: " + mathResult.result, mathResult.expression + " = " + mathResult.result + " (copied to clipboard)"])
+        Notifier.post("Calculated: " + mathResult.result,
+                      mathResult.expression + " = " + mathResult.result + " (copied to clipboard)",
+                      "accessories-calculator", "Ringo Calculator")
         root.closeRequested()
         return
       }
@@ -347,7 +349,6 @@ Item {
 
         // Special Action Card (Inline Math Calculator / Web Search / Direct URL)
         Rectangle {
-            id: specialCard
             Layout.fillWidth: true
             Layout.preferredHeight: root.hasSpecialCard ? 50 : 0
             visible: root.hasSpecialCard
@@ -436,7 +437,6 @@ Item {
             spacing: 3
 
             delegate: Rectangle {
-                id: rowDelegate
                 width: appList.width
                 height: 42
                 radius: 8
@@ -464,7 +464,6 @@ Item {
                     spacing: 10
 
                     IconImage {
-                        id: appIcon
                         visible: Quickshell.iconPath(modelData.icon, true)
                         Layout.preferredWidth: 26
                         Layout.preferredHeight: 26

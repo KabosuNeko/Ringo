@@ -3,7 +3,6 @@ import Quickshell
 import Quickshell.Io
 
 Singleton {
-  id: root
 
   FileView {
     path: Quickshell.env("HOME") + "/.config/ringo-shell/config.jsonc"
@@ -18,10 +17,8 @@ Singleton {
       property int pillBottomMargin: 26
       property string textFontFamily: "JetBrainsMono Nerd Font"
       property string nerdFontFamily: "JetBrainsMono Nerd Font Propo"
-      property int maxWorkspaces: 5
       property int notificationDisplayTime: 3000
       property int maxNotificationsInStack: 20
-      property int bandwidthRefreshInterval: 300000
       property int osdDuration: 800
       property string weatherUnits: "metric"
       property string weatherLocation: "Ho Chi Minh City"
@@ -33,6 +30,13 @@ Singleton {
       property string wallpapersDir: Quickshell.env("HOME") + "/Pictures/Wallpapers"
       property bool wsCloseOnWallpaperSet: true
       property bool wsAnimation: true
+      property int nightLightLowTemperature: 4000
+      property int nightLightHighTemperature: 6500
+      // 0 = follow the weather location
+      property real nightLightLatitude: 0
+      property real nightLightLongitude: 0
+      property bool slideshowEnabled: false
+      property int slideshowIntervalMinutes: 30
     }
   }
 
@@ -42,10 +46,8 @@ Singleton {
   readonly property alias pillBottomMargin: adapter.pillBottomMargin
   readonly property alias textFontFamily: adapter.textFontFamily
   readonly property alias nerdFontFamily: adapter.nerdFontFamily
-  readonly property alias maxWorkspaces: adapter.maxWorkspaces
   readonly property alias notificationDisplayTime: adapter.notificationDisplayTime
   readonly property alias maxNotificationsInStack: adapter.maxNotificationsInStack
-  readonly property alias bandwidthRefreshInterval: adapter.bandwidthRefreshInterval
   readonly property alias osdDuration: adapter.osdDuration
   readonly property alias weatherUnits: adapter.weatherUnits
   readonly property alias weatherLocation: adapter.weatherLocation
@@ -58,4 +60,10 @@ Singleton {
   readonly property alias wallpapersDir: adapter.wallpapersDir
   readonly property alias wsCloseOnWallpaperSet: adapter.wsCloseOnWallpaperSet
   readonly property alias wsAnimation: adapter.wsAnimation
+  readonly property alias nightLightLowTemperature: adapter.nightLightLowTemperature
+  readonly property alias nightLightHighTemperature: adapter.nightLightHighTemperature
+  readonly property alias nightLightLatitude: adapter.nightLightLatitude
+  readonly property alias nightLightLongitude: adapter.nightLightLongitude
+  readonly property alias slideshowEnabled: adapter.slideshowEnabled
+  readonly property alias slideshowIntervalMinutes: adapter.slideshowIntervalMinutes
 }

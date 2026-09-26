@@ -24,6 +24,8 @@ class WeatherController final : public QObject {
     Q_PROPERTY(QString iconColor READ iconColor NOTIFY iconColorChanged)
     Q_PROPERTY(QString sunrise READ sunrise NOTIFY sunriseChanged)
     Q_PROPERTY(QString sunset READ sunset NOTIFY sunsetChanged)
+    Q_PROPERTY(double latitude READ latitude NOTIFY coordinatesChanged)
+    Q_PROPERTY(double longitude READ longitude NOTIFY coordinatesChanged)
     Q_PROPERTY(QVariantList forecast READ forecast NOTIFY forecastChanged)
     Q_PROPERTY(bool loading READ loading NOTIFY loadingChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
@@ -31,6 +33,7 @@ class WeatherController final : public QObject {
     Q_PROPERTY(QString weatherLocation READ weatherLocation WRITE setWeatherLocation NOTIFY weatherLocationChanged)
     Q_PROPERTY(QString weatherUnits READ weatherUnits WRITE setWeatherUnits NOTIFY weatherUnitsChanged)
     Q_PROPERTY(int refreshInterval READ refreshInterval WRITE setRefreshInterval NOTIFY refreshIntervalChanged)
+    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
     explicit WeatherController(QObject *parent = nullptr);
@@ -47,6 +50,8 @@ public:
     QString iconColor() const { return m_iconColor; }
     QString sunrise() const { return m_sunrise; }
     QString sunset() const { return m_sunset; }
+    double latitude() const { return m_latitude; }
+    double longitude() const { return m_longitude; }
     QVariantList forecast() const { return m_forecast; }
     bool loading() const { return m_loading; }
     QString errorMessage() const { return m_errorMessage; }
@@ -54,10 +59,12 @@ public:
     QString weatherLocation() const { return m_weatherLocation; }
     QString weatherUnits() const { return m_weatherUnits; }
     int refreshInterval() const { return m_refreshInterval; }
+    bool active() const { return m_active; }
 
     void setWeatherLocation(const QString &v);
     void setWeatherUnits(const QString &v);
     void setRefreshInterval(int v);
+    void setActive(bool v);
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE QVariantMap iconForCode(int code) const;
@@ -75,6 +82,8 @@ signals:
     void iconColorChanged();
     void sunriseChanged();
     void sunsetChanged();
+    // Both coordinates are reported by the weather service's nearest area.
+    void coordinatesChanged();
     void forecastChanged();
     void loadingChanged();
     void errorMessageChanged();
@@ -82,6 +91,7 @@ signals:
     void weatherLocationChanged();
     void weatherUnitsChanged();
     void refreshIntervalChanged();
+    void activeChanged();
 
 private slots:
     void onReplyFinished();
@@ -107,6 +117,8 @@ private:
     QString m_iconColor = QStringLiteral("#9aa0a6");
     QString m_sunrise;
     QString m_sunset;
+    double m_latitude = 0;
+    double m_longitude = 0;
     QVariantList m_forecast;
     bool m_loading = false;
     QString m_errorMessage;
@@ -115,6 +127,7 @@ private:
     QString m_weatherLocation = QStringLiteral("Hanoi");
     QString m_weatherUnits = QStringLiteral("metric");
     int m_refreshInterval = 3600000;
+    bool m_active = false;
 
     QNetworkAccessManager m_nam;
     QTimer m_timer;

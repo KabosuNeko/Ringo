@@ -8,7 +8,6 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell.Widgets
 import Quickshell.Services.Notifications
-import Quickshell.Services.SystemTray
 
 ShellRoot {
   id: root
@@ -27,28 +26,32 @@ ShellRoot {
   IpcHandler {
     target: "cliphist"
     function toggle(): void { const next = !box.cliphistOpen; root.closeOverlays(); box.cliphistOpen = next }
-    function show(): void { root.closeOverlays(); box.cliphistOpen = true }
+    function open(): void { root.closeOverlays(); box.cliphistOpen = true }
     function hide(): void { box.cliphistOpen = false }
+    function wipe(): void {
+      CliphistModel.clearAll()
+      Notifier.post("Clipboard", "Clipboard cleared", "edit-clear", "Ringo", 1, 2000)
+    }
   }
 
   IpcHandler {
     target: "controlCenter"
     function toggle(): void { const next = !box.controlCenter; root.closeOverlays(); box.controlCenter = next }
-    function show(): void { root.closeOverlays(); box.controlCenter = true }
+    function open(): void { root.closeOverlays(); box.controlCenter = true }
     function hide(): void { box.controlCenter = false }
   }
 
   IpcHandler {
     target: "miniDashboard"
     function toggle(): void { const next = !box.miniDashboard; root.closeOverlays(); box.miniDashboard = next }
-    function show(): void { root.closeOverlays(); box.miniDashboard = true }
+    function open(): void { root.closeOverlays(); box.miniDashboard = true }
     function hide(): void { box.miniDashboard = false }
   }
 
   IpcHandler {
     target: "appLauncher"
     function toggle(): void { const next = !box.appLauncher; root.closeOverlays(); box.appLauncher = next }
-    function show(): void { root.closeOverlays(); box.appLauncher = true }
+    function open(): void { root.closeOverlays(); box.appLauncher = true }
     function hide(): void { box.appLauncher = false }
     function search(text: string): void {
       root.closeOverlays()
@@ -68,42 +71,72 @@ ShellRoot {
   IpcHandler {
     target: "wallpaperSwitcher"
     function toggle(): void { const next = !box.wallpaperSwitcherOpen; root.closeOverlays(); box.wallpaperSwitcherOpen = next }
-    function show(): void { root.closeOverlays(); box.wallpaperSwitcherOpen = true }
+    function open(): void { root.closeOverlays(); box.wallpaperSwitcherOpen = true }
     function hide(): void { box.wallpaperSwitcherOpen = false }
+  }
+
+  IpcHandler {
+    target: "wallpaper"
+    function set(path: string): void { WallpaperController.apply(path) }
+    function reload(): void { WallpaperController.reload() }
+    function setMode(mode: string): void {
+      WallpaperController.mode = mode
+      WallpaperController.reload()
+    }
+    function next(): void { WallpaperController.nextSlide() }
+    function status(): string {
+      return `${WallpaperController.mode} ${WallpaperController.path}`
+        + (WallpaperController.slideshowEnabled ? ` · slideshow ${WallpaperController.slideshowIntervalMinutes}m` : "")
+    }
+  }
+
+  IpcHandler {
+    target: "nightLight"
+    function toggle(): void { NightLightController.enabled = !NightLightController.enabled }
+    function on(): void { NightLightController.enabled = true }
+    function off(): void { NightLightController.enabled = false }
+    function force(mode: string): void { NightLightController.force = mode }
+    function status(): string {
+      const where = `${NightLightController.locationExplicit ? "pinned" : "auto"} `
+        + `${NightLightController.latitude.toFixed(2)},${NightLightController.longitude.toFixed(2)}`
+      return NightLightController.active
+        ? `${NightLightController.temperature}K on ${NightLightController.outputs} output(s) · ${where}`
+        : (NightLightController.error !== "" ? "error: " + NightLightController.error : "off")
+    }
   }
 
   IpcHandler {
     target: "powerMenu"
     function toggle(): void { const next = !box.powerMenuOpen; root.closeOverlays(); box.powerMenuOpen = next }
-    function show(): void { root.closeOverlays(); box.powerMenuOpen = true }
+    function open(): void { root.closeOverlays(); box.powerMenuOpen = true }
     function hide(): void { box.powerMenuOpen = false }
   }
 
   IpcHandler {
     target: "recordMenu"
     function toggle(): void { const next = !box.recordMenuOpen; root.closeOverlays(); box.recordMenuOpen = next }
-    function show(): void { root.closeOverlays(); box.recordMenuOpen = true }
+    function open(): void { root.closeOverlays(); box.recordMenuOpen = true }
     function hide(): void { box.recordMenuOpen = false }
   }
 
   IpcHandler {
     target: "bar"
     function toggle(): void { root.barHidden = !root.barHidden }
-    function show(): void { root.barHidden = false }
+    function open(): void { root.barHidden = false }
     function hide(): void { root.barHidden = true }
   }
 
   IpcHandler {
     target: "calendar"
     function toggle(): void { calendarPopup.shown = !calendarPopup.shown; weatherPopup.shown = false }
-    function show(): void { calendarPopup.shown = true; weatherPopup.shown = false }
+    function open(): void { calendarPopup.shown = true; weatherPopup.shown = false }
     function hide(): void { calendarPopup.shown = false }
   }
 
   IpcHandler {
     target: "weather"
     function toggle(): void { weatherPopup.shown = !weatherPopup.shown; calendarPopup.shown = false }
-    function show(): void { weatherPopup.shown = true; calendarPopup.shown = false }
+    function open(): void { weatherPopup.shown = true; calendarPopup.shown = false }
     function hide(): void { weatherPopup.shown = false }
   }
 
@@ -113,11 +146,24 @@ ShellRoot {
     function lock(): void { LockController.lock() }
   }
 
+  IpcHandler {
+    target: "media"
+    function playPause(): void { MprisController.playPause() }
+    function next(): void { MprisController.next() }
+    function prev(): void { MprisController.prev() }
+    function stop(): void { MprisController.stop() }
+  }
+
+  IpcHandler {
+    target: "brightness"
+    function up(): void { BrightnessController.step(2) }
+    function down(): void { BrightnessController.step(-2) }
+    function step(delta: real): void { BrightnessController.step(delta) }
+  }
+
   property real barSurfaceOpacity: 0.5
 
 
-  property bool notifFullscreenMode: false
-  readonly property bool fullscreenActive: NiriController.fullscreenActive
   property bool barHidden: false
 
   Component.onCompleted: {
@@ -125,6 +171,32 @@ ShellRoot {
     WeatherController.weatherUnits = Config.weatherUnits
     WeatherController.refreshInterval = Config.weatherRefreshInterval
     WeatherController.refresh()
+    NightLightController.lowTemperature = Config.nightLightLowTemperature
+    NightLightController.highTemperature = Config.nightLightHighTemperature
+    WallpaperController.slideshowDir = Config.wallpapersDir
+    WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes
+    WallpaperController.slideshowEnabled = Config.slideshowEnabled
+    applyNightLightLocation()
+    WallpaperController.start()
+    NightLightController.start()
+  }
+
+  // The night light follows config.jsonc when it pins a location, and the
+  // weather widget's city otherwise.
+  function applyNightLightLocation(): void {
+    if (Config.nightLightLatitude !== 0 || Config.nightLightLongitude !== 0) {
+      NightLightController.latitude = Config.nightLightLatitude
+      NightLightController.longitude = Config.nightLightLongitude
+      return
+    }
+    NightLightController.clearLocationOverride()
+    if (WeatherController.latitude !== 0 || WeatherController.longitude !== 0)
+      NightLightController.setAutoLocation(WeatherController.latitude, WeatherController.longitude)
+  }
+
+  Connections {
+    target: WeatherController
+    function onCoordinatesChanged() { root.applyNightLightLocation() }
   }
 
   Connections {
@@ -132,6 +204,26 @@ ShellRoot {
     function onWeatherLocationChanged() { WeatherController.weatherLocation = Config.weatherLocation; WeatherController.refresh() }
     function onWeatherUnitsChanged() { WeatherController.weatherUnits = Config.weatherUnits; WeatherController.refresh() }
     function onWeatherRefreshIntervalChanged() { WeatherController.refreshInterval = Config.weatherRefreshInterval }
+    function onNightLightLowTemperatureChanged() { NightLightController.lowTemperature = Config.nightLightLowTemperature }
+    function onNightLightHighTemperatureChanged() { NightLightController.highTemperature = Config.nightLightHighTemperature }
+    function onNightLightLatitudeChanged() { root.applyNightLightLocation() }
+    function onNightLightLongitudeChanged() { root.applyNightLightLocation() }
+    function onSlideshowEnabledChanged() { WallpaperController.slideshowEnabled = Config.slideshowEnabled }
+    function onSlideshowIntervalMinutesChanged() { WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes }
+    function onWallpapersDirChanged() { WallpaperController.slideshowDir = Config.wallpapersDir }
+  }
+
+  // Weather is fetched on demand: the controller only runs its refresh timer
+  // while the weather UI (mini dashboard or weather popup) is on screen.
+  readonly property bool weatherUiVisible: weatherPopup.shown || box.miniDashboard
+  Binding {
+    target: WeatherController
+    property: "active"
+    value: root.weatherUiVisible
+  }
+  // Opening the weather UI fetches immediately so it never shows stale data.
+  onWeatherUiVisibleChanged: {
+    if (weatherUiVisible) WeatherController.refresh()
   }
 
 
@@ -177,7 +269,7 @@ ShellRoot {
       id: box
       anchors.top: parent.top
       anchors.horizontalCenter: parent.horizontalCenter
-      opacity: ((!fullscreenActive || panelWindow.overlayActive) && !notifFullscreenMode && !LockController.locked) ? 1 : 0
+      opacity: !LockController.locked ? 1 : 0
       visible: opacity > 0
       clip: true
       focus: true
@@ -225,15 +317,6 @@ ShellRoot {
         onTriggered: box.activeOsd = ""
       }
 
-      onImplicitHeightChanged: {
-          heightAnim.stop()
-          heightAnim.to = implicitHeight
-          heightAnim.duration = 150
-          heightAnim.start()
-      }
-
-
-
       // adjust box shape conditionally
       readonly property real dpi: Config.dpiScale
 
@@ -242,7 +325,7 @@ ShellRoot {
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
 
       readonly property real baseWidth: activeOsd !== "" ? 220
-                     : (notificationModule.active && !notifFullscreenMode) ? 320
+                     : notificationModule.active ? 320
                      : controlCenter ? 410
                      : appLauncher ? 420
                      : wallpaperSwitcherOpen ? 600
@@ -254,7 +337,7 @@ ShellRoot {
                         : leftWing.implicitWidth + centerClock.implicitWidth + rightWing.implicitWidth + (hovered ? 68 : 58) * Config.paddingScale
 
       readonly property real baseHeight: activeOsd !== "" ? 40
-                  : (notificationModule.active && !notifFullscreenMode) ? 52
+                  : notificationModule.active ? 52
                   : controlCenter
                       ? (ccColumn.implicitHeight + 24)
                   : (cliphistOpen && cliphistPreviewing) ? 380
@@ -292,8 +375,8 @@ ShellRoot {
           }
       }
 
-      Behavior on implicitWidth { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-      NumberAnimation { id: heightAnim; target: box; property: "height"; duration: 150; easing.type: Easing.OutCubic }
+      Behavior on implicitHeight { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
+      Behavior on implicitWidth { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
 
       MouseArea {
         anchors.fill: parent
@@ -468,7 +551,6 @@ ShellRoot {
         }
 
         RowLayout {
-          id: barFocusRow
           visible: FocusTimer.running
           spacing: 4 * Config.paddingScale
 
@@ -514,30 +596,20 @@ ShellRoot {
 
       NotificationPopup {
         active: notificationModule.active
-                && !notifFullscreenMode
                 && box.activeOsd === ""
         notif: notificationModule.current
       }
 
       // cliphist opens on middle click
-      Item {
-        anchors.centerIn: parent
-        width: box.implicitWidth - 26
-        height: (box.cliphistOpen ? box.implicitHeight - 26 : 0) + cliphistExtraHeight
-        opacity: box.cliphistOpen
-                 && !notificationModule.active
-                 && box.activeOsd === ""
-                 && !box.controlCenter ? 1 : 0
-        visible: opacity > 0
-
-        property real cliphistExtraHeight: 0
-
-        Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-        }
+      OverlaySlot {
+        open: box.cliphistOpen
+        openHeight: box.implicitHeight - 26
+        widthInset: 26
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
 
         Cliphist {
-          id: cliphistPanel
           shown: box.cliphistOpen
           anchors.fill: parent
           onCloseRequested: box.cliphistOpen = false
@@ -546,22 +618,16 @@ ShellRoot {
       }
 
       // wallpaper switcher opens through IPC
-      Item {
-        anchors.centerIn: parent
-        width: box.implicitWidth - 28
-        height: box.wallpaperSwitcherOpen ? 280 : 0
-        opacity: box.wallpaperSwitcherOpen
-                 && !notificationModule.active
-                 && box.activeOsd === ""
-                 && !box.controlCenter
-                 && !box.miniDashboard
-                 && !box.cliphistOpen
-                 && !box.appLauncher ? 1 : 0
-        visible: opacity > 0
+      OverlaySlot {
+        open: box.wallpaperSwitcherOpen
+        openHeight: 280
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
+                 || box.appLauncher
 
-        Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-        }
         Loader {
           id: wallpaperLoader
           anchors.fill: parent
@@ -584,23 +650,17 @@ ShellRoot {
       }
 
       // power menu opens through IPC
-      Item {
-        anchors.centerIn: parent
-        width: box.implicitWidth - 28
-        height: box.powerMenuOpen ? 70 : 0
-        opacity: box.powerMenuOpen
-                 && !notificationModule.active
-                 && box.activeOsd === ""
-                 && !box.controlCenter
-                 && !box.miniDashboard
-                 && !box.cliphistOpen
-                 && !box.appLauncher
-                 && !box.wallpaperSwitcherOpen ? 1 : 0
-        visible: opacity > 0
+      OverlaySlot {
+        open: box.powerMenuOpen
+        openHeight: 70
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
+                 || box.appLauncher
+                 || box.wallpaperSwitcherOpen
 
-        Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-        }
         Loader {
           id: powerMenuLoader
           anchors.fill: parent
@@ -622,25 +682,19 @@ ShellRoot {
         }
       }
 
-      // record menu opens through IPC (Mod+F11) — quickshell picker replaces rofi
-      Item {
-        anchors.centerIn: parent
-        width: box.implicitWidth - 28
-        height: box.recordMenuOpen ? 70 : 0
-        opacity: box.recordMenuOpen
-                 && !notificationModule.active
-                 && box.activeOsd === ""
-                 && !box.controlCenter
-                 && !box.miniDashboard
-                 && !box.cliphistOpen
-                 && !box.appLauncher
-                 && !box.wallpaperSwitcherOpen
-                 && !box.powerMenuOpen ? 1 : 0
-        visible: opacity > 0
+      // record menu opens through IPC (Mod+F11)
+      OverlaySlot {
+        open: box.recordMenuOpen
+        openHeight: 70
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
+                 || box.appLauncher
+                 || box.wallpaperSwitcherOpen
+                 || box.powerMenuOpen
 
-        Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-        }
         Loader {
           id: recordMenuLoader
           anchors.fill: parent
@@ -663,29 +717,23 @@ ShellRoot {
       }
 
       // app launcher opens through IPC
-      Item {
-          anchors.centerIn: parent
-          width: box.implicitWidth - 24
-          height: box.appLauncher ? 386 : 0
-          opacity: box.appLauncher
-                   && !notificationModule.active
-                   && box.activeOsd === ""
-                   && !box.controlCenter
-                   && !box.miniDashboard
-                   && !box.cliphistOpen ? 1 : 0
-          visible: opacity > 0
+      OverlaySlot {
+        open: box.appLauncher
+        openHeight: 386
+        widthInset: 24
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
 
-          Behavior on opacity {
-              NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
-          }
-
-          AppLauncher {
-              id: appLauncherPanel
-              anchors.fill: parent
-              shown: box.appLauncher
-              initialQuery: box.pendingLauncherQuery
-              onCloseRequested: box.appLauncher = false
-          }
+        AppLauncher {
+          id: appLauncherPanel
+          anchors.fill: parent
+          shown: box.appLauncher
+          initialQuery: box.pendingLauncherQuery
+          onCloseRequested: box.appLauncher = false
+        }
       }
 
       // control center opens on left click
@@ -718,7 +766,6 @@ ShellRoot {
 
 
           MediaPlayer {
-            id: ccMediaPlayer
             Layout.fillWidth: true
           }
 
@@ -731,7 +778,6 @@ ShellRoot {
 
 
           Rectangle {
-            id: sliderCard
             Layout.fillWidth: true
             implicitHeight: sliderCol.implicitHeight + 16
             radius: 12
@@ -900,14 +946,12 @@ ShellRoot {
 
 
           TrayModule {
-            id: ccTrayModule
             parentWindow: panelWindow
             Layout.fillWidth: true
           }
 
           // 5. Bento Notifications Pod
           Rectangle {
-            id: notifCard
             Layout.fillWidth: true
             radius: 12
             color: Theme.cardBg
@@ -1011,12 +1055,10 @@ ShellRoot {
 
               // add/append notifications in the stack
               delegate: Item {
-                id: notifDelegate
                 width: ListView.view.width
                 height: contentColumn.implicitHeight + 7
 
                 Text {
-                  id: bellIcon
                   text: String.fromCodePoint(0xf0f3)
                   color: Theme.fg
                   font { family: Theme.nerdFontFamily; pixelSize: 16 }
@@ -1228,7 +1270,6 @@ ShellRoot {
               RowLayout {
                 spacing: 6
                 Text {
-                  id: whoamiText
                   text: SystemMonitor.username
                   color: Theme.fg
                   font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
@@ -1261,7 +1302,6 @@ ShellRoot {
                   font { family: Theme.nerdFontFamily; pixelSize: 9 }
                 }
                 Text {
-                  id: uptimeText
                   text: "up " + SystemMonitor.uptime
                   color: Theme.fg4
                   font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
@@ -1389,7 +1429,6 @@ ShellRoot {
   }
 
   NotificationServer {
-    id: notifServer
     keepOnReload: false
     imageSupported: true
     actionsSupported: true
@@ -1423,92 +1462,8 @@ ShellRoot {
     }
   }
 
-  FullscreenOsd {
-    id: fsNotif
-    active: notificationModule.active && notifFullscreenMode
-    visible: notifFullscreenMode
-    cardWidth: 300 * box.dpi
-    cardHeight: 52 * box.dpi
-
-    property var displayNotif: null
-
-    RowLayout {
-      Layout.alignment: Qt.AlignVCenter
-      spacing: 12 * box.dpi
-
-      Text {
-        text: String.fromCodePoint(0xf0f3)
-        color: Theme.fg
-        font { family: Theme.nerdFontFamily; pixelSize: 14 * box.dpi }
-        visible: cardIcon.status !== Image.Ready
-      }
-
-      Image {
-        id: cardIcon
-        Layout.preferredWidth: 23; Layout.preferredHeight: 23
-        fillMode: Image.PreserveAspectCrop
-        source: {
-          if (fsNotif.displayNotif && fsNotif.displayNotif.image) return fsNotif.displayNotif.image
-          if (fsNotif.displayNotif && fsNotif.displayNotif.appIcon) {
-            if (fsNotif.displayNotif.appIcon.startsWith("/")) {
-              return "file://" + fsNotif.displayNotif.appIcon
-            }
-            // iconPath(icon, true) returns "" if the icon is missing from the
-            // theme, so we never see the black/purple "missing texture" block.
-            return Quickshell.iconPath(fsNotif.displayNotif.appIcon, true)
-          }
-          return ""
-        }
-        sourceSize: Qt.size(23 * box.dpi, 23 * box.dpi)
-        visible: status === Image.Ready
-      }
-
-      ColumnLayout {
-        spacing: 3 * box.dpi
-
-        Text {
-          text: fsNotif.displayNotif ? fsNotif.displayNotif.summary : ""
-          textFormat: Text.PlainText
-          color: Theme.fg
-          font { family: Theme.fontFamily; pixelSize: 10 * box.dpi; weight: 700 }
-          elide: Text.ElideRight
-          Layout.maximumWidth: 200
-        }
-
-        Text {
-          text: fsNotif.displayNotif ? fsNotif.displayNotif.body.replace(
-            /\[([^\]]+)\]\(["']?([^)"']+)["']?\)/g,
-            '<a href="$2">$1</a>'
-          ) : ""
-          textFormat: Text.StyledText
-          linkColor: Theme.accent
-          color: Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 9 * box.dpi }
-          elide: Text.ElideRight
-          visible: text !== ""
-          Layout.maximumWidth: 200
-        }
-      }
-    }
-  }
-
-  Connections {
-    target: notificationModule
-    function onActiveChanged() {
-        if (notificationModule.active) {
-            notifFullscreenMode = fullscreenActive
-        } else {
-            notifFullscreenMode = false
-        }
-    }
-    function onCurrentChanged() {
-      if (notificationModule.current) fsNotif.displayNotif = notificationModule.current
-    }
-  }
-
   // --- Idle / power management (replaces swayidle) ---
   IdleMonitor {
-    id: dimMonitor
     timeout: 300
     respectInhibitors: true
     onIsIdleChanged: {
@@ -1518,7 +1473,6 @@ ShellRoot {
   }
 
   IdleMonitor {
-    id: lockMonitor
     timeout: 330
     respectInhibitors: true
     onIsIdleChanged: {
@@ -1527,7 +1481,6 @@ ShellRoot {
   }
 
   IdleMonitor {
-    id: offMonitor
     timeout: 360
     respectInhibitors: true
     onIsIdleChanged: {
@@ -1541,7 +1494,6 @@ ShellRoot {
   }
 
   IdleMonitor {
-    id: suspendMonitor
     timeout: 600
     respectInhibitors: false
     onIsIdleChanged: {
@@ -1549,7 +1501,17 @@ ShellRoot {
     }
   }
 
-  Backdrop {}
+  Backdrop {
+    id: backdrop
+  }
+
+  // The blurred backdrop is normally picked up by Backdrop's own file watcher;
+  // this fires the reload explicitly so a swap that lands mid-watch is not missed.
+  Connections {
+    target: WallpaperController
+    function onBackdropChanged(): void { backdrop.reloadImage() }
+  }
+
   LockScreen {}
 
 }

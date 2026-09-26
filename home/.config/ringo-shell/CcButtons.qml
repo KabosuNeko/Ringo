@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
-import Quickshell.Io
 import IslandBackend
 
 Item {
@@ -262,7 +261,6 @@ Item {
     }
 
     Rectangle {
-      id: dndBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
@@ -328,7 +326,6 @@ Item {
     }
 
     Rectangle {
-      id: focusBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
@@ -409,15 +406,18 @@ Item {
     }
 
     Rectangle {
-      id: colorPickerBtn
+      id: nightLightBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
-      color: colorPickerHover.hovered ? Theme.chipBgHover : Theme.cardBg
+      color: NightLightController.enabled
+              ? (nightLightHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
+              : (nightLightHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
-      border.color: Theme.cardBorder
-      scale: colorPickerMouse.pressed ? 0.96 : (colorPickerHover.hovered ? 1.01 : 1.0)
+      border.color: NightLightController.enabled ? Theme.accent : Theme.cardBorder
+      scale: nightLightMouse.pressed ? 0.96 : (nightLightHover.hovered ? 1.01 : 1.0)
       Behavior on color { ColorAnimation { duration: 120 } }
+      Behavior on border.color { ColorAnimation { duration: 120 } }
       Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
 
       RowLayout {
@@ -429,12 +429,13 @@ Item {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
           radius: 8
-          color: Theme.chipBg
+          color: NightLightController.enabled ? Theme.accent : Theme.chipBg
+          Behavior on color { ColorAnimation { duration: 120 } }
 
           Text {
             anchors.centerIn: parent
-            text: "\uf1fb"
-            color: Theme.fg4
+            text: NightLightController.enabled ? "\uf186" : "\uf185"
+            color: NightLightController.enabled ? Theme.bg : Theme.fg4
             font { family: Theme.nerdFontFamily; pixelSize: 13 }
           }
         }
@@ -444,7 +445,7 @@ Item {
           spacing: 1
 
           Text {
-            text: "Pick Color"
+            text: "Night Light"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
             elide: Text.ElideRight
@@ -452,7 +453,9 @@ Item {
           }
 
           Text {
-            text: "Sample screen"
+            text: !NightLightController.enabled ? "Disabled"
+                : NightLightController.active ? NightLightController.temperature + "K"
+                : NightLightController.error.length > 0 ? "Unavailable" : "Starting"
             color: Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
@@ -461,14 +464,12 @@ Item {
         }
       }
 
-      HoverHandler { id: colorPickerHover }
+      HoverHandler { id: nightLightHover }
       MouseArea {
-        id: colorPickerMouse
+        id: nightLightMouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: {
-          Quickshell.execDetached([Quickshell.env("HOME") + "/.local/bin/color-picker.sh"])
-        }
+        onClicked: NightLightController.enabled = !NightLightController.enabled
       }
     }
   }

@@ -5,10 +5,8 @@
   "pillBottomMargin": 26,
   "textFontFamily": "JetBrainsMono Nerd Font",
   "nerdFontFamily": "JetBrainsMono Nerd Font Propo",
-  "maxWorkspaces": 5,
   "notificationDisplayTime": 3000,
   "maxNotificationsInStack": 20,
-  "bandwidthRefreshInterval": 300000,
   "osdDuration": 800,
   "weatherLocation": "Ho Chi Minh City",
   "weatherUnits": "metric",
@@ -19,5 +17,11 @@
   "dpiScale": 1.0,
   "wallpapersDir": "~/Pictures/Wallpapers",
   "wsCloseOnWallpaperSet": true,
-  "wsAnimation": true
+  "wsAnimation": true,
+  "nightLightLowTemperature": 4000,
+  "nightLightHighTemperature": 6500,
+  "nightLightLatitude": 0,
+  "nightLightLongitude": 0,
+  "slideshowEnabled": false,
+  "slideshowIntervalMinutes": 30
 }

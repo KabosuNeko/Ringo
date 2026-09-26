@@ -36,7 +36,6 @@ Singleton {
   signal completed(string finishedMode)
 
   Timer {
-    id: ticker
     interval: 1000
     repeat: true
     running: root.running
@@ -55,20 +54,16 @@ Singleton {
     let finished = root.mode
     if (finished === "work") {
       SoundController.playAlarm()
-      Quickshell.execDetached([
-        "notify-send", "-u", "critical", "-i", "alarm", "-a", "Ringo Focus",
-        "Focus Session Complete! (" + Math.floor(root.workDuration / 60) + " min)",
-        "Hết giờ tập trung! Hãy nghỉ ngơi giải lao 5 phút."
-      ])
+      Notifier.post("Focus Session Complete! (" + Math.floor(root.workDuration / 60) + " min)",
+                    "Hết giờ tập trung! Hãy nghỉ ngơi giải lao 5 phút.",
+                    "alarm", "Ringo Focus", 2)
       root.mode = "break"
       root.timeLeft = root.breakDuration
     } else {
       SoundController.playComplete()
-      Quickshell.execDetached([
-        "notify-send", "-u", "normal", "-i", "alarm", "-a", "Ringo Focus",
-        "Break Finished!",
-        "Hết giờ nghỉ giải lao! Sẵn sàng cho phiên tập trung mới."
-      ])
+      Notifier.post("Break Finished!",
+                    "Hết giờ nghỉ giải lao! Sẵn sàng cho phiên tập trung mới.",
+                    "alarm", "Ringo Focus")
       root.mode = "work"
       root.timeLeft = root.workDuration
     }

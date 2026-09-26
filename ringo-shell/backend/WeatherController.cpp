@@ -29,7 +29,27 @@ void WeatherController::setRefreshInterval(int v) {
     m_refreshInterval = v;
     emit refreshIntervalChanged();
     m_timer.setInterval(m_refreshInterval);
+    // Never poll while inactive - the timer only runs while the weather UI is up.
+    if (!m_active || m_refreshInterval <= 0) {
+        m_timer.stop();
+        return;
+    }
     if (!m_timer.isActive()) m_timer.start();
+}
+
+void WeatherController::setActive(bool v) {
+    if (m_active == v) return;
+    m_active = v;
+    emit activeChanged();
+
+    if (!m_active) {
+        m_timer.stop();
+        return;
+    }
+    if (m_refreshInterval > 0 && !m_timer.isActive()) {
+        m_timer.setInterval(m_refreshInterval);
+        m_timer.start();
+    }
 }
 void WeatherController::setLoading(bool v) { if (m_loading==v) return; m_loading=v; emit loadingChanged(); }
 void WeatherController::setErrorMessage(const QString &v) { if (m_errorMessage==v) return; m_errorMessage=v; emit errorMessageChanged(); }
@@ -81,7 +101,8 @@ void WeatherController::refresh() {
     if (m_reply) { m_reply->abort(); m_reply->deleteLater(); }
     m_reply = m_nam.get(req);
     connect(m_reply, &QNetworkReply::finished, this, &WeatherController::onReplyFinished);
-    if (!m_timer.isActive() && m_refreshInterval > 0) { m_timer.setInterval(m_refreshInterval); m_timer.start(); }
+    // Deliberately does NOT arm the refresh timer: a manual refresh must work
+    // while inactive, and enabling polling is the QML's job via `active`.
 }
 
 void WeatherController::onReplyFinished() {
@@ -147,6 +168,19 @@ void WeatherController::parseAndApply(const QByteArray &data) {
     setS(m_iconColor, color, &WeatherController::iconColorChanged);
     setS(m_sunrise, sunrise, &WeatherController::sunriseChanged);
     setS(m_sunset, sunset, &WeatherController::sunsetChanged);
+
+    // The night light follows the same location as the weather widget.
+    QJsonArray areas = root.value(QStringLiteral("nearest_area")).toArray();
+    if (!areas.isEmpty()) {
+        QJsonObject area = areas[0].toObject();
+        double lat = area.value(QStringLiteral("latitude")).toString().toDouble();
+        double lon = area.value(QStringLiteral("longitude")).toString().toDouble();
+        const bool changed = !qFuzzyCompare(m_latitude + 1.0, lat + 1.0)
+            || !qFuzzyCompare(m_longitude + 1.0, lon + 1.0);
+        m_latitude = lat;
+        m_longitude = lon;
+        if (changed) emit coordinatesChanged();
+    }
 
     QVariantList forecast;
     int n = qMin(3, weatherArr.size());
