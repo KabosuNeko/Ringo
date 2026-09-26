@@ -70,6 +70,10 @@ struct {
 	unsigned char *data;
 } image;
 
+/* scandir()'s array while a directory path is being resolved. It is run-scope
+ * state so teardown() can release it even when a later step fails. */
+static struct dirent **namelist;
+
 static uint32_t color;
 
 static void image_fill(unsigned char *dst, struct output *output);
@@ -80,7 +84,11 @@ noop() {}
 
 /* The engine runs inside the shell process, so a failure must never exit() the
  * host: the message is recorded and control returns to ringo_wallpaper_run()'s
- * setjmp point instead. */
+ * setjmp point instead.
+ *
+ * While a run is armed -- everything between setjmp() and teardown() -- this
+ * function does not return, so statements that follow a die() call inside the
+ * run are unreachable. */
 static jmp_buf g_fail;
 static char g_error[256];
 static bool g_armed;
@@ -216,9 +224,11 @@ static struct wl_buffer *
 output_load_image(struct output *output)
 {
 	int fd = -1;
-	struct wl_shm_pool *shm_pool;
+	int fail_errno = 0;
+	struct wl_shm_pool *shm_pool = NULL;
 	struct wl_buffer *buffer;
-	unsigned char *data;
+	const char *failmsg = "image buffer creation failed:";
+	unsigned char *data = MAP_FAILED;
 	
 	fd = memfd_create("drwbuf-shm-buffer-pool",
 		MFD_CLOEXEC | MFD_ALLOW_SEALING 
@@ -226,12 +236,21 @@ output_load_image(struct output *output)
 		| MFD_NOEXEC_SEAL
 	#endif
 	);
-	if (fd < 0) die("memfd_create:");
+	if (fd < 0) {
+		failmsg = "memfd_create:";
+		goto fail;
+	}
 
-	if ((ftruncate(fd, output->size)) < 0) die("ftruncate:");
+	if ((ftruncate(fd, output->size)) < 0) {
+		failmsg = "ftruncate:";
+		goto fail;
+	}
 
 	data = mmap(NULL, output->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-	if (data == MAP_FAILED) die("mmap:");
+	if (data == MAP_FAILED) {
+		failmsg = "mmap:";
+		goto fail;
+	}
 
 	fcntl(fd, F_ADD_SEALS, F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL);
 
@@ -239,7 +258,9 @@ output_load_image(struct output *output)
 	buffer = wl_shm_pool_create_buffer(shm_pool, 0,
 		output->width, output->height, output->stride, WL_SHM_FORMAT_ARGB8888);
 	wl_shm_pool_destroy(shm_pool);
+	shm_pool = NULL;
 	close(fd);
+	fd = -1;
 
 	image_modify(data, output);
 
@@ -252,6 +273,20 @@ output_load_image(struct output *output)
 
 	munmap(data, output->size);
 	return buffer;
+
+fail:
+	/* die() longjmps out of here, so release everything allocated above before
+	 * unwinding; errno is kept so die() can still append strerror(). */
+	fail_errno = errno;
+	if (data != MAP_FAILED)
+		munmap(data, output->size);
+	if (shm_pool)
+		wl_shm_pool_destroy(shm_pool);
+	if (fd >= 0)
+		close(fd);
+	errno = fail_errno;
+	die(failmsg);
+	return NULL;
 }
 
 static void
@@ -293,16 +328,35 @@ layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *layer_s
 	image.data = NULL;
 }
 
+/* Destroys one output's Wayland objects (layer surface, surface, output) and
+ * frees it. Shared by the `closed` handler, which releases an output the
+ * compositor retired, and by teardown(); the fields are cleared so the two can
+ * never destroy the same object twice. */
+static void
+output_destroy(struct output *output)
+{
+	wl_list_remove(&output->link);
+	if (output->layer_surface) {
+		zwlr_layer_surface_v1_destroy(output->layer_surface);
+		output->layer_surface = NULL;
+	}
+	if (output->surface) {
+		wl_surface_destroy(output->surface);
+		output->surface = NULL;
+	}
+	if (output->wl) {
+		wl_output_destroy(output->wl);
+		output->wl = NULL;
+	}
+	free(output);
+}
+
 static void
 layer_surface_handle_closed(void *data, struct zwlr_layer_surface_v1 *surface)
 {
-	struct output *output = data;
+	(void)surface;
 
-	zwlr_layer_surface_v1_destroy(output->layer_surface);
-	wl_surface_destroy(output->surface);
-	wl_output_destroy(output->wl);
-	wl_list_remove(&output->link);
-	free(output);
+	output_destroy(data);
 }
 
 static const struct zwlr_layer_surface_v1_listener layer_surface_listener = {
@@ -434,11 +488,13 @@ teardown(void)
 	struct output *o, *tmp;
 
 	if (g_outputs_ready) {
-		wl_list_for_each_safe(o, tmp, &outputs, link) {
-			wl_list_remove(&o->link);
-			free(o);
-		}
+		wl_list_for_each_safe(o, tmp, &outputs, link)
+			output_destroy(o);
 		g_outputs_ready = false;
+	}
+	if (namelist) {
+		free(namelist);
+		namelist = NULL;
 	}
 	if (image.data) {
 		stbi_image_free(image.data);
@@ -510,6 +566,7 @@ ringo_wallpaper_run(const char *modeArg, const char *pathArg)
 	image.data = NULL;
 	image.width = 0;
 	image.height = 0;
+	namelist = NULL;
 	color = 0;
 	image_modify = image_fill;
 	wl_list_init(&outputs);
@@ -539,7 +596,7 @@ ringo_wallpaper_run(const char *modeArg, const char *pathArg)
 		image_modify = image_color;
 		break;
 	case 3:;
-		struct dirent **namelist = NULL, *name;
+		struct dirent *name;
 		int dirn = 0;
 
 		mode = argv[1]; path = argv[2];
@@ -549,10 +606,8 @@ mode:
 		else if (!strcmp(mode, "fill")) image_modify = image_fill;
 		else if (!strcmp(mode, "tile")) image_modify = image_tile;
 		else if (!strcmp(mode, "spread")) image_modify = image_spread;
-		else if (!namelist) {
+		else if (!namelist)
 			die("unknown image mode: %s", mode);
-			return -1;
-		}
 		else goto prescan;
 
 file:
@@ -562,7 +617,8 @@ file:
 			srand((intptr_t)path | (unsigned int)time(NULL));
 scan:
 			if (chdir(path) < 0) die("chdir:"); // slower & easier than strncpy PATH_MAX
-			if (namelist) free(namelist);
+			free(namelist);
+			namelist = NULL;
 			if ((dirn = scandir(".", &namelist, NULL, alphasort)) < 0) die("scandir:");
 			if (dirn < 3) die("no images");
 			name = namelist[2 + rand() % (dirn - 2)];
@@ -573,11 +629,11 @@ prescan:
 		}
 
 		if (!(image.fp = fopen(path, "rb"))) die("fopen %s:", path);
-		if (namelist) free(namelist);
+		free(namelist);
+		namelist = NULL;
 		break;
 	default:
 		die("usage: [fill|fit|spread|stretch|tile] filename|dir, or filename|dir|RRGGBB[AA]");
-		return -1;
 	}
 
 	if (!(display = wl_display_connect(NULL)))

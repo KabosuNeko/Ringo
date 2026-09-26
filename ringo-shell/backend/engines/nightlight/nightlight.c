@@ -1,6 +1,5 @@
 #define _DEFAULT_SOURCE
 #define _XOPEN_SOURCE 700
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
@@ -26,44 +25,6 @@
 
 #include <pthread.h>
 
-#if defined(SPEEDRUN)
-static time_t start = 0, offset = 0, multiplier = 1000;
-static void init_time(void) {
-	tzset();
-	struct timespec realtime;
-	clock_gettime(CLOCK_REALTIME, &realtime);
-	offset = realtime.tv_sec;
-
-	char *startstr = getenv("SPEEDRUN_START");
-	if (startstr != NULL) {
-		start = atol(startstr);
-	} else {
-		start = offset;
-	}
-
-	char *multistr = getenv("SPEEDRUN_MULTIPLIER");
-	if (multistr != NULL) {
-		multiplier = atol(multistr);
-	}
-}
-static time_t get_time_sec(void) {
-	struct timespec realtime;
-	clock_gettime(CLOCK_REALTIME, &realtime);
-	time_t now = start + ((realtime.tv_sec - offset) * multiplier +
-			realtime.tv_nsec / (1000000000 / multiplier));
-	struct tm tm;
-	localtime_r(&now, &tm);
-	fprintf(stderr, "time in termina: %02d:%02d:%02d, %d/%d/%d\n",
-			tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_mday,
-			tm.tm_mon+1, tm.tm_year + 1900);
-	return now;
-}
-static void adjust_timerspec(struct itimerspec *timerspec) {
-	int diff = timerspec->it_value.tv_sec - offset;
-	timerspec->it_value.tv_sec = offset + diff / multiplier;
-	timerspec->it_value.tv_nsec = (diff % multiplier) * (1000000000 / multiplier);
-}
-#else
 static inline void init_time(void) {
 	tzset();
 }
@@ -75,7 +36,6 @@ static inline time_t get_time_sec(void) {
 static inline void adjust_timerspec(struct itimerspec *timerspec) {
 	(void)timerspec;
 }
-#endif
 
 /* One engine per process: the shell runs a single ringo_nightlight_run() at a
  * time, and every piece of state below is reset by it. */
@@ -437,7 +397,9 @@ static void update_timer(const struct context *ctx, time_t now) {
 		engine_failf("unexpected engine state");
 	}
 
-	assert(deadline > now);
+	if (deadline <= now) {
+		engine_failf("invalid timer deadline");
+	}
 	struct itimerspec timerspec = {
 		.it_interval = {0},
 		.it_value = {
@@ -473,7 +435,12 @@ static int create_anonymous_file(off_t size) {
 }
 
 static int create_gamma_table(uint32_t ramp_size, uint16_t **table) {
-	size_t table_size = ramp_size * 3 * sizeof(uint16_t);
+	/* Reject a ramp whose table size would wrap size_t: mapping it would hand
+	 * the compositor a buffer smaller than the ramp it describes. */
+	if (ramp_size == 0 || 3 * sizeof(uint16_t) > SIZE_MAX / ramp_size) {
+		engine_failf("gamma ramp size %u is out of range", ramp_size);
+	}
+	size_t table_size = (size_t)ramp_size * 3 * sizeof(uint16_t);
 	int fd = create_anonymous_file(table_size);
 	if (fd < 0) {
 		fprintf(stderr, "failed to create anonymous file\n");
@@ -492,14 +459,27 @@ static int create_gamma_table(uint32_t ramp_size, uint16_t **table) {
 	return fd;
 }
 
-static void gamma_control_handle_gamma_size(void *data,
-		struct zwlr_gamma_control_v1 *gamma_control, uint32_t ramp_size) {
-	(void)gamma_control;
-	struct output *output = data;
+/* The mapping and the ramp_size it was created with belong together: unmapping
+ * with a stale size would unmap an unrelated part of the address space. */
+static void release_table(struct output *output) {
+	if (output->table != NULL) {
+		if (output->ramp_size > 0) {
+			munmap(output->table,
+				(size_t)output->ramp_size * 3 * sizeof(uint16_t));
+		}
+		output->table = NULL;
+	}
 	if (output->table_fd != -1) {
 		close(output->table_fd);
 		output->table_fd = -1;
 	}
+}
+
+static void gamma_control_handle_gamma_size(void *data,
+		struct zwlr_gamma_control_v1 *gamma_control, uint32_t ramp_size) {
+	(void)gamma_control;
+	struct output *output = data;
+	release_table(output);
 	output->ramp_size = ramp_size;
 	if (ramp_size == 0) {
 		// Maybe the output does not currently have a CRTC to tell us
@@ -584,7 +564,12 @@ static void wl_output_handle_scale(void *data, struct wl_output *output, int sca
 static void wl_output_handle_name(void *data, struct wl_output *wl_output, const char *name) {
 	(void)wl_output;
 	struct output *output = data;
-	output->name = strdup(name);
+	char *dup = strdup(name);
+	if (dup == NULL) {
+		engine_failf("could not duplicate the name of output %d", output->id);
+	}
+	free(output->name);
+	output->name = dup;
 	struct config *cfg = &output->context->config;
 	for (size_t idx = 0; idx < cfg->output_names.len; ++idx) {
 		if (strcmp(output->name, cfg->output_names.data[idx]) == 0) {
@@ -625,6 +610,9 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
 		fprintf(stderr, "registry: adding output %d\n", name);
 
 		struct output *output = calloc(1, sizeof(struct output));
+		if (output == NULL) {
+			engine_failf("could not allocate output %d", name);
+		}
 		output->id = name;
 		output->table_fd = -1;
 		output->context = ctx;
@@ -651,6 +639,8 @@ static void registry_handle_global(void *data, struct wl_registry *registry,
 	}
 }
 
+static void destroy_output(struct output *output);
+
 static void registry_handle_global_remove(void *data,
 		struct wl_registry *registry, uint32_t name) {
 	(void)registry;
@@ -659,14 +649,8 @@ static void registry_handle_global_remove(void *data,
 	wl_list_for_each_safe(output, tmp, &ctx->outputs, link) {
 		if (output->id == name) {
 			fprintf(stderr, "registry: removing output %s (%d)\n", output->name, name);
-			free(output->name);
+			destroy_output(output);
 			wl_list_remove(&output->link);
-			if (output->gamma_control != NULL) {
-				zwlr_gamma_control_v1_destroy(output->gamma_control);
-			}
-			if (output->table_fd != -1) {
-				close(output->table_fd);
-			}
 			free(output);
 			break;
 		}
@@ -817,28 +801,23 @@ static int set_nonblock(int fd) {
 	return 0;
 }
 
-static int setup_pipes(void) {
+static void setup_pipes(void) {
 	if (pipe(g_stop_pipe) == -1) {
 		engine_failf("could not create the stop pipe: %s", strerror(errno));
-		return -1;
 	}
 	if (set_nonblock(g_stop_pipe[0]) == -1 ||
 			set_nonblock(g_stop_pipe[1]) == -1) {
 		engine_failf("could not set the stop pipe non-blocking: %s",
 				strerror(errno));
-		return -1;
 	}
 	g_timer_fd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC | TFD_NONBLOCK);
 	if (g_timer_fd == -1) {
 		engine_failf("could not create the sun timer: %s", strerror(errno));
-		return -1;
 	}
 	g_retry_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
 	if (g_retry_fd == -1) {
 		engine_failf("could not create the retry timer: %s", strerror(errno));
-		return -1;
 	}
-	return 0;
 }
 
 static void engine_teardown(void);
@@ -857,9 +836,7 @@ static int wlrun(const struct config *cfg) {
 
 	wl_list_init(&g_ctx.outputs);
 
-	if (setup_pipes() == -1) {
-		return EXIT_FAILURE;
-	}
+	setup_pipes();
 
 	g_display = wl_display_connect(NULL);
 	if (g_display == NULL) {
@@ -933,14 +910,7 @@ static void destroy_output(struct output *output) {
 		zwlr_gamma_control_v1_destroy(output->gamma_control);
 		output->gamma_control = NULL;
 	}
-	if (output->table != NULL && output->ramp_size > 0) {
-		munmap(output->table, (size_t)output->ramp_size * 3 * sizeof(uint16_t));
-		output->table = NULL;
-	}
-	if (output->table_fd != -1) {
-		close(output->table_fd);
-		output->table_fd = -1;
-	}
+	release_table(output);
 	free(output->name);
 	output->name = NULL;
 	if (output->wl_output != NULL) {
@@ -1046,17 +1016,21 @@ int ringo_nightlight_run(const struct ringo_nightlight_options *options) {
 	init_time();
 
 	str_vec_init(&config.output_names);
-	if (options->output_names != NULL) {
-		for (const char *const *name = options->output_names; *name != NULL; ++name) {
-			str_vec_push(&config.output_names, (char *) *name);
-		}
-	}
 
 	if (setjmp(g_fail_jump) != 0) {
 		engine_teardown();
 		str_vec_free(&config.output_names);
 		pthread_mutex_unlock(&g_run_lock);
 		return EXIT_FAILURE;
+	}
+
+	// The jump target above must be armed before anything that can fail.
+	if (options->output_names != NULL) {
+		for (const char *const *name = options->output_names; *name != NULL; ++name) {
+			if (str_vec_push(&config.output_names, *name) != 0) {
+				engine_failf("could not record output name \"%s\"", *name);
+			}
+		}
 	}
 
 	if (options->manual_sunrise >= 0 && options->manual_sunset >= 0) {

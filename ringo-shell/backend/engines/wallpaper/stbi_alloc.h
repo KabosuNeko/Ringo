@@ -14,11 +14,17 @@ static void *stbi_mmap_alloc(size_t sz)
 {
 	if (sz == 0) return NULL;
 	long page = sysconf(_SC_PAGESIZE);
-	size_t mapsz = ((sz + page) & ~(page - 1)) + page;
+	if (page <= 0) return NULL;
+	size_t pagesz = (size_t)page;
+	/* The mapping is rounded up to a page boundary plus one guard page that
+	 * stores its size. Refuse sizes whose arithmetic would wrap size_t instead
+	 * of silently mapping too little. */
+	if (sz > SIZE_MAX - pagesz - pagesz) return NULL;
+	size_t mapsz = ((sz + pagesz) & ~(pagesz - 1)) + pagesz;
 	void *p = mmap(NULL, mapsz, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
 	if (p == MAP_FAILED) return NULL;
 	*(size_t*)p = mapsz;
-	return (char*)p + page;
+	return (char*)p + pagesz;
 }
 
 static void stbi_mmap_free(void *p)
