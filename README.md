@@ -43,6 +43,9 @@
 - **Native C++ Backend (`IslandBackend`)**  
   Direct asynchronous D-Bus integration for WiFi (IWD / NetworkManager), Bluetooth (BlueZ), and PAM authentication. No state-polling loops: values arrive as D-Bus signals, and the only repeating timers that poll external state (system telemetry, weather) run while their UI is on screen. Subprocesses are event-driven, never pollers — wallpaper blur/`wal` on wallpaper change (the wallpaper and the night light are rendered in-process), `wl-copy` on launch, `wl-paste --watch cliphist store` on clipboard change.
 
+- **Self-Check**  
+  `ringo-shell call doctor check` prints one report with the state of both engines, the palette and state files, and every external tool the shell drives (marking what is required and what is optional).
+
 - **Built-in Night Light**  
   The gamma ramp is computed from the sun position for your coordinates and applied in-process by the shell itself: warm after sunset, neutral during the day. `ringo-shell call nightLight status` reports the current temperature, and `force off|high|low` pins it manually.
 

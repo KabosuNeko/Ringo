@@ -112,6 +112,12 @@ ShellRoot {
     }
   }
 
+  // Health report: engines, palette, state, external tools.
+  IpcHandler {
+    target: "doctor"
+    function check(): string { return root.doctorReport() }
+  }
+
   // Scripts bound to keybinds post through here instead of spawning notify-send.
   IpcHandler {
     target: "notify"
@@ -179,6 +185,22 @@ ShellRoot {
   property real barSurfaceOpacity: 0.5
 
 
+  // Tools the shell drives; `needed: false` means the feature that uses them
+  // degrades gracefully.
+  readonly property var doctorToolChecks: [
+    { name: "niri",              needed: true,  why: "compositor" },
+    { name: "qs",                needed: true,  why: "shell runtime" },
+    { name: "wal",               needed: true,  why: "palette generation" },
+    { name: "cliphist",          needed: true,  why: "clipboard history" },
+    { name: "wl-copy",           needed: true,  why: "clipboard writes" },
+    { name: "wl-paste",          needed: true,  why: "clipboard watcher" },
+    { name: "foot",              needed: false, why: "default terminal" },
+    { name: "wl-screenrec",      needed: false, why: "screen recording" },
+    { name: "fcitx5",            needed: false, why: "input method" },
+    { name: "canberra-gtk-play", needed: false, why: "sound events" },
+    { name: "mpv",               needed: false, why: "alarm sounds" }
+  ]
+
   property bool barHidden: false
 
   Component.onCompleted: {
@@ -197,6 +219,62 @@ ShellRoot {
 
   // The night light follows config.jsonc when it pins a location, and the
   // weather widget's city otherwise.
+function doctorReport(): string {
+  const out = []
+  out.push(Tools.version())
+
+  // --- engines ---
+  const wall = WallpaperController
+  out.push("")
+  out.push("[wallpaper] " + wall.mode + " · " + (wall.path.length > 0 ? wall.path : "(no image)"))
+  out.push("  engine: " + (wall.ready ? "ready" : wall.busy ? "starting" : "stopped")
+           + (wall.slideshowEnabled ? " · slideshow every " + wall.slideshowIntervalMinutes + "m" : ""))
+  if (wall.error.length > 0) out.push("  error: " + wall.error)
+
+  const nl = NightLightController
+  out.push("")
+  out.push("[night light] " + (nl.enabled ? "enabled" : "disabled")
+           + (nl.force !== "off" ? " · forced " + nl.force : ""))
+  out.push("  engine: " + (nl.active ? "active, " + nl.temperature + "K on " + nl.outputs + " output(s)"
+                                      : nl.error.length > 0 ? "unavailable" : "stopped"))
+  out.push("  location: " + (nl.locationExplicit ? "pinned" : "auto") + " "
+           + nl.latitude.toFixed(2) + "," + nl.longitude.toFixed(2)
+           + " · " + nl.lowTemperature + "K night / " + nl.highTemperature + "K day")
+  if (nl.error.length > 0) out.push("  error: " + nl.error)
+
+  // --- files ---
+  const wal = Quickshell.env("HOME") + "/.cache/wal/colors.json"
+  const state = Quickshell.env("HOME") + "/.local/state/quickshell/ringo-shell/state.json"
+  out.push("")
+  out.push("[files]")
+  out.push("  palette: " + (Tools.fileExists(wal) ? "ok" : "missing") + "  " + wal)
+  out.push("  state:   " + (Tools.fileExists(state) ? "ok" : "absent") + "  " + state)
+
+  // --- tools ---
+  const missingRequired = []
+  const missingOptional = []
+  for (const tool of doctorToolChecks) {
+    if (Tools.have(tool.name)) continue
+    if (tool.needed) missingRequired.push(tool.name + " (" + tool.why + ")")
+    else missingOptional.push(tool.name + " (" + tool.why + ")")
+  }
+  out.push("")
+  out.push("[tools] " + doctorToolChecks.length + " checked")
+  out.push("  missing required: " + (missingRequired.length > 0 ? missingRequired.join(", ") : "none"))
+  out.push("  missing optional: " + (missingOptional.length > 0 ? missingOptional.join(", ") : "none"))
+
+  // --- verdict ---
+  const problems = []
+  if (missingRequired.length > 0) problems.push(missingRequired.length + " required tool(s) missing")
+  if (wall.error.length > 0) problems.push("wallpaper: " + wall.error)
+  if (nl.enabled && nl.outputs === 0) problems.push("night light: no output accepted the ramp")
+  else if (nl.enabled && nl.error.length > 0) problems.push("night light: " + nl.error)
+  out.push("")
+  out.push(problems.length === 0 ? "verdict: ok" : "verdict: " + problems.join(" | "))
+  return out.join("\n")
+  }
+
+
   function applyNightLightLocation(): void {
     if (Config.nightLightLatitude !== 0 || Config.nightLightLongitude !== 0) {
       NightLightController.latitude = Config.nightLightLatitude
