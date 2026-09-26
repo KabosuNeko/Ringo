@@ -91,7 +91,7 @@ chmod +x install.sh
 The installer runs interactively with confirmation at each stage:
 
 1. Installs `yay` (AUR helper) if not already present
-2. Verifies core utilities (`stow`, `git`, `curl`)
+2. Verifies core utilities (`stow`, `git`)
 3. Installs package manifest from `pkg.txt`
 4. Creates directory structure (`~/.icons`, `~/.themes`, `~/Pictures/Screenshots`)
 5. Deploys dotfiles via **GNU Stow** (symlinks into `~/.config` and `~/.local`)
@@ -179,18 +179,24 @@ Toggles the UI changes (night light on/off, wallpaper mode, slideshow on/off) ar
 Everything the shell can be told to do from a keybind or a script:
 
 ```sh
-ringo-shell call doctor check                                          # health report
-ringo-shell call nightLight status|on|off|toggle                       # night light
-ringo-shell call nightLight force off|high|low                         # pin the temperature
-ringo-shell call wallpaper status|next|reload|setMode fill|tile        # wallpaper
-ringo-shell call wallpaper slideshow on|off|toggle|interval 30         # slideshow
-ringo-shell call notify post "Summary" "Body" "icon-name" 1            # notification
-ringo-shell call controlCenter|miniDashboard|appLauncher|wallpaperSwitcher|powerMenu|recordMenu|bar|calendar|weather toggle
-ringo-shell call cliphist toggle|wipe
-ringo-shell call brightness up|down|step 5
-ringo-shell call media playPause|next|prev|stop
-ringo-shell call lock lock|unlock
+ringo-shell call doctor check                      # health report
+ringo-shell call nightLight status                 # or: on / off / toggle
+ringo-shell call nightLight force low              # or: off / high
+ringo-shell call wallpaper status                  # or: next / reload
+ringo-shell call wallpaper setMode tile            # or: fill / fit / spread / stretch
+ringo-shell call wallpaper slideshow on            # or: off / toggle
+ringo-shell call wallpaper interval 30             # minutes
+ringo-shell call notify post "Summary" "Body" "icon-name" 1
+ringo-shell call cliphist toggle                   # or: wipe
+ringo-shell call brightness step 5                 # or: up / down
+ringo-shell call media playPause                   # or: next / prev / stop
+ringo-shell call lock lock                         # or: unlock
 ```
+
+Every panel takes `toggle`, `open` or `hide`:
+`controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `bar`, `calendar`, `weather`.
+
+`docs/KEYBINDS.md` lists the same commands next to the keybindings that call them.
 
 ## Related Configurations
 

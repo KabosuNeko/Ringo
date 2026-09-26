@@ -24,7 +24,7 @@ Flags:
   --yes                 Answer yes to every confirmation prompt.
   --non-interactive     Never read stdin. Optional prompts are answered no, so
                         only the steps that need no confirmation are performed
-                        and the required packages (stow, git, curl, yay) must
+                        and the required packages (stow, git, yay) must
                         already be installed. Combined with --yes the optional
                         prompts are answered yes instead.
   --profile core|full   core installs the dependencies, builds the backend and
@@ -175,7 +175,7 @@ if ! command -v yay > /dev/null 2>&1; then
     exit 1
 fi
 
-for pkg in stow git curl; do
+for pkg in stow git; do
     if command -v "$pkg" > /dev/null 2>&1; then
         echo ":: $pkg ... found"
     else
@@ -196,8 +196,6 @@ else
 fi
 
 for folder in \
-    "$HOME/.icons" \
-    "$HOME/.themes" \
     "$HOME/Pictures/Screenshots"
 do
     if [ ! -d "$folder" ]; then
