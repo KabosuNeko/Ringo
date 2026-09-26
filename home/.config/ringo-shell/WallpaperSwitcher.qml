@@ -37,7 +37,13 @@ Rectangle {
     // all owned by the backend controller.
     WallpaperController.apply(path)
     // Reload foot so it picks up the new colors-foot-dark.ini
-    Quickshell.execDetached(["sh", "-c", "sleep 0.5 && pkill -USR1 foot 2>/dev/null || true"])
+    footReloadTimer.restart()
+  }
+
+  Timer {
+    id: footReloadTimer
+    interval: 500
+    onTriggered: Quickshell.execDetached(["pkill", "-USR1", "foot"])
   }
 
   function activateCurrent() {
@@ -149,6 +155,7 @@ Rectangle {
             color: "transparent"
 
             Image {
+              id: preview
               anchors.fill: parent
               source: wallUrl
               fillMode: Image.PreserveAspectCrop
@@ -156,9 +163,16 @@ Rectangle {
               cache: true
               sourceSize.width: 200
               sourceSize.height: 150
-              onStatusChanged: {
-                if (status === Image.Error) console.log("FAILED:", wallUrl)
-              }
+            }
+
+            // A wallpaper file that cannot be decoded would otherwise show up as a
+            // blank cell; this is the only place the failure is reported.
+            Text {
+              anchors.centerIn: parent
+              visible: preview.status === Image.Error
+              text: "\uf071  Unreadable"
+              color: Theme.warning
+              font { family: Theme.fontFamily; pixelSize: 9 }
             }
 
             Rectangle {

@@ -33,8 +33,6 @@ Singleton {
     return total > 0 ? (1.0 - (timeLeft / total)) : 0
   }
 
-  signal completed(string finishedMode)
-
   Timer {
     interval: 1000
     repeat: true
@@ -51,8 +49,7 @@ Singleton {
   }
 
   function handleComplete() {
-    let finished = root.mode
-    if (finished === "work") {
+    if (root.mode === "work") {
       SoundController.playAlarm()
       Notifier.post("Focus Session Complete! (" + Math.floor(root.workDuration / 60) + " min)",
                     "Hết giờ tập trung! Hãy nghỉ ngơi giải lao 5 phút.",
@@ -67,7 +64,6 @@ Singleton {
       root.mode = "work"
       root.timeLeft = root.workDuration
     }
-    root.completed(finished)
   }
 
   function setWorkDuration(minutes): void {

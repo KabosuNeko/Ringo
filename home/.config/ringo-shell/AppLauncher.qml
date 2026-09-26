@@ -246,11 +246,14 @@ Item {
 
     function launchEntry(app) {
       if (app.runInTerminal) {
-         if (!Config.defaultTerminal || Config.defaultTerminal.length === 0) {
-             console.log("No defaultTerminal configured, cannot launch this terminal app:", app.name)
-             return
-         }
-         Quickshell.execDetached([Config.defaultTerminal, "-e", "sh", "-c", app.command.join(" ")])
+         // No terminal configured: nothing to launch.
+         if (!Config.defaultTerminal || Config.defaultTerminal.length === 0) return
+         // Hand the parsed Exec argv to the terminal instead of joining it back
+         // into a shell string, which would split paths containing spaces.
+         // app.command is a QML list sequence, so copy it element by element.
+         let argv = [Config.defaultTerminal, "-e"]
+         for (let i = 0; i < app.command.length; i++) argv.push(app.command[i])
+         Quickshell.execDetached(argv)
       } else {
          app.execute()
       }

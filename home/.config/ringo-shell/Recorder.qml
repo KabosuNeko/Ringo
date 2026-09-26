@@ -1,5 +1,6 @@
 pragma Singleton
 import Quickshell
+import Quickshell.Io
 import QtQuick
 import IslandBackend
 
@@ -16,11 +17,15 @@ Singleton {
     root.active = Tools.fileExists(root.pidFile)
   }
 
-  Timer {
-    interval: 1000
-    running: true
-    repeat: true
-    triggeredOnStart: true
-    onTriggered: root.refresh()
+  // The file is written once when a recording starts and removed when it stops,
+  // so watch it instead of polling once a second. No pid file is the normal idle
+  // state, hence printErrors: false.
+  FileView {
+    path: root.pidFile
+    watchChanges: true
+    printErrors: false
+    onFileChanged: root.refresh()
   }
+
+  Component.onCompleted: root.refresh()
 }
