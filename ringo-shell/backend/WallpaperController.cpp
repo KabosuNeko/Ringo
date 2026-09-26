@@ -81,6 +81,7 @@ private:
 
 namespace {
 const QString kModeKey = QStringLiteral("wallpaper.mode");
+const QString kSlideshowKey = QStringLiteral("wallpaper.slideshow");
 const QStringList kModes = {QStringLiteral("fill"), QStringLiteral("fit"),
                             QStringLiteral("spread"), QStringLiteral("stretch"),
                             QStringLiteral("tile")};
@@ -92,6 +93,7 @@ const QStringList kImageFilters = {QStringLiteral("*.png"), QStringLiteral("*.jp
 WallpaperController::WallpaperController(QObject *parent) : QObject(parent) {
     const QString mode = StateStore::instance().get(kModeKey).toString();
     if (kModes.contains(mode)) m_mode = mode;
+    m_slideshowEnabled = StateStore::instance().get(kSlideshowKey, false).toBool();
 
     m_slideTimer = new QTimer(this);
     connect(m_slideTimer, &QTimer::timeout, this, &WallpaperController::nextSlide);
@@ -151,6 +153,7 @@ void WallpaperController::setSlideshowEnabled(bool enabled) {
     if (m_slideshowEnabled == enabled) return;
     m_slideshowEnabled = enabled;
     emit slideshowEnabledChanged();
+    StateStore::instance().set(kSlideshowKey, enabled);
     applySlideshow();
 }
 

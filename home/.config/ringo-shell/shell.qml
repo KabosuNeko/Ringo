@@ -84,6 +84,13 @@ ShellRoot {
       WallpaperController.reload()
     }
     function next(): void { WallpaperController.nextSlide() }
+    function slideshow(state: string): void {
+      if (state === "toggle")
+        WallpaperController.slideshowEnabled = !WallpaperController.slideshowEnabled
+      else
+        WallpaperController.slideshowEnabled = (state === "on" || state === "true" || state === "1")
+    }
+    function interval(minutes: int): void { WallpaperController.slideshowIntervalMinutes = minutes }
     function status(): string {
       return `${WallpaperController.mode} ${WallpaperController.path}`
         + (WallpaperController.slideshowEnabled ? ` · slideshow ${WallpaperController.slideshowIntervalMinutes}m` : "")
@@ -183,7 +190,6 @@ ShellRoot {
     NightLightController.highTemperature = Config.nightLightHighTemperature
     WallpaperController.slideshowDir = Config.wallpapersDir
     WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes
-    WallpaperController.slideshowEnabled = Config.slideshowEnabled
     applyNightLightLocation()
     WallpaperController.start()
     NightLightController.start()
@@ -216,7 +222,6 @@ ShellRoot {
     function onNightLightHighTemperatureChanged() { NightLightController.highTemperature = Config.nightLightHighTemperature }
     function onNightLightLatitudeChanged() { root.applyNightLightLocation() }
     function onNightLightLongitudeChanged() { root.applyNightLightLocation() }
-    function onSlideshowEnabledChanged() { WallpaperController.slideshowEnabled = Config.slideshowEnabled }
     function onSlideshowIntervalMinutesChanged() { WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes }
     function onWallpapersDirChanged() { WallpaperController.slideshowDir = Config.wallpapersDir }
   }

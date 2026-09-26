@@ -35,7 +35,6 @@ Singleton {
       // 0 = follow the weather location
       property real nightLightLatitude: 0
       property real nightLightLongitude: 0
-      property bool slideshowEnabled: false
       property int slideshowIntervalMinutes: 30
     }
   }
@@ -64,6 +63,5 @@ Singleton {
   readonly property alias nightLightHighTemperature: adapter.nightLightHighTemperature
   readonly property alias nightLightLatitude: adapter.nightLightLatitude
   readonly property alias nightLightLongitude: adapter.nightLightLongitude
-  readonly property alias slideshowEnabled: adapter.slideshowEnabled
   readonly property alias slideshowIntervalMinutes: adapter.slideshowIntervalMinutes
 }
