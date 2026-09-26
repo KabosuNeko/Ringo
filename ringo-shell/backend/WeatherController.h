@@ -30,6 +30,9 @@ class WeatherController final : public QObject {
     Q_PROPERTY(QString weatherLocation READ weatherLocation WRITE setWeatherLocation NOTIFY weatherLocationChanged)
     Q_PROPERTY(QString weatherUnits READ weatherUnits WRITE setWeatherUnits NOTIFY weatherUnitsChanged)
     Q_PROPERTY(int refreshInterval READ refreshInterval WRITE setRefreshInterval NOTIFY refreshIntervalChanged)
+    // Set from QML while the weather UI is on screen: the interval timer only
+    // runs then, so nothing polls the network behind a closed popup.
+    Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:
     explicit WeatherController(QObject *parent = nullptr);
@@ -52,10 +55,12 @@ public:
     QString weatherLocation() const { return m_weatherLocation; }
     QString weatherUnits() const { return m_weatherUnits; }
     int refreshInterval() const { return m_refreshInterval; }
+    bool active() const { return m_active; }
 
     void setWeatherLocation(const QString &v);
     void setWeatherUnits(const QString &v);
     void setRefreshInterval(int v);
+    void setActive(bool v);
 
     Q_INVOKABLE void refresh();
 
@@ -78,6 +83,7 @@ signals:
     void weatherLocationChanged();
     void weatherUnitsChanged();
     void refreshIntervalChanged();
+    void activeChanged();
 
 private slots:
     void onReplyFinished();
@@ -111,6 +117,7 @@ private:
     QString m_weatherLocation = QStringLiteral("Hanoi");
     QString m_weatherUnits = QStringLiteral("metric");
     int m_refreshInterval = 3600000;
+    bool m_active = false;
 
     QNetworkAccessManager m_nam;
     QTimer m_timer;

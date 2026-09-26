@@ -11,10 +11,7 @@
 WeatherController::WeatherController(QObject *parent) : QObject(parent) {
     m_timer.setSingleShot(false);
     connect(&m_timer, &QTimer::timeout, this, &WeatherController::onTimerTriggered);
-    // Poll on the configured interval from the start: nothing else arms the
-    // timer, and QML re-assigning the default interval is a no-op.
     m_timer.setInterval(m_refreshInterval);
-    if (m_refreshInterval > 0) m_timer.start();
     loadCache();
 }
 
@@ -33,11 +30,16 @@ void WeatherController::setRefreshInterval(int v) {
     m_refreshInterval = v;
     emit refreshIntervalChanged();
     m_timer.setInterval(m_refreshInterval);
-    if (m_refreshInterval <= 0) {
-        m_timer.stop();
-        return;
-    }
-    if (!m_timer.isActive()) m_timer.start();
+    if (m_active && m_refreshInterval > 0) m_timer.start();
+    else m_timer.stop();
+}
+
+void WeatherController::setActive(bool v) {
+    if (m_active == v) return;
+    m_active = v;
+    emit activeChanged();
+    if (m_active && m_refreshInterval > 0) m_timer.start();
+    else m_timer.stop();
 }
 
 void WeatherController::setLoading(bool v) { if (m_loading==v) return; m_loading=v; emit loadingChanged(); }
