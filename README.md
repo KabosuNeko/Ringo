@@ -1,17 +1,28 @@
-# Ringo
+<div align="center">
+  <img src="https://github.com/user-attachments/assets/ac1d9feb-5fda-4bac-ae40-bacb5d0beb46" alt="Ringo Logo" width="160" />
+  <h1>Ringo</h1>
+  <p><b>A clean, distraction-free Niri desktop driven by a native C++ Quickshell island.</b></p>
+  <p>
+    <a href="https://github.com/YaLTeR/niri"><img src="https://img.shields.io/badge/Compositor-Niri-5e81ac?style=flat-square" alt="Niri" /></a>
+    <a href="https://git.outfoxxed.me/quickshell/quickshell"><img src="https://img.shields.io/badge/Shell-Quickshell-b48ead?style=flat-square" alt="Quickshell" /></a>
+    <a href="https://archlinux.org"><img src="https://img.shields.io/badge/OS-Arch_Linux-1793d1?style=flat-square" alt="Arch Linux" /></a>
+    <a href="https://github.com/KabosuNeko/Ringo/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-a3be8c?style=flat-square" alt="License" /></a>
+  </p>
+</div>
 
-An Arch Linux desktop built on [Niri](https://github.com/YaLTeR/niri) and [Quickshell](https://quickshell.org).
+---
+
+## Preview
+
+| <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7" /> |
+|---|---|
+| <img width="1920" height="1080" alt="screenshot_3" src="https://github.com/user-attachments/assets/bf5fb964-78ee-4985-b227-f2e4bb78b2af" /> | <img width="1920" height="1080" alt="screenshot_4" src="https://github.com/user-attachments/assets/48dc4ba1-277a-4523-a57c-6d3d8731fe35" /> |
+
+---
 
 One Quickshell process is the whole shell: bar, launcher, notification daemon, clipboard history, control center, mini dashboard, OSDs, lock screen and wallpaper. A C++ backend (`IslandBackend`) talks to D-Bus directly and runs two Wayland clients **inside that process** — a layer-shell wallpaper renderer and a gamma-ramp night light — so there is no helper daemon to supervise.
 
-## Screenshots
-
-[1](https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa) ·
-[2](https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7) ·
-[3](https://github.com/user-attachments/assets/bf5fb964-78ee-4985-b227-f2e4bb78b2af) ·
-[4](https://github.com/user-attachments/assets/48dc4ba1-277a-4523-a57c-6d3d8731fe35)
-
-## Components
+## Core Components
 
 - **Compositor** — [Niri](https://github.com/YaLTeR/niri), scrollable tiling.
 - **Shell** — `ringo-shell`, QML on Quickshell, plus the `IslandBackend` Qt module.
@@ -22,7 +33,7 @@ One Quickshell process is the whole shell: bar, launcher, notification daemon, c
 - **Themes** — Gruvbox GTK/icon themes, Adwaita cursors (see `pkg.txt`).
 - Everything else the shell drives (`cliphist`, `wl-clipboard`, `wl-screenrec`, `power-profiles-daemon`, …) is in `pkg.txt`; `ringo-shell call doctor check` reports what is missing.
 
-## Install
+## Installation
 
 ```sh
 git clone https://github.com/KabosuNeko/Ringo.git ~/Ringo
@@ -135,7 +146,7 @@ Two engines are vendored and adapted to run inside the shell, together with the 
 
 Their license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`, `ringo-shell/backend/engines/nightlight/LICENSE`, the notices inside the `stb_*` headers, and the `<copyright>` blocks of the protocol XML files.
 
-## Related
+## Related Configurations
 
 Other configurations from the same setup: [mpv](https://github.com/KabosuNeko/mpv) ·
 [Firefox](https://github.com/KabosuNeko/YuzuFox) ·
