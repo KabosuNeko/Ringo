@@ -1,182 +1,93 @@
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/ac1d9feb-5fda-4bac-ae40-bacb5d0beb46" alt="Ringo Logo" width="160" />
-  <h1>Ringo</h1>
-  <p><b>A clean, distraction-free Niri desktop driven by a native C++ Quickshell island.</b></p>
-  <p>
-    <a href="https://github.com/YaLTeR/niri"><img src="https://img.shields.io/badge/Compositor-Niri-5e81ac?style=flat-square" alt="Niri" /></a>
-    <a href="https://git.outfoxxed.me/quickshell/quickshell"><img src="https://img.shields.io/badge/Shell-Quickshell-b48ead?style=flat-square" alt="Quickshell" /></a>
-    <a href="https://archlinux.org"><img src="https://img.shields.io/badge/OS-Arch_Linux-1793d1?style=flat-square" alt="Arch Linux" /></a>
-    <a href="https://github.com/KabosuNeko/Ringo/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-a3be8c?style=flat-square" alt="License" /></a>
-  </p>
-</div>
+# Ringo
 
----
+An Arch Linux desktop built on [Niri](https://github.com/YaLTeR/niri) and [Quickshell](https://quickshell.org).
 
-## Preview
+One Quickshell process is the whole shell: bar, launcher, notification daemon, clipboard history, control center, mini dashboard, OSDs, lock screen and wallpaper. A C++ backend (`IslandBackend`) talks to D-Bus directly and runs two Wayland clients **inside that process** — a layer-shell wallpaper renderer and a gamma-ramp night light — so there is no helper daemon to supervise.
 
-| <img width="1920" height="1080" alt="screenshot_1" src="https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa" /> | <img width="1920" height="1080" alt="screenshot_2" src="https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7" /> |
-|---|---|
-| <img width="1920" height="1080" alt="screenshot_3" src="https://github.com/user-attachments/assets/bf5fb964-78ee-4985-b227-f2e4bb78b2af" /> | <img width="1920" height="1080" alt="screenshot_4" src="https://github.com/user-attachments/assets/48dc4ba1-277a-4523-a57c-6d3d8731fe35" /> |
+## Screenshots
 
----
+[1](https://github.com/user-attachments/assets/411d7fcc-ba95-4d1c-bc0a-e42f19b012fa) ·
+[2](https://github.com/user-attachments/assets/58102f54-8fd8-4645-b7ca-5b0641c3dca7) ·
+[3](https://github.com/user-attachments/assets/bf5fb964-78ee-4985-b227-f2e4bb78b2af) ·
+[4](https://github.com/user-attachments/assets/48dc4ba1-277a-4523-a57c-6d3d8731fe35)
 
-## Core Components
+## Components
 
-| Component | Software / Source | Role |
-| :--- | :--- | :--- |
-| **Compositor** | [Niri](https://github.com/YaLTeR/niri) | Scrollable-tiling Wayland compositor |
-| **Desktop Shell** | **ringo-shell** | Dynamic island pill bar, launcher, OSD & menus |
-| **Backend Engine** | `IslandBackend` (C++) | Direct D-Bus & PAM integration module |
-| **Terminal** | [Foot](https://codeberg.org/dnkl/foot) | Fast, lightweight Wayland terminal emulator |
-| **Display Manager** | [Ly](https://github.com/fairyglade/ly) | Minimalist TUI display manager |
-| **Wallpaper** | **Ringo Wallpaper Engine** | Layer-shell renderer inside the shell backend (`fill` / `fit` / `stretch` / `tile` / `spread` / solid colour) |
-| **Power Management** | [power-profiles-daemon](https://gitlab.freedesktop.org/upower/power-profiles-daemon) | System power profile switching |
-| **Color Scheme** | [pywal16](https://github.com/eylles/pywal16) | Dynamic palette generated from wallpaper |
-| **GTK Theme** | [Gruvbox-BL-LB-dark](https://www.gnome-look.org/p/1681313) | Consistent GTK application theme |
-| **Icon Theme** | [Gruvbox-Plus-Icon](https://www.gnome-look.org/p/1961046) | System and application icon set |
-| **Cursor Theme** | [Adwaita](https://gitlab.gnome.org/GNOME/adwaita-icon-theme) | Default GNOME cursor theme |
+- **Compositor** — [Niri](https://github.com/YaLTeR/niri), scrollable tiling.
+- **Shell** — `ringo-shell`, QML on Quickshell, plus the `IslandBackend` Qt module.
+- **Wallpaper** — `fill`, `fit`, `stretch`, `tile`, `spread`, or a solid colour; decoded and drawn by the shell.
+- **Night light** — sun-following colour temperature, applied through `wlr-gamma-control`.
+- **Terminal** — [foot](https://codeberg.org/dnkl/foot). **Login** — [ly](https://github.com/fairyglade/ly).
+- **Palette** — [pywal16](https://github.com/eylles/pywal16) generates `colors.json`, foot colours and GTK colours from the wallpaper.
+- **Themes** — Gruvbox GTK/icon themes, Adwaita cursors (see `pkg.txt`).
+- Everything else the shell drives (`cliphist`, `wl-clipboard`, `wl-screenrec`, `power-profiles-daemon`, …) is in `pkg.txt`; `ringo-shell call doctor check` reports what is missing.
 
----
-
-## Features
-
-- **Native C++ Backend (`IslandBackend`)**  
-  Direct asynchronous D-Bus integration for WiFi (IWD / NetworkManager), Bluetooth (BlueZ), and PAM authentication. No state-polling loops: values arrive as D-Bus signals, and the only repeating timers that poll external state (system telemetry, weather) run while their UI is on screen. Subprocesses are event-driven, never pollers — wallpaper blur/`wal` on wallpaper change (the wallpaper and the night light are rendered in-process), `wl-copy` on launch, `wl-paste --watch cliphist store` on clipboard change.
-
-- **Self-Check**  
-  `ringo-shell call doctor check` prints one report with the state of both engines, the palette and state files, and every external tool the shell drives (marking what is required and what is optional).
-
-- **Built-in Night Light**  
-  The gamma ramp is computed from the sun position for your coordinates and applied in-process by the shell itself: warm after sunset, neutral during the day. `ringo-shell call nightLight status` reports the current temperature, and `force off|high|low` pins it manually.
-
-- **All-in-One Dynamic Shell**  
-  A single hardware-accelerated Quickshell process that replaces separate bar, launcher, notification daemon, clipboard manager, control center, mini dashboard, and blur lock screen.
-
-- **Dynamic pywal16 Palette**  
-  Colors generated by `wal` (`colors.json` for ringo-shell, `colors-foot-dark.ini` for Foot, `gtk-colors` for GTK) propagate automatically upon wallpaper selection without restarting applications.
-
-- **Progressive Idle Management**  
-  Built-in Quickshell `IdleMonitor` with graduated timeouts: 300s screen dim → 330s lock → 360s monitor sleep → 600s system suspend.
-
-- **Hardware-Adaptive & Clean**  
-  No hardcoded monitor outputs, backlight sysfs paths, battery devices, or GPU driver assumptions. Dotfiles deployed reliably via GNU Stow symlinks.
-
----
-
-## Why Ringo?
-
-Ringo is a Niri + Quickshell configuration designed to be clean, simple, and functional.
-
-A lot of modern desktop setups focus mainly on looking as flashy as possible. In practice, that often means heavy bloat, wasted screen real estate, and a pile of widgets and features that 99% of people never touch while trying to get actual work done. Ringo takes the opposite path: keep it lightweight, purposeful, and out of your way.
-
-Instead of stitching together brittle shell scripts and background polling loops, Ringo is powered by **ringo-shell** — an all-in-one dynamic island with a dedicated C++ backend (`IslandBackend`) for direct D-Bus communication and PAM authentication.
-
-### Why Niri?
-
-For me, Niri strikes the ideal balance: lightweight, fast, and exceptionally practical for everyday laptop use. The scrollable tiling ribbon feels completely natural with trackpad gestures, avoids the constant window juggling of manual tilers on a smaller screen, and keeps your display focused on what you're actually doing without wasting space.
-
----
-
-## Installation
-
-### Fresh Install
+## Install
 
 ```sh
 git clone https://github.com/KabosuNeko/Ringo.git ~/Ringo
 cd ~/Ringo
-chmod +x install.sh
 ./install.sh
 ```
 
-The installer runs interactively with confirmation at each stage:
-
-1. Installs `yay` (AUR helper) if not already present
-2. Verifies core utilities (`stow`, `git`)
-3. Installs package manifest from `pkg.txt`
-4. Creates directory structure (`~/.icons`, `~/.themes`, `~/Pictures/Screenshots`)
-5. Deploys dotfiles via **GNU Stow** (symlinks into `~/.config` and `~/.local`)
-6. Installs Fish shell (optional)
-7. Clones default Wallpapers repository (optional)
-8. Sets GTK font and theme configuration via `gsettings`
-9. Configures systemd services with safe fallback checks
-10. Compiles the `IslandBackend` C++ module (wallpaper engine included) into `~/.config/ringo-shell/IslandBackend`
-
-`pkg.txt` is the package manifest; everything the shell needs at runtime is either listed there or compiled into the `IslandBackend` module by the installer, so nothing extra has to be fetched or built by hand. `swaybg` is no longer used.
-
-### Maintenance
+The installer asks before each step. Flags:
 
 ```sh
-# Pull latest updates and re-apply symlinks:
-cd ~/Ringo && git pull && stow --restow --no-folding -t ~ home
-
-# Preview changes without modifying files:
-cd ~/Ringo && stow -n -t ~ home
-
-# Uninstall (safely unlinks configs, personal files remain untouched):
-cd ~/Ringo && stow -D -t ~ home
+./install.sh --dry-run --non-interactive --profile core   # print the plan, change nothing
+./install.sh --profile core|full                          # core skips the optional extras
+./install.sh --yes                                        # answer yes to every prompt
+./install.sh --rollback                                   # restore the previous backend plugin
 ```
 
----
+It installs `yay` and the `pkg.txt` packages, deploys the dotfiles with GNU Stow, and builds the backend into `~/.config/ringo-shell/IslandBackend/` (the previous build is kept in `.backup/` before it is replaced).
 
-## Keybinds
+## Maintenance
 
-All bindings use `Mod` (Super / Windows key) unless specified otherwise.
+```sh
+cd ~/Ringo && git pull && stow --restow --no-folding -t ~ home   # update + re-link
+cd ~/Ringo && stow -n -t ~ home                                  # preview
+cd ~/Ringo && stow -D -t ~ home                                  # unlink (your files stay)
+```
 
-The full list lives in [`docs/KEYBINDS.md`](docs/KEYBINDS.md): every binding from `~/.config/niri/keybinds.kdl` plus the commands the shell exposes over IPC. That file is generated by `scripts/gen-keybinds-doc.sh`, which also has a `--check` mode that fails when the document goes stale.
+Building the backend by hand:
 
----
-
-## Credits
-
-Two engines are vendored into the shell and adapted to run in-process (threads instead of daemons), plus the protocol definitions they speak:
-
-| Component | Author | License | Where |
-| :--- | :--- | :--- | :--- |
-| [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer (`fill`, `fit`, `stretch`, `tile`, `spread`) |
-| [wlsunset](https://git.sr.ht/~kennylevinsen/wlsunset) | Kenny Levinsen | MIT | `ringo-shell/backend/engines/nightlight/` — gamma-ramp engine and sun-position math |
-| [stb_image](https://github.com/nothings/stb) / stb_image_resize2 | Sean Barrett and contributors | Public domain / MIT | image decoding and resizing inside the wallpaper engine |
-| [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols) / [wlr-protocols](https://gitlab.freedesktop.org/wlroots/wlr-protocols) | Kristian Høgsberg, Rafael Antognolli, Jasper St. Pierre, Intel, Samsung, Red Hat, Drew DeVault, Giulio Camuffo, Simon Ser | MIT | `xdg-shell`, `xdg-output`, `wlr-layer-shell`, `wlr-gamma-control` definitions |
-
-The license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`, `ringo-shell/backend/engines/nightlight/LICENSE`, the notices inside `stb_image.h` / `stb_image_resize2.h`, and the `<copyright>` blocks of the protocol XML files.
-
-The rest of the stack — Niri, Quickshell, Foot, pywal16, and the other tools this setup builds on — is listed under [Core Components](#core-components).
-
----
+```sh
+cmake -S ringo-shell -B ringo-shell/build -DCMAKE_BUILD_TYPE=Release
+cmake --build ringo-shell/build -j"$(nproc)"
+# copy libIslandBackend.so, libIslandBackendPlugin.so, qmldir, IslandBackend.qmltypes
+# into ~/.config/ringo-shell/IslandBackend/
+```
 
 ## Configuration
 
-`~/.config/ringo-shell/config.jsonc` is the shell's own configuration, and the only file you have to touch: it is watched, so saving applies immediately. Everything else lives in `~/.config/niri/` (compositor, keybinds, window rules) and reloads the same way.
+`~/.config/ringo-shell/config.jsonc` is the shell's configuration. It is watched, so saving applies immediately; so is everything under `~/.config/niri/`.
 
 | Key | Default | What it does |
 | :--- | :--- | :--- |
 | `displayPicture` | `~/.pfp.png` | Avatar in the control center and lock screen |
 | `clockFormat` | `hh:mm` | Clock format on the bar |
 | `pillTopMargin` / `pillBottomMargin` | `9` / `26` | Vertical margins of the island |
-| `textFontFamily` | `JetBrainsMono Nerd Font` | UI font |
-| `nerdFontFamily` | `JetBrainsMono Nerd Font Propo` | Icon font |
-| `pillScale` | `1.0` | Island scale (padding follows sub-linearly) |
-| `dpiScale` | `1.4` | Global DPI multiplier |
+| `textFontFamily` / `nerdFontFamily` | `JetBrainsMono Nerd Font[ Propo]` | Text and icon fonts |
+| `pillScale` / `dpiScale` | `1.0` / `1.4` | Island scale and global DPI multiplier |
 | `notificationDisplayTime` | `3000` | Toast duration, ms |
 | `maxNotificationsInStack` | `20` | Notification history depth |
-| `avoidDuplicateNotifications` | `true` | Collapse repeated notifications into `(n)` |
+| `avoidDuplicateNotifications` | `true` | Collapse repeats into `(n)` |
 | `osdDuration` | `800` | On-screen display duration, ms |
 | `weatherLocation` | `Ho Chi Minh City` | City for the weather widget — and the night light's coordinates |
 | `weatherUnits` | `metric` | `metric` or `imperial` |
 | `weatherRefreshInterval` | `3600000` | Weather refresh, ms |
 | `defaultTerminal` | `foot` | Terminal the launcher runs commands in |
-| `wallpapersDir` | `~/Pictures/Wallpapers` | Folder the wallpaper switcher and the slideshow read |
-| `wsCloseOnWallpaperSet` | `true` | Close the switcher after picking a wallpaper |
-| `wsAnimation` | `true` | Animate the switcher |
-| `nightLightLowTemperature` | `4000` | Night temperature, K |
-| `nightLightHighTemperature` | `6500` | Day temperature, K (`6500` is neutral) |
-| `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the night light's location; `0` follows `weatherLocation` |
+| `wallpapersDir` | `~/Pictures/Wallpapers` | Folder the switcher and the slideshow read |
+| `wsCloseOnWallpaperSet` / `wsAnimation` | `true` | Wallpaper switcher behaviour |
+| `nightLightLowTemperature` / `nightLightHighTemperature` | `4000` / `6500` | Night and day temperature, K (`6500` is neutral) |
+| `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the location; `0` follows `weatherLocation` |
 | `slideshowIntervalMinutes` | `30` | How often the slideshow rotates the wallpaper |
 
-Toggles the UI changes (night light on/off, wallpaper mode, slideshow on/off) are runtime state, remembered in the XDG state directory rather than in this file.
+What the UI changes (night light on/off and force, wallpaper mode, slideshow on/off) is runtime state, kept in the XDG state directory rather than in this file.
 
-### Commands
+## Commands
 
-Everything the shell can be told to do from a keybind or a script:
+Every panel and engine is reachable from a keybind or a script through `ringo-shell call`:
 
 ```sh
 ringo-shell call doctor check                      # health report
@@ -193,16 +104,44 @@ ringo-shell call media playPause                   # or: next / prev / stop
 ringo-shell call lock lock                         # or: unlock
 ```
 
-Every panel takes `toggle`, `open` or `hide`:
-`controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `bar`, `calendar`, `weather`.
+`controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `keybinds`, `bar`, `calendar` and `weather` each take `toggle`, `open` or `hide`.
 
-`docs/KEYBINDS.md` lists the same commands next to the keybindings that call them.
+## Keybinds
 
-## Related Configurations
+[`docs/KEYBINDS.md`](docs/KEYBINDS.md) lists every binding in `~/.config/niri/keybinds.kdl` next to the shell command it runs. It is generated by `scripts/gen-keybinds-doc.sh`, which has a `--check` mode (also run by CI) that fails when the document goes stale.
 
-Additional configuration repositories from my personal setup:
+## Layout
 
-- [MPV](https://github.com/KabosuNeko/mpv) — Video player configuration and scripts
-- [FireFox](https://github.com/KabosuNeko/YuzuFox/) — Firefox UI theme and userchrome
-- [Wallpapers](https://github.com/KabosuNeko/Wallpapers) — Curated wallpaper collection
-- [Nvim](https://github.com/KabosuNeko/nvim) — Neovim configuration
+| Path | What lives there |
+| :--- | :--- |
+| `home/` | GNU Stow package: `~/.config/{niri,ringo-shell,foot,fish,gtk-3.0,…}` and `~/.local/bin` |
+| `ringo-shell/backend/` | C++ controllers and models (`IslandBackend`) |
+| `ringo-shell/backend/engines/` | Vendored wallpaper and night-light engines, adapted to run in-process |
+| `home/.local/bin/ringo-shell` | Launcher and IPC client |
+| `scripts/`, `docs/` | Documentation generator and its output |
+| `install.sh`, `pkg.txt` | Installer and package manifest |
+| `AGENTS.md` | Repository guidelines (architecture, conventions, how to verify) |
+
+## Credits
+
+Two engines are vendored and adapted to run inside the shell, together with the protocol definitions they speak:
+
+| Component | Author | License | Where |
+| :--- | :--- | :--- | :--- |
+| [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer |
+| [wlsunset](https://git.sr.ht/~kennylevinsen/wlsunset) | Kenny Levinsen | MIT | `ringo-shell/backend/engines/nightlight/` — gamma ramp and sun-position math |
+| [stb_image](https://github.com/nothings/stb) / stb_image_resize2 | Sean Barrett and contributors | Public domain / MIT | image decoding and resizing in the wallpaper engine |
+| [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols) / [wlr-protocols](https://gitlab.freedesktop.org/wlroots/wlr-protocols) | Kristian Høgsberg, Rafael Antognolli, Jasper St. Pierre, Intel, Samsung, Red Hat, Drew DeVault, Giulio Camuffo, Simon Ser | MIT | `xdg-shell`, `xdg-output`, `wlr-layer-shell`, `wlr-gamma-control` |
+
+Their license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`, `ringo-shell/backend/engines/nightlight/LICENSE`, the notices inside the `stb_*` headers, and the `<copyright>` blocks of the protocol XML files.
+
+## Related
+
+Other configurations from the same setup: [mpv](https://github.com/KabosuNeko/mpv) ·
+[Firefox](https://github.com/KabosuNeko/YuzuFox) ·
+[wallpapers](https://github.com/KabosuNeko/Wallpapers) ·
+[neovim](https://github.com/KabosuNeko/nvim)
+
+## License
+
+MIT — see [LICENSE](LICENSE).
