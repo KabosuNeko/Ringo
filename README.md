@@ -29,19 +29,22 @@
 | **Backend Engine** | `IslandBackend` (C++) | Direct D-Bus & PAM integration module |
 | **Terminal** | [Foot](https://codeberg.org/dnkl/foot) | Fast, lightweight Wayland terminal emulator |
 | **Display Manager** | [Ly](https://github.com/fairyglade/ly) | Minimalist TUI display manager |
-| **Wallpaper** | [Swaybg](https://github.com/swaywm/swaybg) | Wallpaper renderer |
+| **Wallpaper** | **Ringo Wallpaper Engine** | Layer-shell renderer inside the shell backend (`fill` / `fit` / `stretch` / `tile` / `spread` / solid colour) |
 | **Power Management** | [power-profiles-daemon](https://gitlab.freedesktop.org/upower/power-profiles-daemon) | System power profile switching |
 | **Color Scheme** | [pywal16](https://github.com/eylles/pywal16) | Dynamic palette generated from wallpaper |
 | **GTK Theme** | [Gruvbox-BL-LB-dark](https://www.gnome-look.org/p/1681313) | Consistent GTK application theme |
 | **Icon Theme** | [Gruvbox-Plus-Icon](https://www.gnome-look.org/p/1961046) | System and application icon set |
-| **Cursor Theme** | [Bibata-Modern-Amber](https://www.gnome-look.org/p/1914819) | Modern cursor theme |
+| **Cursor Theme** | [Adwaita](https://gitlab.gnome.org/GNOME/adwaita-icon-theme) | Default GNOME cursor theme |
 
 ---
 
 ## Features
 
 - **Native C++ Backend (`IslandBackend`)**  
-  Direct asynchronous D-Bus integration for WiFi (IWD / NetworkManager), Bluetooth (BlueZ), and PAM authentication. Zero polling loops and zero background bash subprocesses.
+  Direct asynchronous D-Bus integration for WiFi (IWD / NetworkManager), Bluetooth (BlueZ), and PAM authentication. No state-polling loops: values arrive as D-Bus signals, and the only repeating timers that poll external state (system telemetry, weather) run while their UI is on screen. Subprocesses are event-driven, never pollers — wallpaper blur/`wal` on wallpaper change (the wallpaper and the night light are rendered in-process), `wl-copy` on launch, `wl-paste --watch cliphist store` on clipboard change.
+
+- **Built-in Night Light**  
+  The gamma ramp is computed from the sun position for your coordinates and applied in-process by the shell itself: warm after sunset, neutral during the day. `ringo-shell call nightLight status` reports the current temperature, and `force off|high|low` pins it manually.
 
 - **All-in-One Dynamic Shell**  
   A single hardware-accelerated Quickshell process that replaces separate bar, launcher, notification daemon, clipboard manager, control center, mini dashboard, and blur lock screen.
@@ -93,7 +96,9 @@ The installer runs interactively with confirmation at each stage:
 7. Clones default Wallpapers repository (optional)
 8. Sets GTK font and theme configuration via `gsettings`
 9. Configures systemd services with safe fallback checks
-10. Compiles the `IslandBackend` C++ module into `~/.config/ringo-shell/IslandBackend`
+10. Compiles the `IslandBackend` C++ module (wallpaper engine included) into `~/.config/ringo-shell/IslandBackend`
+
+`pkg.txt` is the package manifest; everything the shell needs at runtime is either listed there or compiled into the `IslandBackend` module by the installer, so nothing extra has to be fetched or built by hand. `swaybg` is no longer used.
 
 ### Maintenance
 
@@ -168,6 +173,23 @@ All bindings use `Mod` (Super / Windows key) unless specified otherwise.
 | `XF86AudioRaiseVolume` / `LowerVolume` | Adjust volume |
 | `XF86AudioMute` | Mute audio output |
 | `XF86MonBrightnessUp` / `Down` | Adjust screen brightness |
+
+---
+
+## Credits
+
+Two engines are vendored into the shell and adapted to run in-process (threads instead of daemons), plus the protocol definitions they speak:
+
+| Component | Author | License | Where |
+| :--- | :--- | :--- | :--- |
+| [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer (`fill`, `fit`, `stretch`, `tile`, `spread`) |
+| [wlsunset](https://git.sr.ht/~kennylevinsen/wlsunset) | Kenny Levinsen | MIT | `ringo-shell/backend/engines/nightlight/` — gamma-ramp engine and sun-position math |
+| [stb_image](https://github.com/nothings/stb) / stb_image_resize2 | Sean Barrett and contributors | Public domain / MIT | image decoding and resizing inside the wallpaper engine |
+| [wayland-protocols](https://gitlab.freedesktop.org/wayland/wayland-protocols) / [wlr-protocols](https://gitlab.freedesktop.org/wlroots/wlr-protocols) | Kristian Høgsberg, Rafael Antognolli, Jasper St. Pierre, Intel, Samsung, Red Hat, Drew DeVault, Giulio Camuffo, Simon Ser | MIT | `xdg-shell`, `xdg-output`, `wlr-layer-shell`, `wlr-gamma-control` definitions |
+
+The license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`, `ringo-shell/backend/engines/nightlight/LICENSE`, the notices inside `stb_image.h` / `stb_image_resize2.h`, and the `<copyright>` blocks of the protocol XML files.
+
+The rest of the stack — Niri, Quickshell, Foot, pywal16, and the other tools this setup builds on — is listed under [Core Components](#core-components).
 
 ---
 
