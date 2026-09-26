@@ -1,5 +1,10 @@
 #include "LockController.h"
 
+#include <QByteArray>
+#include <QMetaObject>
+#include <QPointer>
+#include <QThreadPool>
+
 #include <security/pam_appl.h>
 
 #include <cstdlib>
@@ -41,31 +46,10 @@ int conversation(int numMsg, const struct pam_message **msg,
     return PAM_SUCCESS;
 }
 
-} // namespace
-
-LockController::LockController(QObject *parent)
-    : QObject(parent) {}
-
-bool LockController::locked() const {
-    return m_locked;
-}
-
-void LockController::lock() {
-    setLocked(true);
-}
-
-void LockController::unlock() {
-    setLocked(false);
-}
-
-bool LockController::tryUnlock(const QString &password) {
-    const QByteArray user = qgetenv("USER");
-    const QByteArray pass = password.toUtf8();
-    if (user.isEmpty() || pass.isEmpty()) {
-        return false;
-    }
-
-    ConversationData data{pass.constData()};
+// Runs the whole PAM conversation on the calling (worker) thread. `password`
+// is owned by the caller, which wipes it once this returns.
+bool authenticate(const QByteArray &user, const QByteArray &password) {
+    ConversationData data{password.constData()};
     struct pam_conv conv = {conversation, &data};
     pam_handle_t *handle = nullptr;
 
@@ -80,12 +64,74 @@ bool LockController::tryUnlock(const QString &password) {
     }
 
     pam_end(handle, result);
+    return result == PAM_SUCCESS;
+}
 
-    const bool ok = (result == PAM_SUCCESS);
-    if (ok) {
+} // namespace
+
+LockController::LockController(QObject *parent)
+    : QObject(parent) {}
+
+bool LockController::locked() const {
+    return m_locked;
+}
+
+bool LockController::authenticating() const {
+    return m_authenticating;
+}
+
+void LockController::lock() {
+    setLocked(true);
+}
+
+void LockController::unlock() {
+    setLocked(false);
+}
+
+void LockController::tryUnlock(const QString &password) {
+    // A conversation is already running: drop this attempt instead of stacking
+    // a second PAM conversation on top of it.
+    if (m_authenticating) {
+        return;
+    }
+
+    const QByteArray user = qgetenv("USER");
+    if (user.isEmpty() || password.isEmpty()) {
+        emit unlockResult(false);
+        return;
+    }
+
+    setAuthenticating(true);
+
+    // The singleton outlives every attempt, but guard anyway so a late worker
+    // result can never touch a destroyed object.
+    QPointer<LockController> guard(this);
+    QThreadPool::globalInstance()->start(
+        [guard, user, password = password.toUtf8()]() mutable {
+            const bool ok = authenticate(user, password);
+            // The password copy lives and dies on this worker thread.
+            password.fill('\0');
+
+            if (!guard) {
+                return;
+            }
+            QMetaObject::invokeMethod(
+                guard.data(),
+                [guard, ok]() {
+                    if (LockController *self = guard.data()) {
+                        self->finishUnlock(ok);
+                    }
+                },
+                Qt::QueuedConnection);
+        });
+}
+
+void LockController::finishUnlock(bool success) {
+    setAuthenticating(false);
+    if (success) {
         setLocked(false);
     }
-    return ok;
+    emit unlockResult(success);
 }
 
 void LockController::setLocked(bool on) {
@@ -94,4 +140,12 @@ void LockController::setLocked(bool on) {
     }
     m_locked = on;
     emit lockedChanged();
+}
+
+void LockController::setAuthenticating(bool on) {
+    if (m_authenticating == on) {
+        return;
+    }
+    m_authenticating = on;
+    emit authenticatingChanged();
 }

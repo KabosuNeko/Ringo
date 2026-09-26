@@ -1,6 +1,7 @@
 #pragma once
 #include <QAbstractListModel>
 #include <QString>
+#include <QThreadPool>
 #include <QVector>
 #include <QVariantMap>
 #include <QProcess>
@@ -49,8 +50,7 @@ public:
 
     Q_INVOKABLE void refresh();
     Q_INVOKABLE void copyItem(int index);
-    Q_INVOKABLE void copyById(const QString &id);
-    Q_INVOKABLE void deleteItem(int index);
+    void copyById(const QString &id);
     Q_INVOKABLE void deleteById(const QString &id);
     Q_INVOKABLE void clearAll();
     Q_INVOKABLE QVariantMap get(int index) const;
@@ -74,5 +74,8 @@ private:
     QString m_searchQuery;
     bool m_loading = false;
     QString m_cacheDir;
+    bool m_listValid = false;
+    int m_pendingThumbs = 0;
+    QThreadPool *m_thumbPool = nullptr;
     QProcess *m_listProcess = nullptr;
 };

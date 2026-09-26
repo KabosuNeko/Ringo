@@ -22,7 +22,6 @@ public:
 
     Q_INVOKABLE void setProfile(const QString &profile);
     Q_INVOKABLE void cycleNext();
-    Q_INVOKABLE void refresh();
 
 signals:
     void activeProfileChanged();

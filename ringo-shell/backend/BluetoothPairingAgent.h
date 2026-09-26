@@ -5,7 +5,6 @@
 #include <QDBusObjectPath>
 #include <QObject>
 
-#include <QVariantMap>
 #include <QDBusMessage>
 #include <QtQml/qqml.h>
 
@@ -16,8 +15,6 @@ class BluetoothPairingAgent final : public QObject, protected QDBusContext {
     QML_UNCREATABLE("Singleton")
     Q_CLASSINFO("D-Bus Interface", "org.bluez.Agent1")
 
-    Q_PROPERTY(bool registered READ registered NOTIFY registeredChanged)
-    Q_PROPERTY(QString registrationError READ registrationError NOTIFY registrationErrorChanged)
     Q_PROPERTY(bool requestActive READ requestActive NOTIFY requestChanged)
     Q_PROPERTY(QString requestKind READ requestKind NOTIFY requestChanged)
     Q_PROPERTY(bool requestRequiresInput READ requestRequiresInput NOTIFY requestChanged)
@@ -34,8 +31,6 @@ public:
     explicit BluetoothPairingAgent(QObject *parent = nullptr);
     ~BluetoothPairingAgent() override;
 
-    bool registered() const;
-    QString registrationError() const;
     bool requestActive() const;
     QString requestKind() const;
     bool requestRequiresInput() const;
@@ -54,8 +49,6 @@ public:
     Q_INVOKABLE void cancelRequest();
 
 signals:
-    void registeredChanged();
-    void registrationErrorChanged();
     void requestChanged();
 
 public slots:
@@ -106,7 +99,6 @@ private:
     void ensureAgentRegistered();
     void unregisterAgent();
     void setRegisteredState(bool registered);
-    void setRegistrationError(const QString &error);
     void replaceRequest(PendingRequest request);
     void clearRequest();
     void finishWithVoidReply();
@@ -120,6 +112,5 @@ private:
 
     bool m_registered = false;
     bool m_objectExported = false;
-    QString m_registrationError;
     PendingRequest m_request;
 };

@@ -110,6 +110,7 @@ private:
     QString takeIwdPassphraseForNetwork(const QString &networkPath);
 
     QVariant getProperty(const QString &service, const QString &path, const QString &interfaceName, const QString &propertyName) const;
+    QVariantMap getAllProperties(const QString &service, const QString &path, const QString &interfaceName) const;
     bool setProperty(const QString &service, const QString &path, const QString &interfaceName, const QString &propertyName, const QVariant &value, QString *errorMessage = nullptr) const;
     QDBusMessage callMethod(const QString &service, const QString &path, const QString &interfaceName, const QString &methodName, const QList<QVariant> &arguments = {}) const;
 
@@ -154,6 +155,10 @@ private:
     bool m_managerSignalsConnected = false;
     bool m_iwdSignalsConnected = false;
     bool m_settingsSignalsConnected = false;
+    bool m_networkManagerServiceRegistered = false;
+    bool m_iwdServiceRegistered = false;
+    bool m_connmanServiceRegistered = false;
+    bool m_serviceRegistrationProbed = false;
     QString m_connectedDeviceSignalPath;
     QString m_connectedDeviceSignalBackend;
     IwdAgent *m_iwdAgent = nullptr;

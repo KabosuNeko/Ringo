@@ -10,7 +10,6 @@
 #include <QDBusVariant>
 #include <QMap>
 #include <QMetaType>
-#include <QSet>
 #include <QVariant>
 #include <QUuid>
 #include <algorithm>
@@ -196,6 +195,22 @@ QString objectPathFromVariant(const QVariant &variant) {
     }
 
     return raw.toString();
+}
+
+QVariantMap variantMapFromVariant(const QVariant &variant) {
+    const QVariant raw = unwrapVariant(variant);
+
+    if (raw.metaType().id() == QMetaType::QVariantMap)
+        return raw.toMap();
+
+    if (raw.metaType().id() == qMetaTypeId<QDBusArgument>()) {
+        const QDBusArgument argument = qvariant_cast<QDBusArgument>(raw);
+        const QVariantMap map = qdbus_cast<QVariantMap>(argument);
+        if (!map.isEmpty())
+            return map;
+    }
+
+    return raw.toMap();
 }
 
 QString labelForSsid(const QString &ssid) {
@@ -618,12 +633,20 @@ void WifiController::clearMessages() {
     setErrorMessage({});
 }
 
-void WifiController::handleNameOwnerChanged(const QString &name, const QString &, const QString &) {
-    if (name == QLatin1String(kNetworkManagerService)
-            || name == QLatin1String(kIwdService)
-            || name == QLatin1String(kConnmanService)) {
-        detectBackend();
+void WifiController::handleNameOwnerChanged(const QString &name, const QString &, const QString &newOwner) {
+    const bool registered = !newOwner.isEmpty();
+
+    if (name == QLatin1String(kNetworkManagerService)) {
+        m_networkManagerServiceRegistered = registered;
+    } else if (name == QLatin1String(kIwdService)) {
+        m_iwdServiceRegistered = registered;
+    } else if (name == QLatin1String(kConnmanService)) {
+        m_connmanServiceRegistered = registered;
+    } else {
+        return;
     }
+
+    detectBackend();
 }
 
 void WifiController::handleManagerPropertiesChanged(const QString &interfaceName, const QVariantMap &, const QStringList &) {
@@ -725,9 +748,16 @@ void WifiController::detectBackend() {
         return;
     }
 
-    const bool hasNetworkManager = busInterface->isServiceRegistered(kNetworkManagerService);
-    const bool hasIwd = busInterface->isServiceRegistered(kIwdService);
-    const bool hasConnman = busInterface->isServiceRegistered(kConnmanService);
+    if (!m_serviceRegistrationProbed) {
+        m_networkManagerServiceRegistered = busInterface->isServiceRegistered(kNetworkManagerService);
+        m_iwdServiceRegistered = busInterface->isServiceRegistered(kIwdService);
+        m_connmanServiceRegistered = busInterface->isServiceRegistered(kConnmanService);
+        m_serviceRegistrationProbed = true;
+    }
+
+    const bool hasNetworkManager = m_networkManagerServiceRegistered;
+    const bool hasIwd = m_iwdServiceRegistered;
+    const bool hasConnman = m_connmanServiceRegistered;
 
     if (!m_managerSignalsConnected) {
         QDBusConnection::systemBus().connect(
@@ -1234,36 +1264,16 @@ void WifiController::refreshNetworksInternal(bool rescan, bool triggeredBySignal
 
     for (const QDBusObjectPath &accessPoint : accessPoints) {
         const QString accessPointPath = accessPoint.path();
-        const QString ssid = decodeSsid(byteArrayFromVariant(getProperty(
+        const QVariantMap accessPointProperties = getAllProperties(
             kNetworkManagerService,
             accessPointPath,
-            kNetworkManagerAccessPointInterface,
-            QStringLiteral("Ssid")
-        )));
-        const int signal = getProperty(
-            kNetworkManagerService,
-            accessPointPath,
-            kNetworkManagerAccessPointInterface,
-            QStringLiteral("Strength")
-        ).toInt();
-        const uint flags = getProperty(
-            kNetworkManagerService,
-            accessPointPath,
-            kNetworkManagerAccessPointInterface,
-            QStringLiteral("Flags")
-        ).toUInt();
-        const uint wpaFlags = getProperty(
-            kNetworkManagerService,
-            accessPointPath,
-            kNetworkManagerAccessPointInterface,
-            QStringLiteral("WpaFlags")
-        ).toUInt();
-        const uint rsnFlags = getProperty(
-            kNetworkManagerService,
-            accessPointPath,
-            kNetworkManagerAccessPointInterface,
-            QStringLiteral("RsnFlags")
-        ).toUInt();
+            kNetworkManagerAccessPointInterface
+        );
+        const QString ssid = decodeSsid(byteArrayFromVariant(accessPointProperties.value(QStringLiteral("Ssid"))));
+        const int signal = unwrapVariant(accessPointProperties.value(QStringLiteral("Strength"))).toInt();
+        const uint flags = unwrapVariant(accessPointProperties.value(QStringLiteral("Flags"))).toUInt();
+        const uint wpaFlags = unwrapVariant(accessPointProperties.value(QStringLiteral("WpaFlags"))).toUInt();
+        const uint rsnFlags = unwrapVariant(accessPointProperties.value(QStringLiteral("RsnFlags"))).toUInt();
         const bool secure = (flags & kAccessPointPrivacyFlag) != 0 || wpaFlags != 0 || rsnFlags != 0;
         const bool connected = !m_currentSsid.isEmpty() && ssid == m_currentSsid;
         const QString key = ssid.isEmpty() ? QStringLiteral("__hidden__") : ssid;
@@ -1550,6 +1560,21 @@ QVariant WifiController::getProperty(const QString &service, const QString &path
         return {};
 
     return unwrapVariant(reply.arguments().constFirst());
+}
+
+QVariantMap WifiController::getAllProperties(const QString &service, const QString &path, const QString &interfaceName) const {
+    const QDBusMessage reply = callMethod(
+        service,
+        path,
+        kDbusPropertiesInterface,
+        QStringLiteral("GetAll"),
+        {interfaceName}
+    );
+
+    if (reply.type() == QDBusMessage::ErrorMessage || reply.arguments().isEmpty())
+        return {};
+
+    return variantMapFromVariant(reply.arguments().constFirst());
 }
 
 bool WifiController::setProperty(const QString &service, const QString &path, const QString &interfaceName, const QString &propertyName, const QVariant &value, QString *errorMessage) const {

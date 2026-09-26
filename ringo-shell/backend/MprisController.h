@@ -3,11 +3,12 @@
 #include <QTimer>
 #include <QElapsedTimer>
 #include <QHash>
-#include <QDBusObjectPath>
+#include <QDBusContext>
 #include <QtQml/qqml.h>
 
 struct PlayerInfo {
     QString dbusName;
+    QString uniqueName;
     QString track;
     QString artist;
     QString artUrl;
@@ -22,7 +23,7 @@ struct PlayerInfo {
     bool canSeek = false;
 };
 
-class MprisController final : public QObject {
+class MprisController final : public QObject, protected QDBusContext {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
@@ -35,7 +36,6 @@ class MprisController final : public QObject {
     Q_PROPERTY(double polledPosition READ polledPosition NOTIFY polledPositionChanged)
     Q_PROPERTY(double polledLength READ polledLength NOTIFY polledLengthChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
-    Q_PROPERTY(QString activePlayerDbusName READ activePlayerDbusName NOTIFY activePlayerDbusNameChanged)
 
 public:
     explicit MprisController(QObject *parent = nullptr);
@@ -48,13 +48,12 @@ public:
     double polledPosition() const { return m_polledPosition; }
     double polledLength() const { return m_polledLength; }
     double progress() const { return m_polledLength > 0 ? m_polledPosition / m_polledLength : 0; }
-    QString activePlayerDbusName() const { return m_activePlayerDbusName; }
 
     Q_INVOKABLE void playPause();
     Q_INVOKABLE void next();
     Q_INVOKABLE void prev();
+    Q_INVOKABLE void stop();
     Q_INVOKABLE void seek(double positionSeconds);
-    Q_INVOKABLE void refresh();
 
 signals:
     void trackChanged();
@@ -65,7 +64,6 @@ signals:
     void polledPositionChanged();
     void polledLengthChanged();
     void progressChanged();
-    void activePlayerDbusNameChanged();
     void nowPlaying();
 
 private slots:

@@ -16,6 +16,19 @@ static inline QVariant unwrapDVariant(const QVariant &v) {
     return v;
 }
 
+static QVariantMap getAllProperties(const QString &service, const QString &path, const QString &interfaceName) {
+    QDBusInterface iface(service, path, QStringLiteral("org.freedesktop.DBus.Properties"), QDBusConnection::sessionBus());
+    if (!iface.isValid()) return {};
+    const QDBusMessage reply = iface.call(QStringLiteral("GetAll"), interfaceName);
+    if (reply.type() == QDBusMessage::ErrorMessage || reply.arguments().isEmpty()) return {};
+    const QVariant value = reply.arguments().constFirst();
+    if (value.userType() == qMetaTypeId<QDBusArgument>()) {
+        const QVariantMap map = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(value));
+        if (!map.isEmpty()) return map;
+    }
+    return value.toMap();
+}
+
 MprisController::MprisController(QObject *parent) : QObject(parent) {
     m_pollTimer.setInterval(500);
     m_pollTimer.setSingleShot(false);
@@ -44,6 +57,8 @@ void MprisController::discoverPlayers() {
 void MprisController::addPlayer(const QString &name) {
     if (m_players.contains(name)) return;
     PlayerInfo info; info.dbusName = name;
+    if (QDBusConnectionInterface *busInterface = QDBusConnection::sessionBus().interface())
+        info.uniqueName = busInterface->serviceOwner(name);
     m_players.insert(name, info);
     QDBusConnection::sessionBus().connect(name, QStringLiteral("/org/mpris/MediaPlayer2"),
         QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"),
@@ -77,9 +92,23 @@ void MprisController::handleNameOwnerChanged(const QString &name, const QString 
 void MprisController::handlePropertiesChanged(const QString &interface, const QVariantMap &changed, const QStringList &) {
     if (interface != QStringLiteral("org.mpris.MediaPlayer2.Player")) return;
     Q_UNUSED(changed)
-    for (auto it = m_players.begin(); it != m_players.end(); ++it) fetchPlayerState(it.key());
+
+    QString target;
+    if (calledFromDBus()) {
+        const QString sender = message().service();
+        if (!sender.isEmpty()) {
+            for (auto it = m_players.cbegin(); it != m_players.cend(); ++it) {
+                if (it->uniqueName == sender) { target = it.key(); break; }
+            }
+        }
+    }
+
+    if (target.isEmpty()) {
+        for (auto it = m_players.begin(); it != m_players.end(); ++it) fetchPlayerState(it.key());
+    } else {
+        fetchPlayerState(target);
+    }
     updateActivePlayer();
-    updatePolledValues();
 }
 
 void MprisController::handleSeeked(qint64 position) {
@@ -98,16 +127,12 @@ void MprisController::handleSeeked(qint64 position) {
 void MprisController::fetchPlayerState(const QString &name) {
     auto it = m_players.find(name);
     if (it == m_players.end()) return;
-    QDBusInterface iface(name, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.freedesktop.DBus.Properties"), QDBusConnection::sessionBus());
-    if (!iface.isValid()) return;
-    auto get = [&](const QString &ifaceName, const QString &prop) -> QVariant {
-        QDBusReply<QVariant> r = iface.call(QStringLiteral("Get"), ifaceName, prop);
-        if (!r.isValid()) return {};
-        return unwrapDVariant(r.value());
-    };
-    QVariant vStatus = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("PlaybackStatus"));
-    if (vStatus.isValid()) it->playbackStatus = unwrapDVariant(vStatus).toString();
-    QVariant vMeta = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Metadata"));
+    const QVariantMap properties = getAllProperties(name, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"));
+    if (properties.isEmpty()) return;
+
+    const QVariant vStatus = unwrapDVariant(properties.value(QStringLiteral("PlaybackStatus")));
+    if (vStatus.isValid()) it->playbackStatus = vStatus.toString();
+    const QVariant vMeta = properties.value(QStringLiteral("Metadata"));
     QVariantMap md;
     if (vMeta.isValid()) {
         QVariant inner = unwrapDVariant(vMeta);
@@ -122,22 +147,22 @@ void MprisController::fetchPlayerState(const QString &name) {
         qint64 len = lengthFromMetadata(md);
         if (len > 0) it->lengthUs = len;
     }
-    QVariant vPos = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Position"));
+    const QVariant vPos = unwrapDVariant(properties.value(QStringLiteral("Position")));
     if (vPos.isValid()) {
-        qint64 pos = unwrapDVariant(vPos).toLongLong();
+        qint64 pos = vPos.toLongLong();
         it->positionUs = pos;
         it->positionUpdatedUs = 0;
     }
-    QVariant vCanPlay = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPlay"));
-    if (vCanPlay.isValid()) it->canPlay = unwrapDVariant(vCanPlay).toBool();
-    QVariant vCanPause = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanPause"));
-    if (vCanPause.isValid()) it->canPause = unwrapDVariant(vCanPause).toBool();
-    QVariant vCanNext = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanGoNext"));
-    if (vCanNext.isValid()) it->canGoNext = unwrapDVariant(vCanNext).toBool();
-    QVariant vCanPrev = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanGoPrevious"));
-    if (vCanPrev.isValid()) it->canGoPrevious = unwrapDVariant(vCanPrev).toBool();
-    QVariant vCanSeek = get(QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("CanSeek"));
-    if (vCanSeek.isValid()) it->canSeek = unwrapDVariant(vCanSeek).toBool();
+    const QVariant vCanPlay = unwrapDVariant(properties.value(QStringLiteral("CanPlay")));
+    if (vCanPlay.isValid()) it->canPlay = vCanPlay.toBool();
+    const QVariant vCanPause = unwrapDVariant(properties.value(QStringLiteral("CanPause")));
+    if (vCanPause.isValid()) it->canPause = vCanPause.toBool();
+    const QVariant vCanNext = unwrapDVariant(properties.value(QStringLiteral("CanGoNext")));
+    if (vCanNext.isValid()) it->canGoNext = vCanNext.toBool();
+    const QVariant vCanPrev = unwrapDVariant(properties.value(QStringLiteral("CanGoPrevious")));
+    if (vCanPrev.isValid()) it->canGoPrevious = vCanPrev.toBool();
+    const QVariant vCanSeek = unwrapDVariant(properties.value(QStringLiteral("CanSeek")));
+    if (vCanSeek.isValid()) it->canSeek = vCanSeek.toBool();
 }
 
 QString MprisController::trackFromMetadata(const QVariantMap &md) {
@@ -269,7 +294,7 @@ void MprisController::setPlaying(bool v) { if (m_playing==v) return; m_playing=v
 void MprisController::setHasPlayer(bool v) { if (m_hasPlayer==v) return; m_hasPlayer=v; emit hasPlayerChanged(); }
 void MprisController::setPolledPosition(double v) { if (qFuzzyCompare(m_polledPosition+1, v+1)) return; m_polledPosition=v; emit polledPositionChanged(); emit progressChanged(); }
 void MprisController::setPolledLength(double v) { if (qFuzzyCompare(m_polledLength+1, v+1)) return; m_polledLength=v; emit polledLengthChanged(); emit progressChanged(); }
-void MprisController::setActivePlayerDbusName(const QString &v) { if (m_activePlayerDbusName==v) return; m_activePlayerDbusName=v; emit activePlayerDbusNameChanged(); }
+void MprisController::setActivePlayerDbusName(const QString &v) { if (m_activePlayerDbusName==v) return; m_activePlayerDbusName=v; }
 
 void MprisController::playPause() {
     if (m_activePlayerDbusName.isEmpty()) return;
@@ -285,6 +310,11 @@ void MprisController::prev() {
     if (m_activePlayerDbusName.isEmpty()) return;
     QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
     iface.call(QStringLiteral("Previous"));
+}
+void MprisController::stop() {
+    if (m_activePlayerDbusName.isEmpty()) return;
+    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
+    iface.call(QStringLiteral("Stop"));
 }
 void MprisController::seek(double positionSeconds) {
     if (m_activePlayerDbusName.isEmpty()) return;
@@ -313,4 +343,3 @@ void MprisController::seek(double positionSeconds) {
     m_positionBaseUs = us; m_positionBaseSec = positionSeconds; m_elapsed.restart();
     updatePolledValues();
 }
-void MprisController::refresh() { discoverPlayers(); for (auto &k : m_players.keys()) fetchPlayerState(k); updateActivePlayer(); }

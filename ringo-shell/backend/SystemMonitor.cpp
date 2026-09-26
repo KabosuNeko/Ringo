@@ -4,8 +4,7 @@
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
-#include <QDebug>
-#include <QStandardPaths>
+#include <QNetworkInterface>
 #include <QVariantMap>
 #include <QRegularExpression>
 #include <cmath>
@@ -16,6 +15,9 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
     m_telemetryTimer.setSingleShot(false);
     connect(&m_telemetryTimer, &QTimer::timeout, this, &SystemMonitor::pollTelemetry);
 
+    // Network + uptime feed only the mini dashboard, so they are started and
+    // stopped together with telemetry (see setTelemetryActive) instead of running
+    // unconditionally for the whole session.
     m_netTimer.setInterval(30000);
     m_netTimer.setSingleShot(false);
     connect(&m_netTimer, &QTimer::timeout, this, &SystemMonitor::pollNetwork);
@@ -24,11 +26,10 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
     m_uptimeTimer.setSingleShot(false);
     connect(&m_uptimeTimer, &QTimer::timeout, this, &SystemMonitor::pollUptime);
 
-    m_batTimer.setInterval(30000);
-    m_batTimer.setSingleShot(false);
-    connect(&m_batTimer, &QTimer::timeout, this, &SystemMonitor::pollBattery);
-
-    // UPower DBus PropertiesChanged
+    // UPower DBus PropertiesChanged - verified to fire on this exact object and
+    // interface (observed live), which makes a polling timer for the battery
+    // redundant. The bar's battery display is fed by this signal plus the one
+    // initial read below.
     QDBusConnection::systemBus().connect(
         QStringLiteral("org.freedesktop.UPower"),
         QStringLiteral("/org/freedesktop/UPower/devices/DisplayDevice"),
@@ -36,14 +37,8 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
         QStringLiteral("PropertiesChanged"),
         this, SLOT(handleUPowerPropertiesChanged(QString,QVariantMap,QStringList)));
 
-    // initial poll (low frequency network, uptime, battery)
-    pollNetwork();
-    pollUptime();
+    // One initial battery read so the bar has a value before the first signal.
     pollBattery();
-
-    m_netTimer.start();
-    m_uptimeTimer.start();
-    m_batTimer.start();
 }
 
 void SystemMonitor::setTelemetryActive(bool active) {
@@ -52,13 +47,19 @@ void SystemMonitor::setTelemetryActive(bool active) {
     emit telemetryActiveChanged();
 
     if (m_telemetryActive) {
-        // Immediate baseline sampling and instant RAM reading
+        // Immediate sampling so the dashboard is populated on open.
         pollRam();
         pollBandwidth();
         pollCpu();
+        pollNetwork();
+        pollUptime();
         m_telemetryTimer.start();
+        m_netTimer.start();
+        m_uptimeTimer.start();
     } else {
         m_telemetryTimer.stop();
+        m_netTimer.stop();
+        m_uptimeTimer.stop();
         m_prevRx = -1;
         m_prevTx = -1;
         m_prevCpuTotal = 0;
@@ -73,21 +74,6 @@ void SystemMonitor::pollTelemetry() {
     pollCpu();
     pollRam();
 }
-
-void SystemMonitor::refreshTelemetry() {
-    pollTelemetry();
-}
-
-void SystemMonitor::refresh() {
-    if (m_telemetryActive) pollTelemetry();
-    pollNetwork();
-    pollUptime();
-    pollBattery();
-}
-void SystemMonitor::refreshBandwidth() { pollBandwidth(); }
-void SystemMonitor::refreshNetwork() { pollNetwork(); }
-void SystemMonitor::refreshBattery() { pollBattery(); }
-void SystemMonitor::refreshUptime() { pollUptime(); }
 
 QString SystemMonitor::fmtRate(double bps) {
     if (!std::isfinite(bps) || bps < 0) return QStringLiteral("...");
@@ -220,13 +206,6 @@ void SystemMonitor::pollRam() {
         if (m_ramPercent != pct) {
             m_ramPercent = pct;
             emit ramPercentChanged();
-        }
-        double usedGb = double(memUsed) / 1048576.0;
-        double totalGb = double(memTotal) / 1048576.0;
-        QString detail = QString::number(usedGb, 'f', 1) + QStringLiteral("/") + QString::number(totalGb, 'f', 1) + QStringLiteral("G");
-        if (m_ramDetail != detail) {
-            m_ramDetail = detail;
-            emit ramDetailChanged();
         }
     }
 }

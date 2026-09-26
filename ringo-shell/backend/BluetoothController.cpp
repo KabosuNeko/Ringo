@@ -2,10 +2,8 @@
 #include "BluetoothDeviceModel.h"
 
 #include <QDBusConnection>
-#include <QDBusConnectionInterface>
 #include <QDBusInterface>
 #include <QDBusMessage>
-#include <QDBusMetaType>
 #include <QDBusObjectPath>
 #include <QDBusPendingCall>
 #include <QDBusReply>

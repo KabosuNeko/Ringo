@@ -68,14 +68,6 @@ BluetoothPairingAgent::~BluetoothPairingAgent() {
     unregisterAgent();
 }
 
-bool BluetoothPairingAgent::registered() const {
-    return m_registered;
-}
-
-QString BluetoothPairingAgent::registrationError() const {
-    return m_registrationError;
-}
-
 bool BluetoothPairingAgent::requestActive() const {
     return m_request.kind != PromptKind::None;
 }
@@ -349,7 +341,6 @@ void BluetoothPairingAgent::ensureAgentRegistered() {
     QDBusConnection bus = QDBusConnection::systemBus();
     if (!bus.isConnected()) {
         setRegisteredState(false);
-        setRegistrationError(QStringLiteral("The system D-Bus is unavailable."));
         return;
     }
 
@@ -362,7 +353,6 @@ void BluetoothPairingAgent::ensureAgentRegistered() {
 
         if (!m_objectExported) {
             setRegisteredState(false);
-            setRegistrationError(QStringLiteral("Failed to export the Bluetooth pairing agent."));
             return;
         }
     }
@@ -370,7 +360,6 @@ void BluetoothPairingAgent::ensureAgentRegistered() {
     QDBusConnectionInterface *connectionInterface = bus.interface();
     if (!connectionInterface || !connectionInterface->isServiceRegistered(QString::fromLatin1(kBluezService))) {
         setRegisteredState(false);
-        setRegistrationError({});
         return;
     }
 
@@ -383,7 +372,6 @@ void BluetoothPairingAgent::ensureAgentRegistered() {
 
     if (!manager.isValid()) {
         setRegisteredState(false);
-        setRegistrationError(QStringLiteral("BlueZ is unavailable."));
         return;
     }
 
@@ -400,11 +388,9 @@ void BluetoothPairingAgent::ensureAgentRegistered() {
 
     if (!reply.isValid()) {
         setRegisteredState(false);
-        setRegistrationError(reply.error().message());
         return;
     }
 
-    setRegistrationError({});
     setRegisteredState(true);
 }
 
@@ -430,19 +416,7 @@ void BluetoothPairingAgent::unregisterAgent() {
 }
 
 void BluetoothPairingAgent::setRegisteredState(bool registered) {
-    if (m_registered == registered)
-        return;
-
     m_registered = registered;
-    emit registeredChanged();
-}
-
-void BluetoothPairingAgent::setRegistrationError(const QString &error) {
-    if (m_registrationError == error)
-        return;
-
-    m_registrationError = error;
-    emit registrationErrorChanged();
 }
 
 void BluetoothPairingAgent::replaceRequest(PendingRequest request) {

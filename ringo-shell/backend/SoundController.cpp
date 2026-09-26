@@ -78,18 +78,3 @@ void SoundController::playComplete()
 {
     play(QStringLiteral("complete"));
 }
-
-void SoundController::playBell()
-{
-    play(QStringLiteral("bell"));
-}
-
-void SoundController::playCamera()
-{
-    play(QStringLiteral("camera-shutter"));
-}
-
-void SoundController::playWarning()
-{
-    play(QStringLiteral("dialog-warning"));
-}

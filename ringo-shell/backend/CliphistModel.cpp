@@ -1,9 +1,23 @@
 #include "CliphistModel.h"
 #include <QDir>
 #include <QFileInfo>
-#include <QDateTime>
+#include <QImage>
+#include <QSet>
 #include <QThreadPool>
-#include <QDebug>
+#include <algorithm>
+
+namespace {
+// Decoded clipboard images are only ever displayed at <=500px (see the QML
+// delegates' sourceSize), so cache downscaled copies instead of the raw
+// full-resolution decode. Keeps the on-disk cache ~10x smaller.
+constexpr int kThumbMaxEdge = 512;
+
+// Hard ceiling for the on-disk thumbnail cache. The observed cliphist history is
+// ~46 entries (a few dozen images at most); at <=512px a thumbnail is ~150-250 KB,
+// so 32 MB holds roughly 130-210 images - several times any realistic history -
+// while bounding the cache well below the 113 MB it grew to with full-size PNGs.
+constexpr qint64 kCacheCapBytes = 32LL * 1024 * 1024;
+}
 
 CliphistModel::CliphistModel(QObject *parent)
     : QAbstractListModel(parent)
@@ -11,7 +25,14 @@ CliphistModel::CliphistModel(QObject *parent)
     m_cacheDir = QDir::homePath() + QStringLiteral("/.cache/ringo-shell/cliphist-imgs");
     QDir().mkpath(m_cacheDir);
 
-    pruneCache();
+    // Thumbnail jobs shell out to `cliphist decode` and scale the result with
+    // Qt, on a private pool capped at 2 workers; cache filling is background
+    // work and a burst of new images must not spike RSS.
+    m_thumbPool = new QThreadPool(this);
+    m_thumbPool->setMaxThreadCount(2);
+
+    // No prune here: pruning needs the live entry list to detect orphans, which
+    // only exists after the first `cliphist list` completes.
     refresh();
 }
 
@@ -93,14 +114,19 @@ void CliphistModel::refresh()
 
 void CliphistModel::onListProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    Q_UNUSED(exitCode);
-    Q_UNUSED(exitStatus);
-
     if (!m_listProcess) return;
+
+    // Orphan pruning deletes every cache file whose id is missing from the list,
+    // so an empty/failed `cliphist list` must never be treated as "no entries".
+    m_listValid = (exitStatus == QProcess::NormalExit && exitCode == 0);
 
     const QByteArray output = m_listProcess->readAllStandardOutput();
     m_listProcess->deleteLater();
     m_listProcess = nullptr;
+
+    // Thumbnail jobs for this batch are queued inside the loop below; the
+    // counter is decremented as each one finishes on the main thread.
+    m_pendingThumbs = 0;
 
     QVector<ClipEntry> newEntries;
     const QList<QByteArray> lines = output.split('\n');
@@ -139,6 +165,7 @@ void CliphistModel::onListProcessFinished(int exitCode, QProcess::ExitStatus exi
     emit totalCountChanged();
 
     applyFilter();
+    pruneCache();
 }
 
 void CliphistModel::decodeThumbnail(const ClipEntry &entry)
@@ -147,34 +174,64 @@ void CliphistModel::decodeThumbnail(const ClipEntry &entry)
     const QString targetPath = entry.imagePath;
     const QString id = entry.id;
 
-    QThreadPool::globalInstance()->start([rawLine, targetPath, id, this]() {
-        QProcess proc;
-        proc.start(QStringLiteral("cliphist"), {QStringLiteral("decode")});
-        if (proc.waitForStarted(1000)) {
-            proc.write((rawLine + QLatin1Char('\n')).toUtf8());
-            proc.closeWriteChannel();
-            if (proc.waitForFinished(2000)) {
-                QByteArray imgData = proc.readAllStandardOutput();
-                if (!imgData.isEmpty()) {
-                    QFile f(targetPath);
-                    if (f.open(QIODevice::WriteOnly)) {
-                        f.write(imgData);
-                        f.close();
+    ++m_pendingThumbs;
 
-                        // Notify model on main thread
-                        QMetaObject::invokeMethod(this, [id, this]() {
-                            for (int i = 0; i < m_filteredEntries.size(); ++i) {
-                                if (m_filteredEntries.at(i).id == id) {
-                                    QModelIndex idx = index(i, 0);
-                                    emit dataChanged(idx, idx, {ImagePathRole});
-                                    break;
-                                }
-                            }
-                        }, Qt::QueuedConnection);
+    m_thumbPool->start([rawLine, targetPath, id, this]() {
+        bool wrote = false;
+
+        // `cliphist decode` (the same process pipe copyById() uses for
+        // `cliphist decode | wl-copy`) into Qt: decode, shrink to <=512px and
+        // store a PNG. No external image tool is involved.
+        QProcess decode;
+        decode.start(QStringLiteral("cliphist"), {QStringLiteral("decode")});
+        if (decode.waitForStarted(1000)) {
+            decode.write((rawLine + QLatin1Char('\n')).toUtf8());
+            decode.closeWriteChannel();
+            if (decode.waitForFinished(4000)) {
+                const QByteArray imgData = decode.readAllStandardOutput();
+                if (!imgData.isEmpty()) {
+                    const QImage img = QImage::fromData(imgData);
+                    if (!img.isNull()) {
+                        // Shrink only, never upscale.
+                        const QImage thumb =
+                            (img.width() > kThumbMaxEdge || img.height() > kThumbMaxEdge)
+                                ? img.scaled(kThumbMaxEdge, kThumbMaxEdge, Qt::KeepAspectRatio,
+                                             Qt::SmoothTransformation)
+                                : img;
+                        const QString tmp = targetPath + QStringLiteral(".tmp");
+                        if (thumb.save(tmp, "PNG")) {
+                            QFile::remove(targetPath);
+                            wrote = QFile::rename(tmp, targetPath);
+                        } else {
+                            QFile::remove(tmp);
+                        }
                     }
                 }
             }
         }
+
+        if (!wrote) {
+            // Never leave a truncated/empty file behind - the QML would show a
+            // broken image instead of falling back to the text label.
+            QFile::remove(targetPath);
+        }
+
+        // Notify the model on the main thread. The last job of a batch re-runs
+        // the prune so the size cap is enforced after thumbnails are generated.
+        QMetaObject::invokeMethod(this, [id, wrote, this]() {
+            if (wrote) {
+                for (int i = 0; i < m_filteredEntries.size(); ++i) {
+                    if (m_filteredEntries.at(i).id == id) {
+                        const QModelIndex idx = index(i, 0);
+                        emit dataChanged(idx, idx, {ImagePathRole});
+                        break;
+                    }
+                }
+            }
+            if (m_pendingThumbs > 0 && --m_pendingThumbs == 0) {
+                pruneCache();
+            }
+        }, Qt::QueuedConnection);
     });
 }
 
@@ -225,12 +282,6 @@ void CliphistModel::copyById(const QString &id)
             break;
         }
     }
-}
-
-void CliphistModel::deleteItem(int index)
-{
-    if (index < 0 || index >= m_filteredEntries.size()) return;
-    deleteById(m_filteredEntries.at(index).id);
 }
 
 void CliphistModel::deleteById(const QString &id)
@@ -301,13 +352,44 @@ QVariantMap CliphistModel::get(int index) const
 
 void CliphistModel::pruneCache()
 {
-    QDir dir(m_cacheDir);
-    const auto files = dir.entryInfoList(QDir::Files);
-    const QDateTime now = QDateTime::currentDateTime();
+    // Never prune against an unknown/stale entry list (see onListProcessFinished).
+    if (!m_listValid) return;
 
-    for (const auto &file : files) {
-        if (file.lastModified().daysTo(now) > 7) {
+    QDir dir(m_cacheDir);
+    const QFileInfoList files = dir.entryInfoList(QDir::Files);
+
+    // 1. Drop files whose cliphist entry no longer exists. `cliphist delete` and
+    //    `cliphist wipe` also run outside this model (the Mod+Shift+C keybind
+    //    calls `cliphist wipe` directly), so without this the cache accumulates
+    //    thumbnails for entries that are long gone - 88 of 122 files were
+    //    orphans when this was measured.
+    QSet<QString> liveIds;
+    liveIds.reserve(m_allEntries.size());
+    for (const ClipEntry &entry : m_allEntries) {
+        if (entry.isImage) liveIds.insert(entry.id);
+    }
+
+    QFileInfoList kept;
+    kept.reserve(files.size());
+    qint64 totalBytes = 0;
+    for (const QFileInfo &file : files) {
+        if (!liveIds.contains(file.completeBaseName())) {
             QFile::remove(file.absoluteFilePath());
+            continue;
+        }
+        totalBytes += file.size();
+        kept.append(file);
+    }
+
+    // 2. Enforce the size ceiling, evicting the least recently written first.
+    if (totalBytes > kCacheCapBytes) {
+        std::sort(kept.begin(), kept.end(), [](const QFileInfo &a, const QFileInfo &b) {
+            return a.lastModified() < b.lastModified();
+        });
+        for (const QFileInfo &file : kept) {
+            if (totalBytes <= kCacheCapBytes) break;
+            const qint64 size = file.size();
+            if (QFile::remove(file.absoluteFilePath())) totalBytes -= size;
         }
     }
 }

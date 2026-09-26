@@ -2,7 +2,6 @@
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
-#include <QDBusMessage>
 #include <QDBusArgument>
 #include <QDebug>
 
@@ -127,11 +126,6 @@ void PowerProfileController::cycleNext()
     int idx = m_profiles.indexOf(m_activeProfile);
     int nextIdx = (idx + 1) % m_profiles.size();
     setProfile(m_profiles.at(nextIdx));
-}
-
-void PowerProfileController::refresh()
-{
-    fetchProperties();
 }
 
 void PowerProfileController::onPropertiesChanged(const QString &interfaceName,

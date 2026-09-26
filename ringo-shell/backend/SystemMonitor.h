@@ -1,8 +1,6 @@
 #pragma once
 #include <QObject>
 #include <QTimer>
-#include <QElapsedTimer>
-#include <QNetworkInterface>
 #include <QSysInfo>
 #include <QtQml/qqml.h>
 
@@ -27,7 +25,6 @@ class SystemMonitor final : public QObject {
     Q_PROPERTY(QString hostname READ hostname CONSTANT)
     Q_PROPERTY(int cpuPercent READ cpuPercent NOTIFY cpuPercentChanged)
     Q_PROPERTY(int ramPercent READ ramPercent NOTIFY ramPercentChanged)
-    Q_PROPERTY(QString ramDetail READ ramDetail NOTIFY ramDetailChanged)
     Q_PROPERTY(bool telemetryActive READ telemetryActive WRITE setTelemetryActive NOTIFY telemetryActiveChanged)
 
 public:
@@ -53,16 +50,8 @@ public:
     QString uptime() const { return m_uptime; }
     int cpuPercent() const { return m_cpuPercent; }
     int ramPercent() const { return m_ramPercent; }
-    QString ramDetail() const { return m_ramDetail; }
     bool telemetryActive() const { return m_telemetryActive; }
     void setTelemetryActive(bool active);
-
-    Q_INVOKABLE void refresh();
-    Q_INVOKABLE void refreshBandwidth();
-    Q_INVOKABLE void refreshTelemetry();
-    Q_INVOKABLE void refreshNetwork();
-    Q_INVOKABLE void refreshBattery();
-    Q_INVOKABLE void refreshUptime();
 
 signals:
     void rxRateChanged();
@@ -78,7 +67,6 @@ signals:
     void uptimeChanged();
     void cpuPercentChanged();
     void ramPercentChanged();
-    void ramDetailChanged();
     void telemetryActiveChanged();
 
 private slots:
@@ -119,7 +107,6 @@ private:
 
     int m_cpuPercent = 0;
     int m_ramPercent = 0;
-    QString m_ramDetail = QStringLiteral("-- / -- GB");
     bool m_telemetryActive = false;
 
     quint64 m_prevCpuTotal = 0;
@@ -131,5 +118,4 @@ private:
     QTimer m_telemetryTimer;
     QTimer m_netTimer;
     QTimer m_uptimeTimer;
-    QTimer m_batTimer;
 };

@@ -3,7 +3,6 @@
 #include <QFile>
 #include <QDBusConnection>
 #include <QDBusMessage>
-#include <QDebug>
 #include <algorithm>
 #include <cmath>
 
@@ -20,16 +19,41 @@ BrightnessController::BrightnessController(QObject *parent) : QObject(parent) {
     readBrightness();
 
     if (!m_devicePath.isEmpty()) {
-        const QString brightFile = m_devicePath + QStringLiteral("/brightness");
-        m_watcher.addPath(brightFile);
+        rearmWatcher();
         connect(&m_watcher, &QFileSystemWatcher::fileChanged, this, &BrightnessController::onFileChanged);
+        connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &BrightnessController::onDirectoryChanged);
     }
 
-    // Fallback timer every 2.5 seconds in case sysfs inotify events are missed
-    m_pollTimer.setInterval(2500);
-    m_pollTimer.setSingleShot(false);
-    connect(&m_pollTimer, &QTimer::timeout, this, &BrightnessController::readBrightness);
-    m_pollTimer.start();
+    // A 2.5s fallback poll used to live here. It is not needed: inotify on the
+    // sysfs attribute delivers external changes (logind, the compositor, Fn
+    // keys) and this is verified empirically. The two cases the poll was papering
+    // over - the attribute being replaced, and the node disappearing across
+    // suspend/resume - are handled explicitly below without polling.
+    QDBusConnection::systemBus().connect(
+        QStringLiteral("org.freedesktop.login1"),
+        QStringLiteral("/org/freedesktop/login1"),
+        QStringLiteral("org.freedesktop.login1.Manager"),
+        QStringLiteral("PrepareForSleep"),
+        this, SLOT(onPrepareForSleep(bool)));
+}
+
+void BrightnessController::rearmWatcher() {
+    if (!m_devicePath.isEmpty() && QFile::exists(m_devicePath + QStringLiteral("/brightness"))) {
+        const QString brightFile = m_devicePath + QStringLiteral("/brightness");
+        if (!m_watcher.files().contains(brightFile)) m_watcher.addPath(brightFile);
+    }
+    if (!m_backlightDir.isEmpty() && QDir(m_backlightDir).exists()) {
+        if (!m_watcher.directories().contains(m_backlightDir)) m_watcher.addPath(m_backlightDir);
+    }
+}
+
+void BrightnessController::onPrepareForSleep(bool goingToSleep) {
+    if (goingToSleep) return;
+    // The backlight class device can be unregistered and re-registered across a
+    // suspend/resume cycle, which drops the inotify watch silently. Re-arm and
+    // re-read so the bar cannot show a stale value after waking.
+    rearmWatcher();
+    readBrightness();
 }
 
 void BrightnessController::detectDevice() {
@@ -50,7 +74,7 @@ void BrightnessController::detectDevice() {
 
     m_device = chosen;
     m_devicePath = backlightDir.filePath(chosen);
-    emit deviceChanged();
+    m_backlightDir = backlightDir.absolutePath();
 }
 
 void BrightnessController::readBrightness() {
@@ -58,9 +82,8 @@ void BrightnessController::readBrightness() {
 
     bool ok = false;
     const int maxVal = readSysfsFile(m_devicePath + QStringLiteral("/max_brightness")).toInt(&ok);
-    if (ok && maxVal > 0 && maxVal != m_maxBrightness) {
+    if (ok && maxVal > 0) {
         m_maxBrightness = maxVal;
-        emit maxBrightnessChanged();
     }
 
     // Try actual_brightness first, fallback to brightness
@@ -78,10 +101,18 @@ void BrightnessController::readBrightness() {
 
 void BrightnessController::onFileChanged(const QString &path) {
     readBrightness();
-    // QFileSystemWatcher sometimes removes files on sysfs modifications; re-add if missing
-    if (!m_watcher.files().contains(path) && QFile::exists(path)) {
-        m_watcher.addPath(path);
-    }
+    // QFileSystemWatcher drops the watch when a sysfs attribute is replaced (the
+    // new inode is not watched). Re-arm everything so we keep receiving events.
+    rearmWatcher();
+    Q_UNUSED(path);
+}
+
+void BrightnessController::onDirectoryChanged(const QString &path) {
+    // The backlight class directory changed: the attribute may have been
+    // recreated (driver reload, resume). Re-arm and re-read.
+    rearmWatcher();
+    readBrightness();
+    Q_UNUSED(path);
 }
 
 void BrightnessController::setBrightness(int value) {
@@ -111,6 +142,20 @@ void BrightnessController::setPercent(double pct) {
     setBrightness(val);
 }
 
+void BrightnessController::step(double deltaPercent) {
+    if (m_maxBrightness <= 0) return;
+
+    // Same curve as `brightnessctl -e4`: the value the user sees is
+    // (raw / max)^(1/4) * 100, so a step is applied on that percentage and
+    // mapped back to a raw value through the exponent.
+    constexpr double kExponent = 4.0;
+    const double rawFraction = static_cast<double>(m_brightness) / m_maxBrightness;
+    const double currentPct = std::pow(rawFraction, 1.0 / kExponent) * 100.0;
+    const double targetPct = std::clamp(currentPct + deltaPercent, 0.0, 100.0);
+    const double raw = std::pow(targetPct / 100.0, kExponent) * m_maxBrightness;
+    setBrightness(static_cast<int>(std::round(raw)));
+}
+
 void BrightnessController::dim() {
     if (m_maxBrightness <= 0) return;
     m_savedBrightness = m_brightness;
@@ -123,8 +168,4 @@ void BrightnessController::restore() {
         setBrightness(m_savedBrightness);
         m_savedBrightness = -1;
     }
-}
-
-void BrightnessController::refresh() {
-    readBrightness();
 }
