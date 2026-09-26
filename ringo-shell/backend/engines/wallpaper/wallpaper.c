@@ -416,6 +416,9 @@ static const struct wl_registry_listener registry_listener = {
 };
 
 static int g_stop_pipe[2] = { -1, -1 };
+/* A stop can arrive before the pipe exists (the host stops an engine that is
+ * still starting up). It is remembered here and honoured at the next poll. */
+static volatile int g_stop_pending = 0;
 static bool g_outputs_ready;
 
 /* Releases everything a run allocated, from either exit path. */
@@ -456,6 +459,7 @@ ringo_wallpaper_error(void)
 void
 ringo_wallpaper_stop(void)
 {
+	g_stop_pending = 1;
 	if (g_stop_pipe[1] >= 0) {
 		const char byte = 'q';
 		if (write(g_stop_pipe[1], &byte, 1) != 1)
@@ -580,6 +584,7 @@ prescan:
 	if (!compositor || !layer_shell || !shm)
 		die("compositor is missing wl_compositor, wl_shm or zwlr_layer_shell_v1");
 
+	g_stop_pending = 0;
 	if (pipe(g_stop_pipe) < 0)
 		die("pipe:");
 
@@ -596,6 +601,11 @@ prescan:
 				break;
 
 		if (wl_display_flush(display) < 0 && errno != EAGAIN) {
+			wl_display_cancel_read(display);
+			break;
+		}
+
+		if (g_stop_pending) {
 			wl_display_cancel_read(display);
 			break;
 		}

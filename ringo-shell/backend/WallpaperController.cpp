@@ -13,6 +13,7 @@
 #include <QTimer>
 #include <QUrl>
 #include <algorithm>
+#include <functional>
 #include <csignal>
 #include <memory>
 #include <sys/types.h>
@@ -24,8 +25,26 @@
 namespace {
 
 constexpr int kEngineWaitMs = 2000;
+constexpr int kStopAttempts = 4;
 constexpr int kEngineRestartDelayMs = 1000;
 constexpr qint64 kImmediateExitMs = 2000;
+
+// A QThread must never be destroyed while it is still running: Qt treats that
+// as fatal. Ask the engine to return, wait, and if it refuses, hand the object
+// over to the event loop instead of deleting it here.
+bool stopThread(QThread *thread, const std::function<void()> &requestStop) {
+    for (int attempt = 0; attempt < kStopAttempts; ++attempt) {
+        requestStop();
+        if (thread->wait(kEngineWaitMs)) {
+            thread->deleteLater();
+            return true;
+        }
+    }
+
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->setParent(nullptr);
+    return false;
+}
 
 QString stderrTail(const QByteArray &output) {
     const QByteArray trimmed = output.right(400).trimmed();
@@ -479,7 +498,7 @@ void WallpaperController::onEngineFinished(QThread *thread) {
 }
 
 void WallpaperController::stopEngine() {
-    EngineThread *thread = static_cast<EngineThread *>(m_engineThread);
+    auto *thread = static_cast<EngineThread *>(m_engineThread);
     if (!thread) return;
 
     // Detach first: the exit of a replaced engine is not an unexpected one, so
@@ -487,9 +506,10 @@ void WallpaperController::stopEngine() {
     m_engineThread = nullptr;
     setReady(false);
 
-    thread->stop();
-    thread->wait(kEngineWaitMs);
-    thread->deleteLater();
+    if (!stopThread(thread, [thread] { thread->stop(); })) {
+        setError(QStringLiteral(
+            "the wallpaper engine did not stop; its thread is left to finish on its own"));
+    }
 }
 
 void WallpaperController::reapLegacyEngines() {

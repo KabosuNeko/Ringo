@@ -8,12 +8,33 @@
 #include <QMetaObject>
 #include <QTimer>
 
+#include <functional>
+
+
 
 namespace {
 constexpr int kEngineWaitMs = 2000;
+constexpr int kStopAttempts = 4;
 constexpr int kEngineRestartDelayMs = 1000;
 constexpr int kTwilightElevation = -6.0;
 constexpr int kDaylightElevation = 3.0;
+
+// A QThread must never be destroyed while it is still running: Qt treats that
+// as fatal. Ask the engine to return, wait, and if it refuses, hand the object
+// over to the event loop instead of deleting it here.
+bool stopThread(QThread *thread, const std::function<void()> &requestStop) {
+    for (int attempt = 0; attempt < kStopAttempts; ++attempt) {
+        requestStop();
+        if (thread->wait(kEngineWaitMs)) {
+            thread->deleteLater();
+            return true;
+        }
+    }
+
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->setParent(nullptr);
+    return false;
+}
 
 // The engine blocks in its own Wayland event loop, so it needs a thread of its
 // own; changing any option replaces the thread.
@@ -282,9 +303,10 @@ void NightLightController::stopEngine() {
     setActive(false);
     setOutputs(0);
 
-    ringo_nightlight_stop();
-    thread->wait(kEngineWaitMs);
-    thread->deleteLater();
+    if (!stopThread(thread, [] { ringo_nightlight_stop(); })) {
+        setError(QStringLiteral(
+            "the night light engine did not stop; its thread is left to finish on its own"));
+    }
 }
 
 void NightLightController::statusCallback(const struct ringo_nightlight_status *status,
