@@ -79,8 +79,17 @@ static inline void adjust_timerspec(struct itimerspec *timerspec) {
  * time, and every piece of state below is reset by it. */
 static int g_stop_pipe[2] = { -1, -1 };
 static int g_timer_fd = -1;
+/* A stop can arrive before the pipe exists (the host stops an engine that
+ * is still starting up); it is remembered and honoured at the next poll. */
+static volatile int g_stop_pending = 0;
+/* Compositor refused the ramp (another gamma client, or a control we just
+ * released): try again shortly instead of waiting for the next sunrise or
+ * sunset, which can be hours away. */
+static int g_retry_fd = -1;
+static int g_last_temp = 0;
 static int timer_fired = 0;
 static int stop_fired = 0;
+static int retry_fired = 0;
 static bool g_failed = false;
 static char g_error[512];
 static jmp_buf g_fail_jump;
@@ -508,6 +517,13 @@ static void gamma_control_handle_failed(void *data,
 	struct output *output = data;
 	fprintf(stderr, "gamma control of output %s (%d) failed\n",
 			output->name, output->id);
+	if (g_retry_fd != -1) {
+		const struct itimerspec retry = {
+			.it_interval = { 0 },
+			.it_value = { .tv_sec = 5, .tv_nsec = 0 },
+		};
+		timerfd_settime(g_retry_fd, 0, &retry, NULL);
+	}
 	zwlr_gamma_control_v1_destroy(output->gamma_control);
 	output->gamma_control = NULL;
 	if (output->table_fd != -1) {
@@ -685,6 +701,7 @@ static void set_temperature(struct wl_list *outputs, int temp, double gamma) {
 	struct output *output;
 	int applied = 0;
 	fprintf(stderr, "setting temperature to %d K\n", temp);
+	g_last_temp = temp;
 
 	wl_list_for_each(output, outputs, link) {
 		if (!output->enabled) {
@@ -712,10 +729,11 @@ static int display_dispatch(struct wl_display *display, int timeout) {
 		return wl_display_dispatch_pending(display);
 	}
 
-	struct pollfd pfd[3];
+	struct pollfd pfd[4];
 	pfd[0].fd = wl_display_get_fd(display);
 	pfd[1].fd = g_stop_pipe[0];
 	pfd[2].fd = g_timer_fd;
+	pfd[3].fd = g_retry_fd;
 
 	pfd[0].events = POLLOUT;
 	// If we hit EPIPE we might have hit a protocol error. Continue reading
@@ -738,11 +756,16 @@ static int display_dispatch(struct wl_display *display, int timeout) {
 	pfd[0].events = POLLIN;
 	pfd[1].events = POLLIN;
 	pfd[2].events = POLLIN;
-	while (poll(pfd, 3, timeout) == -1) {
+	pfd[3].events = POLLIN;
+	while (poll(pfd, 4, timeout) == -1) {
 		if (errno != EINTR) {
 			wl_display_cancel_read(display);
 			return -1;
 		}
+	}
+
+	if (g_stop_pending) {
+		stop_fired = 1;
 	}
 
 	if (pfd[1].revents & POLLIN) {
@@ -758,6 +781,13 @@ static int display_dispatch(struct wl_display *display, int timeout) {
 		uint64_t expirations;
 		if (read(g_timer_fd, &expirations, sizeof expirations) > 0) {
 			timer_fired = 1;
+		}
+	}
+
+	if (pfd[3].revents & POLLIN) {
+		uint64_t expirations;
+		if (read(g_retry_fd, &expirations, sizeof expirations) > 0) {
+			retry_fired = 1;
 		}
 	}
 
@@ -796,6 +826,11 @@ static int setup_pipes(void) {
 	g_timer_fd = timerfd_create(CLOCK_REALTIME, TFD_CLOEXEC | TFD_NONBLOCK);
 	if (g_timer_fd == -1) {
 		engine_failf("could not create the sun timer: %s", strerror(errno));
+		return -1;
+	}
+	g_retry_fd = timerfd_create(CLOCK_MONOTONIC, TFD_CLOEXEC | TFD_NONBLOCK);
+	if (g_retry_fd == -1) {
+		engine_failf("could not create the retry timer: %s", strerror(errno));
 		return -1;
 	}
 	return 0;
@@ -857,6 +892,13 @@ static int wlrun(const struct config *cfg) {
 			// Force set_temperature
 			old_pos = -1.0;
 			timer_fired = true;
+		}
+
+		if (retry_fired) {
+			retry_fired = false;
+			if (g_last_temp > 0) {
+				set_temperature(&g_ctx.outputs, g_last_temp, g_ctx.config.gamma);
+			}
 		}
 
 		if (timer_fired) {
@@ -934,6 +976,10 @@ static void engine_teardown(void) {
 		close(g_timer_fd);
 		g_timer_fd = -1;
 	}
+	if (g_retry_fd != -1) {
+		close(g_retry_fd);
+		g_retry_fd = -1;
+	}
 	timer_fired = 0;
 	stop_fired = 0;
 }
@@ -944,6 +990,7 @@ void ringo_nightlight_set_status_callback(ringo_nightlight_status_fn fn, void *u
 }
 
 void ringo_nightlight_stop(void) {
+	g_stop_pending = 1;
 	if (g_stop_pipe[1] == -1) {
 		return;
 	}
@@ -976,9 +1023,13 @@ int ringo_nightlight_run(const struct ringo_nightlight_options *options) {
 	g_error[0] = '\0';
 	timer_fired = 0;
 	stop_fired = 0;
+	retry_fired = 0;
+	g_stop_pending = 0;
 	g_stop_pipe[0] = -1;
 	g_stop_pipe[1] = -1;
 	g_timer_fd = -1;
+	g_retry_fd = -1;
+	g_last_temp = 0;
 	g_display = NULL;
 	g_registry = NULL;
 	memset(&g_ctx, 0, sizeof g_ctx);

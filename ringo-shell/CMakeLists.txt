@@ -91,6 +91,8 @@ qt_add_qml_module(IslandBackend
         backend/Notifier.cpp
         backend/StateStore.h
         backend/StateStore.cpp
+        backend/Tools.h
+        backend/Tools.cpp
         backend/engines/wallpaper/wallpaper.c
         ${WALLPAPER_PROTO_DIR}/xdg-shell-protocol.c
         ${WALLPAPER_PROTO_DIR}/xdg-output-unstable-v1-protocol.c
@@ -100,6 +102,8 @@ qt_add_qml_module(IslandBackend
         backend/engines/nightlight/str_vec.c
         ${NIGHTLIGHT_PROTO_DIR}/wlr-gamma-control-unstable-v1-client-protocol.c
 )
+
+target_compile_definitions(IslandBackend PRIVATE RINGO_VERSION="${PROJECT_VERSION}")
 
 target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend ${WALLPAPER_DIR} ${WALLPAPER_PROTO_DIR} ${NIGHTLIGHT_DIR} ${NIGHTLIGHT_PROTO_DIR})
 
