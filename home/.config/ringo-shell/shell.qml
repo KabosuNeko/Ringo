@@ -661,18 +661,28 @@ function doctorReport(): string {
           clickable: false
         }
 
-        Rectangle {
+        Item {
           visible: Recorder.active
+          // the weather module keeps its own right padding, so the dot pulls
+          // itself closer and sits on the text's optical centre, not the row's
           Layout.preferredWidth: 7
-          Layout.preferredHeight: 7
-          radius: 4
-          color: "#ff453a"
+          Layout.preferredHeight: 12
+          Layout.leftMargin: -5
           Layout.alignment: Qt.AlignVCenter
 
-          SequentialAnimation on opacity {
-            loops: Animation.Infinite
-            NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
-            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
+          Rectangle {
+            anchors.centerIn: parent
+            anchors.verticalCenterOffset: -0.5
+            width: 7
+            height: 7
+            radius: 4
+            color: "#ff453a"
+
+            SequentialAnimation on opacity {
+              loops: Animation.Infinite
+              NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
+              NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
+            }
           }
         }
 
