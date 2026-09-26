@@ -148,6 +148,7 @@ ShellRoot {
 
   IpcHandler {
     target: "recordMenu"
+    function stop(): void { Recorder.stop() }
     function toggle(): void { const next = !box.recordMenuOpen; root.closeOverlays(); box.recordMenuOpen = next }
     function open(): void { root.closeOverlays(); box.recordMenuOpen = true }
     function hide(): void { box.recordMenuOpen = false }
@@ -429,6 +430,10 @@ function doctorReport(): string {
 
       readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen && !box.keybindViewer ? 1 : 0
 
+      // Readings (battery, volume, brightness, weather) collapse away when
+      // nothing is happening; the clock and the status chips stay.
+      readonly property bool barExpanded: box.hovered || !Config.barCollapseOnIdle
+
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : notificationModule.active ? 320
                      : controlCenter ? 410
@@ -483,7 +488,7 @@ function doctorReport(): string {
       }
 
       Behavior on implicitHeight { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
-      Behavior on implicitWidth { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
+      Behavior on implicitWidth { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
 
       MouseArea {
         anchors.fill: parent
@@ -608,10 +613,12 @@ function doctorReport(): string {
 
         Battery {
           id: batMod
+          visible: box.barExpanded
         }
 
         Volume {
           id: volumeModule
+          visible: box.barExpanded
           onVolumeChanged: {
             if (!box.controlCenter) box.activeOsd = "volume"
             osdHideTimer.interval = Config.osdDuration
@@ -633,6 +640,7 @@ function doctorReport(): string {
 
         RowLayout {
           id: barBrightnessRow
+          visible: box.barExpanded
           spacing: 4 * Config.paddingScale
           Text {
             text: brightnessModule.icon
@@ -657,11 +665,59 @@ function doctorReport(): string {
 
         WeatherIndicator {
           id: barWeatherIndicator
+          visible: box.barExpanded
           weatherFg: Theme.fg
           clickable: false
         }
 
+        Item {
+          visible: Recorder.active
+          Layout.preferredWidth: recordRow.implicitWidth
+          Layout.preferredHeight: recordRow.implicitHeight
+
+          RowLayout {
+            id: recordRow
+            anchors.fill: parent
+            spacing: 4 * Config.paddingScale
+
+            Rectangle {
+              Layout.preferredWidth: 7
+              Layout.preferredHeight: 7
+              radius: 4
+              color: "#ff453a"
+              Layout.alignment: Qt.AlignVCenter
+
+              SequentialAnimation on opacity {
+                loops: Animation.Infinite
+                NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
+                NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
+              }
+            }
+
+            Text {
+              text: Recorder.elapsedText
+              color: Theme.fg
+              font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
+            }
+
+            Text {
+              text: "\uf04d"
+              color: recordHover.hovered ? Theme.fg : Theme.fg5
+              font { family: Theme.nerdFontFamily; pixelSize: 9 * Config.pillScale }
+              Behavior on color { ColorAnimation { duration: 120 } }
+            }
+          }
+
+          HoverHandler { id: recordHover }
+          MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: Recorder.stop()
+          }
+        }
+
         RowLayout {
+          // a running timer is a status, so it survives the collapse
           visible: FocusTimer.running
           spacing: 4 * Config.paddingScale
 
@@ -1118,6 +1174,8 @@ function doctorReport(): string {
                 text: "Notifications (" + notificationModule.notifications.length + ")"
                 color: Theme.fg2
                 font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 0.5
                 anchors.left: parent.left
                 anchors.leftMargin: 12
                 anchors.verticalCenter: parent.verticalCenter

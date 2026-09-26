@@ -22,5 +22,6 @@
   "nightLightHighTemperature": 6500,
   "nightLightLatitude": 0,
   "nightLightLongitude": 0,
-  "slideshowIntervalMinutes": 30
+  "slideshowIntervalMinutes": 30,
+  "barCollapseOnIdle": true
 }
