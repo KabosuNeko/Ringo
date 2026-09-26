@@ -1,6 +1,7 @@
 #include "Tools.h"
 
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
 #include <QtGlobal>
@@ -24,6 +25,16 @@ bool Tools::fileExists(const QString &path) const {
     if (resolved.startsWith(QStringLiteral("~/")))
         resolved = QDir::homePath() + resolved.mid(1);
     return QFileInfo::exists(resolved);
+}
+
+QString Tools::readText(const QString &path) const {
+    QString resolved = path;
+    if (resolved.startsWith(QStringLiteral("~/")))
+        resolved = QDir::homePath() + resolved.mid(1);
+
+    QFile file(resolved);
+    if (!file.open(QIODevice::ReadOnly)) return QString();
+    return QString::fromUtf8(file.readAll());
 }
 
 QString Tools::version() const {

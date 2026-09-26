@@ -21,6 +21,7 @@ ShellRoot {
     box.wallpaperSwitcherOpen = false
     box.powerMenuOpen = false
     box.recordMenuOpen = false
+    box.keybindViewer = false
   }
 
   IpcHandler {
@@ -109,6 +110,18 @@ ShellRoot {
       return NightLightController.active
         ? `${NightLightController.temperature}K on ${NightLightController.outputs} output(s) · ${where}`
         : (NightLightController.error !== "" ? "error: " + NightLightController.error : "off")
+    }
+  }
+
+  IpcHandler {
+    target: "keybinds"
+    function toggle(): void { const next = !box.keybindViewer; root.closeOverlays(); box.keybindViewer = next }
+    function open(): void { root.closeOverlays(); box.keybindViewer = true }
+    function hide(): void { box.keybindViewer = false }
+    function search(query: string): void {
+      root.closeOverlays()
+      box.keybindViewer = true
+      if (keybindViewerLoader.item) keybindViewerLoader.item.setSearchText(query)
     }
   }
 
@@ -323,9 +336,9 @@ function doctorReport(): string {
   PanelWindow {
     id: panelWindow
     visible: !LockController.locked && !root.barHidden
-    readonly property bool overlayActive: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen
+    readonly property bool overlayActive: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer
     readonly property bool popupsOpen: typeof ccButtons !== "undefined" && (ccButtons.wifiPanelOpened || ccButtons.btPanelOpened)
-    readonly property bool fullKeyboardOverlay: box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen
+    readonly property bool fullKeyboardOverlay: box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer
     WlrLayershell.layer: overlayActive ? WlrLayershell.Overlay : WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
     WlrLayershell.keyboardFocus: popupsOpen
@@ -372,6 +385,7 @@ function doctorReport(): string {
       }
 
       property bool appLauncher: false
+      property bool keybindViewer: false
       property string pendingLauncherQuery: ""
       HoverHandler { id: boxHoverHandler; onHoveredChanged: box.hovered = hovered }
       property bool hovered: false
@@ -413,12 +427,13 @@ function doctorReport(): string {
 
       property bool cliphistPreviewing: false
 
-      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen ? 1 : 0
+      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen && !box.keybindViewer ? 1 : 0
 
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : notificationModule.active ? 320
                      : controlCenter ? 410
                      : appLauncher ? 420
+                     : keybindViewer ? 560
                      : wallpaperSwitcherOpen ? 600
                      : powerMenuOpen ? 400
                      : recordMenuOpen ? 360
@@ -435,6 +450,7 @@ function doctorReport(): string {
                    : cliphistOpen ? 270
                    : miniDashboard ? 160
                    : appLauncher ? 410
+                    : keybindViewer ? 400
                     : wallpaperSwitcherOpen ? 308
                     : powerMenuOpen ? 90
                     : recordMenuOpen ? 90
@@ -516,6 +532,10 @@ function doctorReport(): string {
           }
           if (box.appLauncher) {
             box.appLauncher = false
+            return
+          }
+          if (box.keybindViewer) {
+            if (mouse.button === Qt.LeftButton) box.keybindViewer = false
             return
           }
 
@@ -824,6 +844,39 @@ function doctorReport(): string {
           shown: box.appLauncher
           initialQuery: box.pendingLauncherQuery
           onCloseRequested: box.appLauncher = false
+        }
+      }
+
+      // searchable keybind list opens through IPC (Mod+/)
+      OverlaySlot {
+        open: box.keybindViewer
+        openHeight: box.implicitHeight - 40
+        widthInset: 24
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
+                 || box.appLauncher
+
+        Loader {
+          id: keybindViewerLoader
+          anchors.fill: parent
+          active: box.keybindViewer
+
+          sourceComponent: KeybindViewer {
+            shown: box.keybindViewer
+            onCloseRequested: box.keybindViewer = false
+          }
+          onLoaded: item.forceActiveFocus()
+        }
+
+        Connections {
+          target: box
+          function onKeybindViewerChanged() {
+            if (box.keybindViewer && keybindViewerLoader.item)
+              keybindViewerLoader.item.forceActiveFocus()
+          }
         }
       }
 

@@ -19,6 +19,9 @@ public:
     Q_INVOKABLE bool have(const QString &command) const;
     Q_INVOKABLE bool fileExists(const QString &path) const;
 
+    // File contents as UTF-8; empty when unreadable. `~` is expanded.
+    Q_INVOKABLE QString readText(const QString &path) const;
+
     // "Ringo 1.0.0 · Qt 6.11.2"
     Q_INVOKABLE QString version() const;
 };
