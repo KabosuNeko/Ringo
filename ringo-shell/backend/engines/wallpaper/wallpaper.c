@@ -23,6 +23,8 @@
 
 #include "wallpaper.h"
 
+#include <pthread.h>
+
 #include "stbi_alloc.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -415,6 +417,10 @@ static const struct wl_registry_listener registry_listener = {
 	.global_remove = noop, /* layer_surface_handle_closed */
 };
 
+/* The engine keeps its display, surfaces and image in file scope, so two
+ * runs must never overlap: a stopped engine can still be tearing down when
+ * the next one starts, and they would free each other's display. */
+static pthread_mutex_t g_run_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_stop_pipe[2] = { -1, -1 };
 /* A stop can arrive before the pipe exists (the host stops an engine that is
  * still starting up). It is remembered here and honoured at the next poll. */
@@ -482,10 +488,13 @@ ringo_wallpaper_run(const char *modeArg, const char *pathArg)
 	struct pollfd fds[2];
 	struct output *o, *tmp;
 
+	pthread_mutex_lock(&g_run_lock);
+
 	g_error[0] = '\0';
 	g_armed = true;
 	if (setjmp(g_fail) != 0) {
 		teardown();
+		pthread_mutex_unlock(&g_run_lock);
 		return -1;
 	}
 
@@ -635,5 +644,6 @@ prescan:
 	if (g_stop_pipe[0] >= 0) { close(g_stop_pipe[0]); g_stop_pipe[0] = -1; }
 	if (g_stop_pipe[1] >= 0) { close(g_stop_pipe[1]); g_stop_pipe[1] = -1; }
 	teardown();
+	pthread_mutex_unlock(&g_run_lock);
 	return 0;
 }

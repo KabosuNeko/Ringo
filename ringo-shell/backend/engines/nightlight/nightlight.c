@@ -24,6 +24,8 @@
 #include "str_vec.h"
 #include "nightlight.h"
 
+#include <pthread.h>
+
 #if defined(SPEEDRUN)
 static time_t start = 0, offset = 0, multiplier = 1000;
 static void init_time(void) {
@@ -77,6 +79,9 @@ static inline void adjust_timerspec(struct itimerspec *timerspec) {
 
 /* One engine per process: the shell runs a single ringo_nightlight_run() at a
  * time, and every piece of state below is reset by it. */
+/* One engine per process, and never two runs at once: the state below is
+ * shared, so an overlap would tear down the other run's display. */
+static pthread_mutex_t g_run_lock = PTHREAD_MUTEX_INITIALIZER;
 static int g_stop_pipe[2] = { -1, -1 };
 static int g_timer_fd = -1;
 /* A stop can arrive before the pipe exists (the host stops an engine that
@@ -1018,6 +1023,8 @@ int ringo_nightlight_run(const struct ringo_nightlight_options *options) {
 	};
 	int ret = EXIT_FAILURE;
 
+	pthread_mutex_lock(&g_run_lock);
+
 	// Reset everything a previous run may have left behind.
 	g_failed = false;
 	g_error[0] = '\0';
@@ -1048,6 +1055,7 @@ int ringo_nightlight_run(const struct ringo_nightlight_options *options) {
 	if (setjmp(g_fail_jump) != 0) {
 		engine_teardown();
 		str_vec_free(&config.output_names);
+		pthread_mutex_unlock(&g_run_lock);
 		return EXIT_FAILURE;
 	}
 
@@ -1089,5 +1097,6 @@ int ringo_nightlight_run(const struct ringo_nightlight_options *options) {
 
 	ret = wlrun(&config);
 	str_vec_free(&config.output_names);
+	pthread_mutex_unlock(&g_run_lock);
 	return ret;
 }
