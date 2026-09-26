@@ -105,6 +105,14 @@ ShellRoot {
     }
   }
 
+  // Scripts bound to keybinds post through here instead of spawning notify-send.
+  IpcHandler {
+    target: "notify"
+    function post(summary: string, body: string, icon: string, urgency: int): void {
+      Notifier.post(summary, body, icon, "Ringo", urgency)
+    }
+  }
+
   IpcHandler {
     target: "powerMenu"
     function toggle(): void { const next = !box.powerMenuOpen; root.closeOverlays(); box.powerMenuOpen = next }

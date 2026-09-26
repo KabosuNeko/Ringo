@@ -5,8 +5,14 @@
 # Modes: only-sound | micro | no-sound (args)
 # When called without arg and not recording, delegates to Quickshell RecordMenu.
 
+# Notifications go through the shell's own server when it is running.
+notify() { # summary, body, icon, urgency
+    "$HOME/.local/bin/ringo-shell" call notify post "$1" "$2" "$3" "$4" > /dev/null 2>&1 || \
+        notify-send -i "$3" "$1" "$2"
+}
+
 if ! command -v wl-screenrec > /dev/null 2>&1; then
-    notify-send -u critical "Recording System" "Error: wl-screenrec not installed." -i dialog-error
+    notify "Recording System" "Error: wl-screenrec not installed." dialog-error 2
     exit 1
 fi
 
@@ -20,7 +26,7 @@ stop_recording() {
         kill -INT "$PID" 2>/dev/null
         wait "$PID" 2>/dev/null
         rm -f "$PID_FILE"
-        notify-send -u normal "Recording System" "Saved to $SAVE_DIR" -i video-display
+        notify "Recording System" "Saved to $SAVE_DIR" video-display 1
         exit 0
     fi
 }
@@ -46,7 +52,7 @@ start_recording() {
     esac
 
     echo $! > "$PID_FILE"
-    notify-send "Recording System" "$MSG — press Mod+F11 again to stop" -i video-display
+    notify "Recording System" "$MSG — press Mod+F11 again to stop" video-display 1
     wait $!
     rm -f "$PID_FILE"
 }
