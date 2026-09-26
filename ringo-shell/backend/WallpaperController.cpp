@@ -4,15 +4,19 @@
 #include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QImage>
+#include <QImageReader>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
 #include <QRandomGenerator>
+#include <QScreen>
 #include <QThreadPool>
 #include <QTimer>
 #include <QUrl>
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <csignal>
 #include <memory>
@@ -54,26 +58,83 @@ QString stderrTail(const QByteArray &output) {
 
 /* The engine blocks in its own Wayland event loop, so it owns a thread. stop()
  * is asynchronous: it wakes the loop through the engine's self-pipe, and the
- * loop disconnects and returns by itself. */
+ * loop disconnects and returns by itself.
+ *
+ * The decode runs on this thread too: Qt is the process's only image decoder,
+ * and the engine takes the decoded pixels rather than a path. */
 class EngineThread final : public QThread {
 public:
     EngineThread(const QString &mode, const QString &path, QObject *parent = nullptr)
-        : QThread(parent), m_mode(mode.toUtf8()), m_path(path.toUtf8()) {}
+        : QThread(parent), m_mode(mode.toUtf8()), m_path(path) {}
 
     void stop() { ringo_wallpaper_stop(); }
     QString error() const { return m_error; }
 
 protected:
     void run() override {
-        // The QByteArrays keep the argv strings alive for the whole run.
+        QImageReader reader(m_path);
+        if (!reader.canRead()) {
+            m_error = QStringLiteral("cannot read %1: %2")
+                          .arg(m_path, reader.errorString());
+            return;
+        }
+
+        // tile repeats the image at its own size, so downscaling it would change
+        // what the mode means; every other mode scales per output anyway.
+        const bool nativePixels = m_mode == QByteArrayLiteral("tile");
+        const QSize screen = nativePixels ? QSize() : largestScreen();
+        const QSize full = reader.size();
+        if (screen.isValid() && full.width() > 0 && full.height() > 0) {
+            // Cover the largest screen like PreserveAspectCrop: everything
+            // smaller would be upscaled by the engine, everything larger would
+            // only make the shell hold pixels no output can show.
+            const double scale = std::max(double(screen.width()) / full.width(),
+                                          double(screen.height()) / full.height());
+            if (scale < 1.0)
+                reader.setScaledSize(QSize(std::max(1, int(std::ceil(full.width() * scale))),
+                                           std::max(1, int(std::ceil(full.height() * scale)))));
+        }
+
+        // m_image owns the pixels: the engine reads that buffer for the whole
+        // run, so it must outlive ringo_wallpaper_run() and is dropped right
+        // after it returns.
+        const QImage decoded = reader.read();
+        if (decoded.isNull()) {
+            m_error = QStringLiteral("cannot decode %1: %2")
+                          .arg(m_path, reader.errorString());
+            return;
+        }
+        m_image = decoded.convertToFormat(QImage::Format_RGBA8888);
+        if (m_image.isNull()) {
+            m_error = QStringLiteral("cannot convert %1 to RGBA8888")
+                          .arg(m_path);
+            return;
+        }
+
+        const struct ringo_wallpaper_image image = {
+            m_image.constBits(), m_image.width(), m_image.height()};
+
+        // The QByteArray keeps the mode string alive for the whole run.
         const int rc = ringo_wallpaper_run(m_mode.isEmpty() ? nullptr : m_mode.constData(),
-                                           m_path.constData());
+                                           &image);
+        m_image = QImage();
         if (rc != 0) m_error = QString::fromLocal8Bit(ringo_wallpaper_error());
     }
 
 private:
+    // The largest screen in device pixels. Empty when the shell reports no
+    // screens, in which case the image is decoded at its full size.
+    static QSize largestScreen() {
+        QSize largest;
+        for (const QScreen *screen : QGuiApplication::screens())
+            largest = largest.expandedTo(screen->geometry().size()
+                                             * screen->devicePixelRatio());
+        return largest;
+    }
+
     QByteArray m_mode;
-    QByteArray m_path;
+    QString m_path;
+    QImage m_image;
     QString m_error;
 };
 

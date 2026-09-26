@@ -160,7 +160,9 @@ Rectangle {
               source: wallUrl
               fillMode: Image.PreserveAspectCrop
               asynchronous: true
-              cache: true
+              // 37 thumbnails at 200x150 do not need to stay decoded once the
+              // switcher is closed; they reload on the next open.
+              cache: false
               sourceSize.width: 200
               sourceSize.height: 150
             }

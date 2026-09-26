@@ -26,7 +26,7 @@ One Quickshell process is the whole shell: bar, launcher, notification daemon, c
 
 - **Compositor** — [Niri](https://github.com/YaLTeR/niri), scrollable tiling.
 - **Shell** — `ringo-shell`, QML on Quickshell, plus the `IslandBackend` Qt module.
-- **Wallpaper** — `fill`, `fit`, `stretch`, `tile`, `spread`, or a solid colour; decoded and drawn by the shell.
+- **Wallpaper** — `fill`, `fit`, `stretch`, `tile` or `spread`; decoded by Qt and drawn in-process by the layer-shell engine.
 - **Night light** — sun-following colour temperature, applied through `wlr-gamma-control`.
 - **Terminal** — [foot](https://codeberg.org/dnkl/foot). **Login** — [ly](https://github.com/fairyglade/ly).
 - **Palette** — [pywal16](https://github.com/eylles/pywal16) generates `colors.json`, foot colours and GTK colours from the wallpaper.

@@ -1,9 +1,10 @@
 /* See LICENSE file for copyright and license details. */
-#include <byteswap.h>
-#include <dirent.h>
+/* Ringo's wallpaper engine: paints a caller-provided RGBA8 buffer across every
+ * wlr-layer-shell output, scaling it per output with stb_image_resize2. It
+ * decodes nothing -- the shell's Qt decoder owns that. */
 #include <errno.h>
 #include <fcntl.h>
-#include <libgen.h>
+#include <math.h>
 #include <poll.h>
 #include <setjmp.h>
 #include <stdarg.h>
@@ -12,8 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
@@ -25,9 +24,6 @@
 
 #include <pthread.h>
 
-#include "stbi_alloc.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize2.h"
 
@@ -64,17 +60,12 @@ static struct zwlr_layer_shell_v1 *layer_shell;
 static struct zxdg_output_manager_v1 *output_manager;
 static struct wl_list outputs;
 
+/* The caller's pixels (RGBA8, width * height * 4 bytes). They belong to the
+ * caller, are read-only to the engine, and stay valid for the whole run. */
 struct {
-	FILE *fp;
+	const unsigned char *pixels;
 	int width, height;
-	unsigned char *data;
 } image;
-
-/* scandir()'s array while a directory path is being resolved. It is run-scope
- * state so teardown() can release it even when a later step fails. */
-static struct dirent **namelist;
-
-static uint32_t color;
 
 static void image_fill(unsigned char *dst, struct output *output);
 static void (*image_modify)(unsigned char *, struct output *) = image_fill;
@@ -112,17 +103,10 @@ die(const char *fmt, ...)
 }
 
 static void
-image_color(unsigned char *dst, struct output *output)
-{
-	for (size_t i = 0; i < output->size; i += 4)
-		memcpy(dst + i, &color, 4);
-}
-
-static void
 image_stretch(unsigned char *dst, struct output *output)
 {
 	stbir_resize_uint8_linear(
-	  image.data, image.width, image.height, image.width * 4,
+	  image.pixels, image.width, image.height, image.width * 4,
 		dst, output->width, output->height, output->stride, 4);
 }
 
@@ -138,7 +122,7 @@ image_fit(unsigned char *dst, struct output *output)
 	crop.x = (output->width - crop.width) / 2;
 	crop.y = (output->height - crop.height) / 2;
 	stbir_resize_uint8_linear(
-	  image.data, image.width, image.height, image.width * 4,
+	  image.pixels, image.width, image.height, image.width * 4,
 		dst + crop.y * output->stride + crop.x * 4,
 		crop.width, crop.height, output->stride, 4);
 }
@@ -155,7 +139,7 @@ image_fill(unsigned char *dst, struct output *output)
 	crop.x = (image.width - crop.width) / 2;
 	crop.y = (image.height - crop.height) / 2;
 	stbir_resize_uint8_linear(
-	  image.data + crop.y * image.width * 4 + crop.x * 4,
+	  image.pixels + crop.y * image.width * 4 + crop.x * 4,
 	  crop.width, crop.height, image.width * 4,
 		dst, output->width, output->height, output->stride, 4);
 }
@@ -163,7 +147,8 @@ image_fill(unsigned char *dst, struct output *output)
 static void
 image_tile(unsigned char *dst, struct output *o)
 {
-	unsigned char *to, *src;
+	unsigned char *to;
+	const unsigned char *src;
 	uint16_t off_x, off_y, w, h;
 
 	/* implementation shamelessly stolen from xwallpaper, MIT:
@@ -174,7 +159,7 @@ image_tile(unsigned char *dst, struct output *o)
 			w = (off_x + image.width > o->width) ? o->width - off_x : image.width;
 			for (int y = 0; y < h; y++) {
 				to = dst + ((off_y + y) * o->stride);
-				src = image.data + (y * image.width * 4);
+				src = image.pixels + (y * image.width * 4);
 				memcpy(to + (off_x * 4), src, w * 4);
 			}
 		}
@@ -215,7 +200,7 @@ image_spread(unsigned char *dst, struct output *output)
 	crop.height = MIN(ceil(output->height * scale), image.height - crop.y);
 
 	stbir_resize_uint8_linear(
-		image.data + (crop.y * image.width + crop.x) * 4,
+		image.pixels + (crop.y * image.width + crop.x) * 4,
 		crop.width, crop.height, image.width * 4,
 		dst, output->width, output->height, output->stride, 4);
 }
@@ -301,12 +286,6 @@ layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *layer_s
 	if (output->configured && width == output->width && height == output->height)
 		return;
 
-	if (!image.data && image.fp) {
-		if (fseek(image.fp, 0, SEEK_SET) < 0) die("fseek:");
-		image.data = stbi_load_from_file(image.fp, &image.width, &image.height, NULL, 4);
-		if (!image.data) die("failed to load image: %s", stbi_failure_reason());
-	}
-
 	output->width = width;
 	output->height = height;
 	output->stride = width * 4;
@@ -319,13 +298,6 @@ layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *layer_s
 	wl_buffer_destroy(buffer);
 
 	output->configured = true;
-
-	if (!image.fp) return;
-	wl_list_for_each(output, &outputs, link)
-		if (!output->configured) return;
-
-	stbi_image_free(image.data);
-	image.data = NULL;
 }
 
 /* Destroys one output's Wayland objects (layer surface, surface, output) and
@@ -492,18 +464,6 @@ teardown(void)
 			output_destroy(o);
 		g_outputs_ready = false;
 	}
-	if (namelist) {
-		free(namelist);
-		namelist = NULL;
-	}
-	if (image.data) {
-		stbi_image_free(image.data);
-		image.data = NULL;
-	}
-	if (image.fp) {
-		fclose(image.fp);
-		image.fp = NULL;
-	}
 	if (display) {
 		wl_display_disconnect(display);
 		display = NULL;
@@ -531,18 +491,13 @@ ringo_wallpaper_stop(void)
 
 /* Blocks the calling thread until ringo_wallpaper_stop(), or until the
  * compositor goes away. `mode` may be NULL/empty for the default fill mode;
- * `path` is an image file, a directory or RRGGBB[AA]. Returns 0 after a clean
- * stop, or -1 with ringo_wallpaper_error() describing the failure. */
+ * `img` is the caller's RGBA8 buffer, which stays valid for the whole run and
+ * is never written to or freed here. Returns 0 after a clean stop, or -1 with
+ * ringo_wallpaper_error() describing the failure. */
 int
-ringo_wallpaper_run(const char *modeArg, const char *pathArg)
+ringo_wallpaper_run(const char *mode, const struct ringo_wallpaper_image *img)
 {
-	int argc = (modeArg && *modeArg && pathArg && *pathArg) ? 3 : 2;
-	char *argv[3];
-	int len;
-	char *mode = NULL, *path = NULL;
-	struct stat st;
 	struct pollfd fds[2];
-	struct output *o, *tmp;
 
 	pthread_mutex_lock(&g_run_lock);
 
@@ -562,79 +517,28 @@ ringo_wallpaper_run(const char *modeArg, const char *pathArg)
 	shm = NULL;
 	layer_shell = NULL;
 	output_manager = NULL;
-	image.fp = NULL;
-	image.data = NULL;
+	image.pixels = NULL;
 	image.width = 0;
 	image.height = 0;
-	namelist = NULL;
-	color = 0;
 	image_modify = image_fill;
 	wl_list_init(&outputs);
 	g_outputs_ready = true;
 
-	argv[0] = (char *)"ringo-wallpaper";
-	if (argc == 3) {
-		argv[1] = (char *)modeArg;
-		argv[2] = (char *)pathArg;
-	} else {
-		argv[1] = (char *)pathArg;
-	}
+	if (!img || !img->pixels || img->width <= 0 || img->height <= 0)
+		die("no image");
 
-	switch (argc) {
-	case 2:
-		path = argv[1];
-		if (path[0] == '#')
-			path++;
-		len = strlen(path);
-		if (len != 6 && len != 8) goto file;
-
-		color = strtoul(path, NULL, 16);
-		if (len == 6) color = (color << 8) | 0xFF;
-		/* for colorspace conversion in output_image_load */
-		color = bswap_32(color);
-
-		image_modify = image_color;
-		break;
-	case 3:;
-		struct dirent *name;
-		int dirn = 0;
-
-		mode = argv[1]; path = argv[2];
-mode:
+	if (mode && *mode) {
 		if (!strcmp(mode, "stretch")) image_modify = image_stretch;
 		else if (!strcmp(mode, "fit")) image_modify = image_fit;
 		else if (!strcmp(mode, "fill")) image_modify = image_fill;
 		else if (!strcmp(mode, "tile")) image_modify = image_tile;
 		else if (!strcmp(mode, "spread")) image_modify = image_spread;
-		else if (!namelist)
-			die("unknown image mode: %s", mode);
-		else goto prescan;
-
-file:
-		if (stat(path, &st) < 0) die("stat %s:", path);
-
-		if (S_ISDIR(st.st_mode)) {
-			srand((intptr_t)path | (unsigned int)time(NULL));
-scan:
-			if (chdir(path) < 0) die("chdir:"); // slower & easier than strncpy PATH_MAX
-			free(namelist);
-			namelist = NULL;
-			if ((dirn = scandir(".", &namelist, NULL, alphasort)) < 0) die("scandir:");
-			if (dirn < 3) die("no images");
-			name = namelist[2 + rand() % (dirn - 2)];
-			mode = basename((path = name->d_name));
-			if (argc == 2) goto mode;
-prescan:
-			if (name->d_type == DT_DIR) goto scan;
-		}
-
-		if (!(image.fp = fopen(path, "rb"))) die("fopen %s:", path);
-		free(namelist);
-		namelist = NULL;
-		break;
-	default:
-		die("usage: [fill|fit|spread|stretch|tile] filename|dir, or filename|dir|RRGGBB[AA]");
+		else die("unknown image mode: %s", mode);
 	}
+
+	image.pixels = img->pixels;
+	image.width = img->width;
+	image.height = img->height;
 
 	if (!(display = wl_display_connect(NULL)))
 		die("failed to connect to wayland");

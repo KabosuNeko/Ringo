@@ -30,7 +30,7 @@ State split (do not mix these):
 | :--- | :--- |
 | `home/.config/ringo-shell/` | The shell: `shell.qml`, panels, `Config.qml`, `Theme.qml` |
 | `ringo-shell/backend/` | C++ controllers, models and helpers |
-| `ringo-shell/backend/engines/wallpaper/` | Vendored wallpaper renderer (stb decode, layer-shell) |
+| `ringo-shell/backend/engines/wallpaper/` | Vendored wallpaper renderer (layer-shell; the shell's Qt decoder hands it pixels) |
 | `ringo-shell/backend/engines/nightlight/` | Vendored night-light engine (gamma ramp, sun math) |
 | `home/.config/niri/` | Compositor config: `config.kdl` includes `keybinds/rules/settings/autostart.kdl` |
 | `home/.local/bin/` | User scripts: `ringo-shell`, `record.sh`, `color-picker.sh`, `scratchpad.sh` |
