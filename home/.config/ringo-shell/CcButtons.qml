@@ -79,6 +79,8 @@ Item {
             text: "Wi-Fi"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -155,6 +157,8 @@ Item {
             text: "Bluetooth"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -236,6 +240,8 @@ Item {
             text: "Performance"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -302,6 +308,8 @@ Item {
             text: "Quiet Mode"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -367,6 +375,8 @@ Item {
             text: FocusTimer.mode === "work" ? "Focus" : "Break"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -448,6 +458,8 @@ Item {
             text: "Night Light"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font.capitalization: Font.AllUppercase
+            font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
           }

@@ -61,6 +61,8 @@ PanelWindow {
           font.family: Theme.fontFamily
           font.pixelSize: 12 * dpi
           font.weight: 500
+          font.capitalization: Font.AllUppercase
+          font.letterSpacing: 0.5
           Layout.leftMargin: 3 * dpi
           Layout.fillWidth: true
           elide: Text.ElideRight
@@ -171,6 +173,8 @@ PanelWindow {
                 color: weatherWindow.labelText
                 font.family: Theme.fontFamily
                 font.pixelSize: weatherWindow.fontSizeTiny * dpi
+                font.capitalization: Font.AllUppercase
+                font.letterSpacing: 0.5
                 Layout.alignment: Qt.AlignHCenter
               }
             }
@@ -241,6 +245,8 @@ PanelWindow {
               color: Theme.fg5
               font.family: Theme.fontFamily
               font.pixelSize: weatherWindow.fontSizeTiny * dpi
+              font.capitalization: Font.AllUppercase
+              font.letterSpacing: 0.5
               Layout.alignment: Qt.AlignHCenter
             }
 
