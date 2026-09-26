@@ -148,7 +148,6 @@ ShellRoot {
 
   IpcHandler {
     target: "recordMenu"
-    function stop(): void { Recorder.stop() }
     function toggle(): void { const next = !box.recordMenuOpen; root.closeOverlays(); box.recordMenuOpen = next }
     function open(): void { root.closeOverlays(); box.recordMenuOpen = true }
     function hide(): void { box.recordMenuOpen = false }
@@ -662,49 +661,18 @@ function doctorReport(): string {
           clickable: false
         }
 
-        Item {
+        Rectangle {
           visible: Recorder.active
-          Layout.preferredWidth: recordRow.implicitWidth
-          Layout.preferredHeight: recordRow.implicitHeight
+          Layout.preferredWidth: 7
+          Layout.preferredHeight: 7
+          radius: 4
+          color: "#ff453a"
+          Layout.alignment: Qt.AlignVCenter
 
-          RowLayout {
-            id: recordRow
-            anchors.fill: parent
-            spacing: 4 * Config.paddingScale
-
-            Rectangle {
-              Layout.preferredWidth: 7
-              Layout.preferredHeight: 7
-              radius: 4
-              color: "#ff453a"
-              Layout.alignment: Qt.AlignVCenter
-
-              SequentialAnimation on opacity {
-                loops: Animation.Infinite
-                NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
-                NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
-              }
-            }
-
-            Text {
-              text: Recorder.elapsedText
-              color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
-            }
-
-            Text {
-              text: "\uf04d"
-              color: recordHover.hovered ? Theme.fg : Theme.fg5
-              font { family: Theme.nerdFontFamily; pixelSize: 9 * Config.pillScale }
-              Behavior on color { ColorAnimation { duration: 120 } }
-            }
-          }
-
-          HoverHandler { id: recordHover }
-          MouseArea {
-            anchors.fill: parent
-            cursorShape: Qt.PointingHandCursor
-            onClicked: Recorder.stop()
+          SequentialAnimation on opacity {
+            loops: Animation.Infinite
+            NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
+            NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
           }
         }
 
