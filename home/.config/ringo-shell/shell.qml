@@ -656,6 +656,10 @@ function doctorReport(): string {
             color: "#ff453a"
 
             SequentialAnimation on opacity {
+              // An idle animation keeps the whole scene repainting at the
+              // monitor's rate even while the dot is invisible, so it only runs
+              // while a recording does.
+              running: Recorder.active
               loops: Animation.Infinite
               NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
               NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
