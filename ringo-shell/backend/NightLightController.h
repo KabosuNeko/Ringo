@@ -1,17 +1,17 @@
 #pragma once
-#include <QElapsedTimer>
 #include <QObject>
+#include <QProcess>
 #include <QString>
-#include <QThread>
+#include <QTimer>
 #include <QtQml/qqml.h>
 
-// Night light: warms the screen after sunset and cools it back during the day,
-// following the sun for the configured coordinates.
+// Night light: warms the screen after sunset and cools it back during the day.
 //
-// The gamma ramp is applied by the in-process engine
-// (backend/engines/nightlight/nightlight.c), which owns a Wayland connection and
-// therefore runs on its own thread. Changing any option restarts that thread
-// with the new values; the GUI thread is never blocked on it.
+// The gamma ramp is applied by the upstream `wlsunset` process, which owns its
+// own Wayland connection, so this controller only supervises it: one process,
+// the temperature read back from its stderr, and the manual override forwarded
+// as SIGUSR1 (wlsunset's own off -> high -> low cycle). Changing an option
+// restarts the process; the GUI thread is never blocked on it.
 class NightLightController final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -20,7 +20,6 @@ class NightLightController final : public QObject {
     Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged)
     Q_PROPERTY(bool active READ active NOTIFY activeChanged)
     Q_PROPERTY(int temperature READ temperature NOTIFY temperatureChanged)
-    Q_PROPERTY(int outputs READ outputs NOTIFY outputsChanged)
     Q_PROPERTY(double latitude READ latitude WRITE setLatitude NOTIFY latitudeChanged)
     Q_PROPERTY(double longitude READ longitude WRITE setLongitude NOTIFY longitudeChanged)
     Q_PROPERTY(int lowTemperature READ lowTemperature WRITE setLowTemperature NOTIFY lowTemperatureChanged)
@@ -37,7 +36,6 @@ public:
     bool enabled() const { return m_enabled; }
     bool active() const { return m_active; }
     int temperature() const { return m_temperature; }
-    int outputs() const { return m_outputs; }
     double latitude() const { return m_latitude; }
     double longitude() const { return m_longitude; }
     int lowTemperature() const { return m_lowTemperature; }
@@ -65,19 +63,18 @@ public:
     // Drops the explicit location, letting the automatic one take over again.
     Q_INVOKABLE void clearLocationOverride();
 
-    // Starts the engine when the night light is enabled. Safe to call twice.
+    // Starts the night light when it is enabled. Safe to call twice.
     Q_INVOKABLE void start();
-    // Disables the night light and stops the engine; the configuration is kept,
-    // so start() revives it.
+    // Disables the night light and stops the process; the configuration is
+    // kept, so start() revives it.
     Q_INVOKABLE void stop();
-    // Restarts the engine, re-reading the current configuration.
+    // Restarts the process, re-reading the current configuration.
     Q_INVOKABLE void reload();
 
 signals:
     void enabledChanged();
     void activeChanged();
     void temperatureChanged();
-    void outputsChanged();
     void latitudeChanged();
     void longitudeChanged();
     void lowTemperatureChanged();
@@ -88,22 +85,20 @@ signals:
     void errorChanged();
 
 private:
-    static void statusCallback(const struct ringo_nightlight_status *status, void *user);
-
     void setActive(bool active);
     void setTemperature(int kelvin);
-    void setOutputs(int outputs);
     void setError(const QString &error);
+    void setForceInternal(const QString &force);
 
     void startEngine();
     void stopEngine();
     void restartEngine();
-    void onEngineFinished(QThread *thread);
+    void readEngineOutput();
+    void applyForce();
 
     bool m_enabled = true;
     bool m_active = false;
     int m_temperature = 0;
-    int m_outputs = 0;
     double m_latitude = 11.0;
     double m_longitude = 105.0;
     int m_lowTemperature = 4000;
@@ -113,6 +108,8 @@ private:
     bool m_locationExplicit = false;
     QString m_error;
     int m_restarts = 0;
-    QElapsedTimer m_engineAlive;      // how long the current engine has been up
-    QThread *m_engineThread = nullptr; // resident night-light engine thread
+    bool m_stopping = false;
+    QString m_appliedForce = QStringLiteral("off"); // what wlsunset reported back
+    QProcess m_process;
+    QTimer m_restartTimer;
 };

@@ -18,8 +18,6 @@ find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
 
 set(WALLPAPER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/backend/engines/wallpaper)
 set(WALLPAPER_PROTO_DIR ${CMAKE_CURRENT_BINARY_DIR}/wallpaper-proto)
-set(NIGHTLIGHT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/backend/engines/nightlight)
-set(NIGHTLIGHT_PROTO_DIR ${CMAKE_CURRENT_BINARY_DIR}/nightlight-proto)
 
 function(ringo_protocol name xml out_dir)
     add_custom_command(
@@ -35,18 +33,15 @@ endfunction()
 ringo_protocol(xdg-shell-protocol ${WALLPAPER_DIR}/proto/stable/xdg-shell/xdg-shell.xml ${WALLPAPER_PROTO_DIR})
 ringo_protocol(xdg-output-unstable-v1-protocol ${WALLPAPER_DIR}/proto/unstable/xdg-output/xdg-output-unstable-v1.xml ${WALLPAPER_PROTO_DIR})
 ringo_protocol(wlr-layer-shell-unstable-v1-protocol ${WALLPAPER_DIR}/wlr-layer-shell-unstable-v1.xml ${WALLPAPER_PROTO_DIR})
-ringo_protocol(wlr-gamma-control-unstable-v1-client-protocol ${NIGHTLIGHT_DIR}/proto/wlr-gamma-control-unstable-v1.xml ${NIGHTLIGHT_PROTO_DIR})
 
 set_source_files_properties(backend/engines/wallpaper/wallpaper.c PROPERTIES COMPILE_DEFINITIONS "_GNU_SOURCE")
 
-# The engines include the generated protocol headers, so the generators must run
-# before they are compiled.
+# The wallpaper engine includes the generated protocol headers, so the
+# generators must run before it is compiled.
 set_property(SOURCE backend/engines/wallpaper/wallpaper.c APPEND PROPERTY OBJECT_DEPENDS
     ${WALLPAPER_PROTO_DIR}/xdg-shell-protocol.h
     ${WALLPAPER_PROTO_DIR}/xdg-output-unstable-v1-protocol.h
     ${WALLPAPER_PROTO_DIR}/wlr-layer-shell-unstable-v1-protocol.h)
-set_property(SOURCE backend/engines/nightlight/nightlight.c APPEND PROPERTY OBJECT_DEPENDS
-    ${NIGHTLIGHT_PROTO_DIR}/wlr-gamma-control-unstable-v1-client-protocol.h)
 
 qt_add_qml_module(IslandBackend
     URI IslandBackend
@@ -97,15 +92,11 @@ qt_add_qml_module(IslandBackend
         ${WALLPAPER_PROTO_DIR}/xdg-shell-protocol.c
         ${WALLPAPER_PROTO_DIR}/xdg-output-unstable-v1-protocol.c
         ${WALLPAPER_PROTO_DIR}/wlr-layer-shell-unstable-v1-protocol.c
-        backend/engines/nightlight/nightlight.c
-        backend/engines/nightlight/color.c
-        backend/engines/nightlight/str_vec.c
-        ${NIGHTLIGHT_PROTO_DIR}/wlr-gamma-control-unstable-v1-client-protocol.c
 )
 
 target_compile_definitions(IslandBackend PRIVATE RINGO_VERSION="${PROJECT_VERSION}")
 
-target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend ${WALLPAPER_DIR} ${WALLPAPER_PROTO_DIR} ${NIGHTLIGHT_DIR} ${NIGHTLIGHT_PROTO_DIR})
+target_include_directories(IslandBackend PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/backend ${WALLPAPER_DIR} ${WALLPAPER_PROTO_DIR})
 
 target_link_libraries(IslandBackend PRIVATE Qt6::Core Qt6::Gui Qt6::DBus Qt6::Qml Qt6::Network pam PkgConfig::WAYLAND_CLIENT)
 

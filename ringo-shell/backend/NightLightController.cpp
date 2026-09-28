@@ -1,96 +1,29 @@
 #include "NightLightController.h"
 
-#include "nightlight.h"
-
 #include "StateStore.h"
 
-#include <QElapsedTimer>
-#include <QMetaObject>
-#include <QTimer>
+#include <QStandardPaths>
+#include <QStringList>
 
-#include <functional>
-
-
+#include <csignal>
+#include <unistd.h>
+#ifdef Q_OS_LINUX
+#include <sys/prctl.h>
+#endif
 
 namespace {
-constexpr int kEngineWaitMs = 2000;
-constexpr int kStopAttempts = 4;
-constexpr int kEngineRestartDelayMs = 1000;
-constexpr int kTwilightElevation = -6.0;
-constexpr int kDaylightElevation = 3.0;
+const QString kBinary = QStringLiteral("wlsunset");
+const QString kEnabledKey = QStringLiteral("nightlight.enabled");
+const QString kForceKey = QStringLiteral("nightlight.force");
+constexpr int kRestartDelayMs = 1000;
+constexpr int kTerminateWaitMs = 500;
 
-// A QThread must never be destroyed while it is still running: Qt treats that
-// as fatal. Ask the engine to return, wait, and if it refuses, hand the object
-// over to the event loop instead of deleting it here.
-bool stopThread(QThread *thread, const std::function<void()> &requestStop) {
-    for (int attempt = 0; attempt < kStopAttempts; ++attempt) {
-        requestStop();
-        if (thread->wait(kEngineWaitMs)) {
-            thread->deleteLater();
-            return true;
-        }
-    }
-
-    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->setParent(nullptr);
-    return false;
-}
-
-// The engine blocks in its own Wayland event loop, so it needs a thread of its
-// own; changing any option replaces the thread.
-class NightLightThread final : public QThread {
-public:
-    NightLightThread(double latitude, double longitude, int lowTemperature,
-                     int highTemperature, double gamma, int forced, QObject *parent)
-        : QThread(parent)
-        , m_latitude(latitude)
-        , m_longitude(longitude)
-        , m_lowTemperature(lowTemperature)
-        , m_highTemperature(highTemperature)
-        , m_gamma(gamma)
-        , m_forced(forced) {}
-
-    void run() override {
-        struct ringo_nightlight_options options = {};
-        options.latitude = m_latitude;
-        options.longitude = m_longitude;
-        options.low_temp = m_lowTemperature;
-        options.high_temp = m_highTemperature;
-        options.gamma = m_gamma;
-        options.elevation_twilight = kTwilightElevation;
-        options.elevation_daylight = kDaylightElevation;
-        options.forced = m_forced;
-        options.output_names = nullptr;
-        options.manual_sunrise = -1;
-        options.manual_sunset = -1;
-        options.manual_duration = 0;
-
-        if (ringo_nightlight_run(&options) != 0)
-            m_error = QString::fromLocal8Bit(ringo_nightlight_error());
-    }
-
-    QString error() const { return m_error; }
-
-private:
-    double m_latitude;
-    double m_longitude;
-    int m_lowTemperature;
-    int m_highTemperature;
-    double m_gamma;
-    int m_forced;
-    QString m_error;
-};
-
-int forcedFromName(const QString &force) {
+// wlsunset cycles its manual override on SIGUSR1: off -> high -> low -> off.
+int forceIndex(const QString &force) {
     if (force == QLatin1String("high")) return 1;
     if (force == QLatin1String("low")) return 2;
     return 0;
 }
-} // namespace
-
-namespace {
-const QString kEnabledKey = QStringLiteral("nightlight.enabled");
-const QString kForceKey = QStringLiteral("nightlight.force");
 } // namespace
 
 NightLightController::NightLightController(QObject *parent) : QObject(parent) {
@@ -99,6 +32,40 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
     m_enabled = StateStore::instance().get(kEnabledKey, true).toBool();
     const QString force = StateStore::instance().get(kForceKey).toString();
     if (force == QLatin1String("high") || force == QLatin1String("low")) m_force = force;
+
+    // wlsunset reports the applied temperature on stderr; readLine() needs the
+    // read channel pointed at it.
+    m_process.setReadChannel(QProcess::StandardError);
+
+    m_restartTimer.setSingleShot(true);
+    m_restartTimer.setInterval(kRestartDelayMs);
+    connect(&m_restartTimer, &QTimer::timeout, this, [this] {
+        if (m_enabled) startEngine();
+    });
+
+    connect(&m_process, &QProcess::readyReadStandardError, this, &NightLightController::readEngineOutput);
+    connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        if (error == QProcess::FailedToStart) {
+            setActive(false);
+            setError(QStringLiteral("could not start %1 (install it with: pacman -S %1)").arg(kBinary));
+        }
+    });
+    connect(&m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
+        setActive(false);
+        setTemperature(0);
+        if (m_stopping || !m_enabled) return;
+
+        // A compositor restart or a killed process ends wlsunset; try once more
+        // before reporting, so a transient failure does not leave the screen cold.
+        if (m_restarts < 1) {
+            m_restarts++;
+            m_restartTimer.start();
+            return;
+        }
+        setError(status == QProcess::CrashExit
+                     ? QStringLiteral("%1 crashed (signal)").arg(kBinary)
+                     : QStringLiteral("%1 exited with code %2").arg(kBinary).arg(code));
+    });
 }
 
 NightLightController::~NightLightController() {
@@ -117,16 +84,15 @@ void NightLightController::setTemperature(int kelvin) {
     emit temperatureChanged();
 }
 
-void NightLightController::setOutputs(int outputs) {
-    if (m_outputs == outputs) return;
-    m_outputs = outputs;
-    emit outputsChanged();
-}
-
 void NightLightController::setError(const QString &error) {
     if (m_error == error) return;
     m_error = error;
     emit errorChanged();
+}
+
+void NightLightController::setForceInternal(const QString &force) {
+    if (m_appliedForce == force) return;
+    m_appliedForce = force;
 }
 
 void NightLightController::setEnabled(bool enabled) {
@@ -216,15 +182,15 @@ void NightLightController::setForce(const QString &force) {
     m_force = normalized;
     emit forceChanged();
     StateStore::instance().set(kForceKey, normalized);
-    restartEngine();
+    applyForce();
 }
 
 void NightLightController::start() {
     // Called at startup: the toggle the UI left behind is restored from the
-    // state store, so this only has to bring the engine up.
+    // state store, so this only has to bring the process up.
     m_restarts = 0;
     if (!m_enabled) return;
-    if (!m_engineThread) startEngine();
+    if (m_process.state() == QProcess::NotRunning) startEngine();
 }
 
 void NightLightController::stop() {
@@ -243,93 +209,100 @@ void NightLightController::restartEngine() {
 }
 
 void NightLightController::startEngine() {
-    stopEngine(); // a replaced engine is not an unexpected exit
+    stopEngine();
 
-    ringo_nightlight_set_status_callback(&NightLightController::statusCallback, this);
-
-    auto *thread = new NightLightThread(m_latitude, m_longitude, m_lowTemperature,
-                                        m_highTemperature, m_gamma, forcedFromName(m_force), this);
-    m_engineThread = thread;
-
-    connect(thread, &QThread::started, this, [this, thread] {
-        if (thread != m_engineThread) return;
-        m_engineAlive.start();
-        setError(QString());
-    });
-    connect(thread, &QThread::finished, this, [this, thread] { onEngineFinished(thread); });
-
-    thread->start();
-}
-
-void NightLightController::onEngineFinished(QThread *thread) {
-    if (thread != m_engineThread) {
-        // A replaced engine: stopEngine() detached it before waking it, so this
-        // exit is expected and must not touch the engine that replaced it.
-        if (thread) thread->deleteLater();
+    // wlsunset ships in /usr/sbin on some builds, which a desktop session's PATH
+    // does not always carry.
+    const QString binary = QStandardPaths::findExecutable(
+        kBinary, {QStringLiteral("/usr/local/bin"), QStringLiteral("/usr/bin"), QStringLiteral("/usr/sbin")});
+    if (binary.isEmpty()) {
+        setError(QStringLiteral("%1 is not installed (pacman -S %1)").arg(kBinary));
         return;
     }
 
-    const QString engineError =
-        thread ? static_cast<NightLightThread *>(thread)->error() : QString();
-    if (thread) thread->deleteLater();
-    m_engineThread = nullptr;
-    setActive(false);
-    setOutputs(0);
+    // wlsunset follows the sun for the configured coordinates, or forces one
+    // temperature when the override is on (SIGUSR1 after the start).
+    QStringList args;
+    args << "-t" << QString::number(m_lowTemperature)
+         << "-T" << QString::number(m_highTemperature)
+         << "-g" << QString::number(m_gamma, 'f', 3)
+         << "-l" << QString::number(m_latitude, 'f', 4)
+         << "-L" << QString::number(m_longitude, 'f', 4);
 
-    if (!m_enabled) return;
-
-    // A compositor restart or a protocol error kills the engine; try once more
-    // before reporting, so a transient failure does not leave the screen cold.
-    if (m_restarts < 1) {
-        m_restarts++;
-        QTimer::singleShot(kEngineRestartDelayMs, this, [this] {
-            if (!m_engineThread && m_enabled) startEngine();
-        });
-        return;
-    }
-
-    setError(engineError.isEmpty()
-                 ? QStringLiteral("the night light engine stopped unexpectedly")
-                 : QStringLiteral("the night light engine failed: %1").arg(engineError));
+    m_stopping = false;
+    m_appliedForce = QStringLiteral("off"); // a fresh process starts unforced
+    // Without this a shell restart would leave the old wlsunset alive, and the
+    // two gamma-control clients would fight over the same outputs.
+#ifdef Q_OS_LINUX
+    m_process.setChildProcessModifier([] { prctl(PR_SET_PDEATHSIG, SIGTERM); });
+#endif
+    m_process.setProgram(binary);
+    m_process.setArguments(args);
+    m_process.start();
 }
 
 void NightLightController::stopEngine() {
-    auto *thread = static_cast<NightLightThread *>(m_engineThread);
-    if (!thread) return;
+    if (m_process.state() == QProcess::NotRunning) return;
 
-    // Detach first: the exit of a replaced engine is not an unexpected one, so
-    // its finished handler must not run the supervision path.
-    m_engineThread = nullptr;
+    m_stopping = true;
+    m_process.terminate();
+    if (!m_process.waitForFinished(kTerminateWaitMs)) {
+        m_process.kill();
+        m_process.waitForFinished(kTerminateWaitMs);
+    }
+    m_stopping = false;
     setActive(false);
-    setOutputs(0);
+    setTemperature(0);
+}
 
-    if (!stopThread(thread, [] { ringo_nightlight_stop(); })) {
-        setError(QStringLiteral(
-            "the night light engine did not stop; its thread is left to finish on its own"));
+void NightLightController::applyForce() {
+    if (m_process.state() != QProcess::Running) return;
+
+    // Walk wlsunset's own cycle until it reports the requested state.
+    const int steps = (forceIndex(m_force) - forceIndex(m_appliedForce) + 3) % 3;
+    for (int i = 0; i < steps; ++i) {
+        ::kill(static_cast<pid_t>(m_process.processId()), SIGUSR1);
     }
 }
 
-void NightLightController::statusCallback(const struct ringo_nightlight_status *status,
-                                          void *user) {
-    auto *self = static_cast<NightLightController *>(user);
-    if (self == nullptr) return;
+void NightLightController::readEngineOutput() {
+    while (m_process.canReadLine()) {
+        const QString line = QString::fromLocal8Bit(m_process.readLine()).trimmed();
+        if (line.isEmpty()) continue;
 
-    // Called from the engine thread; the engine reports on every ramp it sets.
-    const int kelvin = status->temperature;
-    const int outputs = status->outputs;
-    QMetaObject::invokeMethod(
-        self,
-        [self, kelvin, outputs] {
-            // A report from an engine that has already been replaced or stopped
-            // must not resurrect `active`.
-            if (!self->m_engineThread) return;
-            self->setActive(true);
-            self->setTemperature(kelvin);
-            self->setOutputs(outputs);
-            self->setError(outputs > 0
-                               ? QString()
-                               : QStringLiteral("no output accepted the gamma ramp "
-                                                "(another gamma-control client may hold it)"));
-        },
-        Qt::QueuedConnection);
+        const QString temperaturePrefix = QStringLiteral("setting temperature to ");
+        if (line.startsWith(temperaturePrefix)) {
+            const QString kelvin = line.mid(temperaturePrefix.size()).section(QLatin1Char(' '), 0, 0);
+            bool ok = false;
+            const int value = kelvin.toInt(&ok);
+            if (ok) {
+                setTemperature(value);
+                setActive(true);
+                setError(QString());
+                // Only now is the signal handler installed: sending SIGUSR1
+                // earlier would kill the process with the default action.
+                if (m_force != m_appliedForce) applyForce();
+            }
+            continue;
+        }
+
+        if (line.startsWith(QLatin1String("forcing high temperature"))) {
+            setForceInternal(QStringLiteral("high"));
+            continue;
+        }
+        if (line.startsWith(QLatin1String("forcing low temperature"))) {
+            setForceInternal(QStringLiteral("low"));
+            continue;
+        }
+        if (line.startsWith(QLatin1String("disabling forced temperature"))) {
+            setForceInternal(QStringLiteral("off"));
+            continue;
+        }
+
+
+        if (line.contains(QLatin1String("failed")) || line.contains(QLatin1String("could not"))
+            || line.contains(QLatin1String("must be"))) {
+            setError(line);
+        }
+    }
 }

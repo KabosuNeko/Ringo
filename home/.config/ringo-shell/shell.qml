@@ -108,7 +108,7 @@ ShellRoot {
       const where = `${NightLightController.locationExplicit ? "pinned" : "auto"} `
         + `${NightLightController.latitude.toFixed(2)},${NightLightController.longitude.toFixed(2)}`
       return NightLightController.active
-        ? `${NightLightController.temperature}K on ${NightLightController.outputs} output(s) · ${where}`
+        ? `${NightLightController.temperature}K · ${where}`
         : (NightLightController.error !== "" ? "error: " + NightLightController.error : "off")
     }
   }
@@ -250,8 +250,8 @@ function doctorReport(): string {
   out.push("")
   out.push("[night light] " + (nl.enabled ? "enabled" : "disabled")
            + (nl.force !== "off" ? " · forced " + nl.force : ""))
-  out.push("  engine: " + (nl.active ? "active, " + nl.temperature + "K on " + nl.outputs + " output(s)"
-                                      : nl.error.length > 0 ? "unavailable" : "stopped"))
+  out.push("  wlsunset: " + (nl.active ? "active, " + nl.temperature + "K"
+                                     : nl.error.length > 0 ? "unavailable" : "stopped"))
   out.push("  location: " + (nl.locationExplicit ? "pinned" : "auto") + " "
            + nl.latitude.toFixed(2) + "," + nl.longitude.toFixed(2)
            + " · " + nl.lowTemperature + "K night / " + nl.highTemperature + "K day")
@@ -282,7 +282,8 @@ function doctorReport(): string {
   const problems = []
   if (missingRequired.length > 0) problems.push(missingRequired.length + " required tool(s) missing")
   if (wall.error.length > 0) problems.push("wallpaper: " + wall.error)
-  if (nl.enabled && nl.outputs === 0) problems.push("night light: no output accepted the ramp")
+  if (nl.enabled && !nl.active && nl.error === "")
+    problems.push("night light: enabled but wlsunset is not running")
   else if (nl.enabled && nl.error.length > 0) problems.push("night light: " + nl.error)
   out.push("")
   out.push(problems.length === 0 ? "verdict: ok" : "verdict: " + problems.join(" | "))

@@ -20,14 +20,14 @@
 
 ---
 
-One Quickshell process is the whole shell: bar, launcher, notification daemon, clipboard history, control center, mini dashboard, OSDs, lock screen and wallpaper. A C++ backend (`IslandBackend`) talks to D-Bus directly and runs two Wayland clients **inside that process** — a layer-shell wallpaper renderer and a gamma-ramp night light — so there is no helper daemon to supervise.
+One Quickshell process is the whole shell: bar, launcher, notification daemon, clipboard history, control center, mini dashboard, OSDs, lock screen and wallpaper. A C++ backend (`IslandBackend`) talks to D-Bus directly and runs a layer-shell wallpaper client **inside that process**; the night light is [`wlsunset`](https://git.sr.ht/~kennylevinsen/wlsunset), spawned and watched by the backend.
 
 ## Core Components
 
 - **Compositor** — [Niri](https://github.com/YaLTeR/niri), scrollable tiling.
 - **Shell** — `ringo-shell`, QML on Quickshell, plus the `IslandBackend` Qt module.
 - **Wallpaper** — `fill`, `fit`, `stretch`, `tile` or `spread`; decoded by Qt and drawn in-process by the layer-shell engine.
-- **Night light** — sun-following colour temperature, applied through `wlr-gamma-control`.
+- **Night light** — sun-following colour temperature, applied by `wlsunset` through `wlr-gamma-control`.
 - **Terminal** — [foot](https://codeberg.org/dnkl/foot). **Login** — [ly](https://github.com/fairyglade/ly).
 - **Palette** — [pywal16](https://github.com/eylles/pywal16) generates `colors.json`, foot colours and GTK colours from the wallpaper.
 - **Themes** — Gruvbox GTK/icon themes, Adwaita cursors (see `pkg.txt`).
@@ -127,7 +127,7 @@ ringo-shell call lock lock                         # or: unlock
 | :--- | :--- |
 | `home/` | GNU Stow package: `~/.config/{niri,ringo-shell,foot,fish,gtk-3.0,…}` and `~/.local/bin` |
 | `ringo-shell/backend/` | C++ controllers and models (`IslandBackend`) |
-| `ringo-shell/backend/engines/` | Vendored wallpaper and night-light engines, adapted to run in-process |
+| `ringo-shell/backend/engines/` | Vendored wallpaper engine, adapted to run in-process |
 | `home/.local/bin/ringo-shell` | Launcher and IPC client |
 | `scripts/`, `docs/` | Documentation generator and its output |
 | `install.sh`, `pkg.txt` | Installer and package manifest |
@@ -135,14 +135,13 @@ ringo-shell call lock lock                         # or: unlock
 
 ## Credits
 
-Two engines are vendored and adapted to run inside the shell:
+One engine is vendored and adapted to run inside the shell; the night light uses the upstream `wlsunset` package:
 
 | Component | Author | License | Where |
 | :--- | :--- | :--- | :--- |
 | [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer |
-| [wlsunset](https://git.sr.ht/~kennylevinsen/wlsunset) | Kenny Levinsen | MIT | `ringo-shell/backend/engines/nightlight/` — gamma ramp and sun-position math |
 
-Their license texts ship with the code: `ringo-shell/backend/engines/wallpaper/LICENSE` and `ringo-shell/backend/engines/nightlight/LICENSE`.
+Its license text ships with the code: `ringo-shell/backend/engines/wallpaper/LICENSE`.
 
 ## Related Configurations
 

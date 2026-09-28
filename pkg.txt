@@ -3,6 +3,7 @@ bluez
 bluez-utils
 power-profiles-daemon
 quickshell
+wlsunset
 foot
 firefox
 ly

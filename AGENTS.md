@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Personal Arch + Niri (Wayland) desktop configuration. One Quickshell process draws the bar, panels, launcher and lock screen; a Qt/C++ backend (`IslandBackend`) owns D-Bus integration and runs two Wayland engines **inside that same process** (a layer-shell wallpaper renderer and a gamma-ramp night light), so there is no helper daemon to supervise.
+Personal Arch + Niri (Wayland) desktop configuration. One Quickshell process draws the bar, panels, launcher and lock screen; a Qt/C++ backend (`IslandBackend`) owns D-Bus integration and runs a layer-shell wallpaper engine **inside that same process**, so there is no wallpaper daemon to supervise; the night light is the `wlsunset` process the backend spawns and watches.
 
 ## Architecture & Data Flow
 
@@ -10,13 +10,13 @@ Three layers, one process:
 
 1. **QML** (`home/.config/ringo-shell/*.qml`) — an implicit Quickshell module. `shell.qml` is the root: it wires the controllers, hosts every overlay, and declares the IPC surface.
 2. **C++ controllers** (`ringo-shell/backend/*.{h,cpp}`) — `QML_ELEMENT` + `QML_SINGLETON` objects, created lazily by the QML engine on the GUI thread. They read D-Bus signals, spawn `QProcess` helpers, and expose the result as properties.
-3. **C engines** (`ringo-shell/backend/engines/{wallpaper,nightlight}/`) — vendored upstream sources adapted to run on their own `QThread`. Each blocks in its own Wayland event loop and is started/stopped by its controller.
+3. **C engine** (`ringo-shell/backend/engines/wallpaper/`) — a vendored upstream source adapted to run on its own `QThread`. It blocks in its own Wayland event loop and is started/stopped by its controller.
 
 Data flow:
 
 - D-Bus / PipeWire / UPower → controller → `Q_PROPERTY` + `xChanged` → QML.
 - QML action → `Q_INVOKABLE` on a controller, or `Quickshell.execDetached([...])` for a real program.
-- Controller → `QThreadPool` for decode/blur/PAM, → `QThread` for the two engines.
+- Controller → `QThreadPool` for decode/blur/PAM, → `QThread` for the wallpaper engine, → `QProcess` for `wlsunset`.
 - Shell → `IpcHandler` targets → `ringo-shell call <target> <fn>` from keybinds and scripts.
 
 State split (do not mix these):
@@ -31,7 +31,7 @@ State split (do not mix these):
 | `home/.config/ringo-shell/` | The shell: `shell.qml`, panels, `Config.qml`, `Theme.qml` |
 | `ringo-shell/backend/` | C++ controllers, models and helpers |
 | `ringo-shell/backend/engines/wallpaper/` | Vendored wallpaper renderer (layer-shell; the shell's Qt decoder hands it pixels) |
-| `ringo-shell/backend/engines/nightlight/` | Vendored night-light engine (gamma ramp, sun math) |
+| `home/.config/niri/autostart.kdl` | What starts with the session; the night light is started by `NightLightController`, not from here |
 | `home/.config/niri/` | Compositor config: `config.kdl` includes `keybinds/rules/settings/autostart.kdl` |
 | `home/.local/bin/` | User scripts: `ringo-shell`, `record.sh`, `color-picker.sh`, `scratchpad.sh` |
 | `scripts/` | `gen-keybinds-doc.sh` (docs generator + `--check`) |
@@ -78,9 +78,9 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 - Surface failures, do not swallow them: a `QString error` property (wallpaper, night light) or a model `errorMessage`. `Notifier` posts user-visible notifications through the shell's own server — no `notify-send` process.
 - No polling loops. Timers only run while their UI is on screen (telemetry) or on a long interval (weather, 1 h).
 - Anything `new`ed gets a parent, or a cleanup path on every exit — including `errorOccurred`, not only `finished`.
-- Async work: D-Bus signals where available, `QProcess` for CLI tools, `QThreadPool` for CPU work, `QThread` only for the two engines.
+- Async work: D-Bus signals where available, `QProcess` for CLI tools (including `wlsunset`), `QThreadPool` for CPU work, `QThread` only for the wallpaper engine.
 
-**C engines** (read the file header first, they are ports)
+**The C engine** (read the file header first, it is a port)
 
 - Tabs, `static` file-scope state, reset at the top of every `run()`.
 - Failure is `die()`/`engine_failf()` → `longjmp` to `run()`; **never** `exit()`, `abort()` or `assert()` — the engine is a guest in the shell process.
@@ -121,7 +121,7 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 ## Runtime/Tooling Preferences
 
 - **Arch Linux only**, **Niri** compositor, **Quickshell 0.3.x**; no X11 fallback, no other distro path.
-- Qt 6 (`Core Gui DBus Qml Network`), CMake ≥ 3.16, C++17 for the backend and **C11** for the engines (upstream relies on pre-C23 `()` declarations — do not bump the standard).
+- Qt 6 (`Core Gui DBus Qml Network`), CMake ≥ 3.16, C++17 for the backend and **C11** for the wallpaper engine (upstream relies on pre-C23 `()` declarations — do not bump the standard).
 - Build deps: `wayland-scanner`, `wayland-client` (pkg-config), plus the runtime tools listed in `pkg.txt` (`wal`, `cliphist`, `wl-clipboard`, `wl-screenrec`, `foot`, `niri`, `qs`, …). `ringo-shell call doctor check` reports which of them are missing and whether they are required.
 - Deployment is GNU Stow (`home/` → `$HOME`); the compiled plugin is copied outside Stow into `~/.config/ringo-shell/IslandBackend/`.
 - Scripts: POSIX `sh` when they must run anywhere (`record.sh`), bash otherwise, Python 3 for `scratchpad.sh` (despite the `.sh` name). They prefer `ringo-shell call notify post …` and fall back to `notify-send`.
@@ -132,20 +132,23 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 There is **no automated test suite** — no `tests/`, no CTest registration, no `add_test()` (see `ringo-shell/CMakeLists.txt`). Verification has three layers:
 
 1. **CI** (`.github/workflows/build.yml`): builds the backend on Ubuntu, `sh -n install.sh`, `shellcheck --severity=warning` over POSIX-shebang scripts, and `scripts/gen-keybinds-doc.sh --check`. It catches compile breaks, shell syntax, and stale generated docs.
-2. **Runtime self-check**: `ringo-shell call doctor check` prints both engines' state, the palette/state files, and every external tool, with a `verdict:` line. It has caught real bugs (a night light that held no output, a dead weather refresh) — run it after any backend change.
+2. **Runtime self-check**: `ringo-shell call doctor check` prints the wallpaper engine's state, the night light's, , the palette/state files, and every external tool, with a `verdict:` line. It has caught real bugs (a night light that held no output, a dead weather refresh) — run it after any backend change.
 3. **Manual smoke**: build → deploy → restart → check the log for `ERROR` → look at the surface (a screenshot; `niri msg action screenshot-screen`) → exercise the IPC command you touched. Never claim a UI or engine change works without having seen the surface or the reported state.
 
-To test a C engine without the shell, compile it with the generated protocol into a small `main()` that calls `ringo_*_run()` and stops it from a second thread:
+To test the wallpaper engine without the shell, compile it with the generated protocols into a small `main()` that fills an RGBA buffer, calls `ringo_wallpaper_run()` and stops it from a second thread:
 
 ```sh
-SRC=ringo-shell/backend/engines/nightlight
-wayland-scanner client-header $SRC/proto/wlr-gamma-control-unstable-v1.xml wlr-gamma-control-unstable-v1-client-protocol.h
-wayland-scanner private-code  $SRC/proto/wlr-gamma-control-unstable-v1.xml wlr-gamma-control-unstable-v1-protocol.c
-gcc -std=gnu11 -O2 -Wall -Wextra -c $SRC/nightlight.c $SRC/color.c $SRC/str_vec.c \
-    wlr-gamma-control-unstable-v1-protocol.c harness.c -I$SRC -I.
-gcc -o harness *.o -lm -lwayland-client
+SRC=ringo-shell/backend/engines/wallpaper
+wayland-scanner client-header $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol-client-protocol.h
+wayland-scanner private-code  $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol-protocol.c
+wayland-scanner client-header $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol-client-protocol.h
+wayland-scanner private-code  $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol-protocol.c
+wayland-scanner client-header $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol-client-protocol.h
+wayland-scanner private-code  $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol-protocol.c
+gcc -std=gnu11 -O2 -Wall -Wextra -D_GNU_SOURCE -c $SRC/wallpaper.c *-protocol.c harness.c -I$SRC -I.
+gcc -o harness *.o -lwayland-client -lm
 ```
 
-Useful invariants for such a harness: three sequential runs in one process must each return 0; a run started after a stop must not exit immediately; an invalid option must return -1 with a message instead of killing the process.
+Useful invariants for such a harness: three sequential runs in one process must each return 0; a run started after a stop must not exit immediately; a NULL image or an unknown mode must return -1 with a message instead of killing the process.
 
-What a future suite should cover, if one is added (wire it as CTest in `ringo-shell/CMakeLists.txt`): the engines' run/stop/re-run contract and failure paths, the wallpaper scaling modes, the night-light sun math for fixed coordinates, and the IPC surface (target + function names) against `docs/KEYBINDS.md`.
+What a future suite should cover, if one is added (wire it as CTest in `ringo-shell/CMakeLists.txt`): the wallpaper engine's run/stop/re-run contract and failure paths, the five scaling modes, and the IPC surface (target + function names) against `docs/KEYBINDS.md`.
