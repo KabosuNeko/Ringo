@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <time.h>
 #include <unistd.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
@@ -33,6 +34,18 @@
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 
+/* Two per output at most: one the compositor is reading while the next is
+ * written. A buffer is only touched again once wl_buffer::release says the
+ * compositor is done with it. */
+struct output_buffer {
+	struct wl_buffer *wl;
+	unsigned char *data;
+	size_t length; /* the mapping, not the output size: they can differ */
+	uint32_t width, height;
+	bool busy;
+	bool stale; /* the output was resized under it; free it when released */
+};
+
 struct output {
 	struct wl_output *wl;
 	struct wl_surface *surface;
@@ -43,6 +56,8 @@ struct output {
 	uint32_t size, stride;
 
 	bool configured;
+
+	struct output_buffer buffers[2];
 
 	struct wl_list link;
 };
@@ -69,6 +84,46 @@ struct {
 
 static void image_fill(unsigned char *dst, struct output *output);
 static void (*image_modify)(unsigned char *, struct output *) = image_fill;
+
+#define FADE_MS 200
+#define FADE_POLL_MS 16
+
+/* The fade is armed at run start and begins on the run's first paint, so the
+ * surface appears transparent and reaches full opacity FADE_MS later. 0 means
+ * no fade runs and the event loop blocks instead of polling. */
+static int64_t g_fade_start;
+static bool g_fade_armed;
+static int64_t g_fade_painted; /* monotonic ms of the last fade frame */
+
+static int64_t
+now_ms(void)
+{
+	struct timespec ts;
+
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+/* Fade opacity in 0..255. The clock starts on the run's first paint and
+ * reaching 1 ends the fade. */
+static unsigned
+fade_alpha(void)
+{
+	int64_t elapsed;
+
+	if (g_fade_armed) {
+		g_fade_armed = false;
+		g_fade_start = now_ms();
+	}
+	if (!g_fade_start)
+		return 255;
+	elapsed = now_ms() - g_fade_start;
+	if (elapsed >= FADE_MS) {
+		g_fade_start = 0;
+		return 255;
+	}
+	return (unsigned)(elapsed * 255 / FADE_MS);
+}
 
 static void
 noop() {}
@@ -205,16 +260,80 @@ image_spread(unsigned char *dst, struct output *output)
 		dst, output->width, output->height, output->stride, 4);
 }
 
-static struct wl_buffer *
-output_load_image(struct output *output)
+/* Writes the current image into a buffer the compositor is not reading. */
+static void
+output_buffer_paint(struct output *output, struct output_buffer *buffer, unsigned alpha)
+{
+	unsigned char *data = buffer->data;
+	const int size = (int)output->size;
+
+	/* fit, tile and spread leave margins untouched, so a reused buffer must
+	 * not still show the previous frame there. */
+	memset(data, 0, output->size);
+
+	image_modify(data, output);
+
+	/* RGBA -> BGRA (ARGB8888) premultiplied by the fade opacity; at 255 this
+	 * is the swap alone, byte for byte. */
+	for (int i = 0; i < size; i += 4) {
+		unsigned char r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+
+		if (alpha < 255) {
+			r = (unsigned char)(r * alpha / 255);
+			g = (unsigned char)(g * alpha / 255);
+			b = (unsigned char)(b * alpha / 255);
+			a = (unsigned char)(a * alpha / 255);
+		}
+
+		data[i] = b;
+		data[i+1] = g;
+		data[i+2] = r;
+		data[i+3] = a;
+	}
+}
+
+static void
+output_buffer_free(struct output_buffer *buffer)
+{
+	if (buffer->wl) {
+		wl_buffer_destroy(buffer->wl);
+		buffer->wl = NULL;
+	}
+	if (buffer->data) {
+		munmap(buffer->data, buffer->length);
+		buffer->data = NULL;
+	}
+	buffer->length = 0;
+	buffer->busy = false;
+	buffer->stale = false;
+}
+
+/* The compositor is done with the pixels; a buffer that outlived a resize of
+ * its output can only be freed here, once it is no longer in use. */
+static void
+buffer_handle_release(void *data, struct wl_buffer *wl_buffer)
+{
+	struct output_buffer *buffer = data;
+
+	(void)wl_buffer;
+	buffer->busy = false;
+	if (buffer->stale)
+		output_buffer_free(buffer);
+}
+
+static const struct wl_buffer_listener buffer_listener = {
+	.release = buffer_handle_release,
+};
+
+static void
+output_buffer_create(struct output *output, struct output_buffer *buffer)
 {
 	int fd = -1;
 	int fail_errno = 0;
 	struct wl_shm_pool *shm_pool = NULL;
-	struct wl_buffer *buffer;
 	const char *failmsg = "image buffer creation failed:";
 	unsigned char *data = MAP_FAILED;
-	
+
 	fd = memfd_create("drwbuf-shm-buffer-pool",
 		MFD_CLOEXEC | MFD_ALLOW_SEALING 
 	#ifdef __linux__
@@ -240,25 +359,21 @@ output_load_image(struct output *output)
 	fcntl(fd, F_ADD_SEALS, F_SEAL_GROW | F_SEAL_SHRINK | F_SEAL_SEAL);
 
 	shm_pool = wl_shm_create_pool(shm, fd, output->size);
-	buffer = wl_shm_pool_create_buffer(shm_pool, 0,
+	buffer->wl = wl_shm_pool_create_buffer(shm_pool, 0,
 		output->width, output->height, output->stride, WL_SHM_FORMAT_ARGB8888);
 	wl_shm_pool_destroy(shm_pool);
 	shm_pool = NULL;
 	close(fd);
 	fd = -1;
 
-	image_modify(data, output);
-
-	/* RGBA->BGRA */
-	const int size = (int)output->size;
-	for (int i = 0; i < size; i += 4) {
-		data[i] ^= data[i+2];
-		data[i+2] ^= data[i];
-		data[i] ^= data[i+2];
-	}
-
-	munmap(data, output->size);
-	return buffer;
+	buffer->data = data;
+	buffer->length = output->size;
+	buffer->width = output->width;
+	buffer->height = output->height;
+	buffer->busy = false;
+	buffer->stale = false;
+	wl_buffer_add_listener(buffer->wl, &buffer_listener, buffer);
+	return;
 
 fail:
 	/* die() longjmps out of here, so release everything allocated above before
@@ -272,14 +387,91 @@ fail:
 		close(fd);
 	errno = fail_errno;
 	die(failmsg);
+}
+
+/* A buffer the compositor is not reading, created while fewer than two exist;
+ * NULL when both are still held, in which case the frame is dropped. */
+static struct output_buffer *
+output_buffer_get(struct output *output)
+{
+	struct output_buffer *buffer;
+
+	for (int i = 0; i < 2; i++) {
+		buffer = &output->buffers[i];
+		if (!buffer->wl)
+			continue;
+		if (buffer->width != output->width || buffer->height != output->height) {
+			/* The output was resized under it: the pixels no longer fit. */
+			if (buffer->busy)
+				buffer->stale = true;
+			else
+				output_buffer_free(buffer);
+			continue;
+		}
+		if (!buffer->busy)
+			return buffer;
+	}
+
+	for (int i = 0; i < 2; i++) {
+		buffer = &output->buffers[i];
+		if (!buffer->wl) {
+			output_buffer_create(output, buffer);
+			return buffer;
+		}
+	}
+
 	return NULL;
+}
+
+/* Paints one output at the given fade opacity. */
+static void
+output_paint(struct output *output, unsigned alpha)
+{
+	struct output_buffer *buffer = output_buffer_get(output);
+
+	if (!buffer)
+		return;
+
+	output_buffer_paint(output, buffer, alpha);
+	buffer->busy = true;
+	wl_surface_attach(output->surface, buffer->wl, 0, 0);
+	wl_surface_damage(output->surface, 0, 0, output->width, output->height);
+	wl_surface_commit(output->surface);
+}
+
+/* Repaints every configured output, one frame per 16 ms, until the fade reaches
+ * full opacity. */
+static void
+fade_step(void)
+{
+	struct output *output;
+	unsigned alpha;
+	int64_t now;
+
+	if (!g_fade_start)
+		return;
+
+	/* Read the clock first: an output can have been retired mid-fade, and the
+	 * fade must still end rather than leave the loop polling. */
+	alpha = fade_alpha();
+	now = now_ms();
+	/* Buffers are released faster than the poll interval, and the fade needs
+	 * one frame per interval, not one per release. */
+	if (alpha < 255 && now - g_fade_painted < FADE_POLL_MS)
+		return;
+	g_fade_painted = now;
+
+	wl_list_for_each(output, &outputs, link) {
+		if (!output->configured)
+			continue;
+		output_paint(output, alpha);
+	}
 }
 
 static void
 layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *layer_surface,
 		uint32_t serial, uint32_t width, uint32_t height)
 {
-	struct wl_buffer *buffer;
 	struct output *output = data;
 
 	zwlr_layer_surface_v1_ack_configure(layer_surface, serial);
@@ -292,11 +484,7 @@ layer_surface_handle_configure(void *data, struct zwlr_layer_surface_v1 *layer_s
 	output->stride = width * 4;
 	output->size = width * height * 4;
 
-	buffer = output_load_image(output);
-	wl_surface_attach(output->surface, buffer, 0, 0);
-	wl_surface_damage(output->surface, 0, 0, output->width, output->height);
-	wl_surface_commit(output->surface);
-	wl_buffer_destroy(buffer);
+	output_paint(output, fade_alpha());
 
 	output->configured = true;
 }
@@ -309,6 +497,8 @@ static void
 output_destroy(struct output *output)
 {
 	wl_list_remove(&output->link);
+	for (int i = 0; i < 2; i++)
+		output_buffer_free(&output->buffers[i]);
 	if (output->layer_surface) {
 		zwlr_layer_surface_v1_destroy(output->layer_surface);
 		output->layer_surface = NULL;
@@ -524,6 +714,9 @@ ringo_wallpaper_run(const char *mode, const struct ringo_wallpaper_image *img)
 	image_modify = image_fill;
 	wl_list_init(&outputs);
 	g_outputs_ready = true;
+	g_fade_armed = true;
+	g_fade_start = 0;
+	g_fade_painted = 0;
 
 	if (!img || !img->pixels || img->width <= 0 || img->height <= 0)
 		die("no image");
@@ -580,7 +773,9 @@ ringo_wallpaper_run(const char *mode, const struct ringo_wallpaper_image *img)
 			break;
 		}
 
-		if (poll(fds, 2, -1) < 0) {
+		/* 16 ms only while the fade runs; otherwise the loop blocks, because
+		 * the shell must not wake up when nothing changes. */
+		if (poll(fds, 2, g_fade_start ? FADE_POLL_MS : -1) < 0) {
 			wl_display_cancel_read(display);
 			if (errno == EINTR)
 				continue;
@@ -600,6 +795,8 @@ ringo_wallpaper_run(const char *mode, const struct ringo_wallpaper_image *img)
 		} else {
 			wl_display_cancel_read(display);
 		}
+
+		fade_step();
 	}
 
 	if (g_stop_pipe[0] >= 0) { close(g_stop_pipe[0]); g_stop_pipe[0] = -1; }
