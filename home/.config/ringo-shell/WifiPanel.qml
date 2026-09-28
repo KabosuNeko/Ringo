@@ -183,7 +183,6 @@ PanelWindow {
       onVisibleChanged: {
         if (visible) {
           passwordField.text = ""
-          wifiListWindow.requestActivate()
           focusTimer.restart()
         }
       }
@@ -192,7 +191,9 @@ PanelWindow {
         id: focusTimer
         interval: 100
         onTriggered: {
-          wifiListWindow.requestActivate()
+          // The window itself takes the keyboard from WlrLayershell.keyboardFocus
+          // (Exclusive while the password prompt is up); this only moves focus
+          // inside it. PanelWindow has no requestActivate().
           passwordField.forceActiveFocus()
         }
       }
@@ -229,7 +230,6 @@ PanelWindow {
             cursorShape: Qt.IBeamCursor
             acceptedButtons: Qt.LeftButton
             onPressed: (mouse) => {
-              wifiListWindow.requestActivate()
               passwordField.forceActiveFocus()
               mouse.accepted = false
             }
