@@ -17,6 +17,7 @@ const QString kEnabledKey = QStringLiteral("nightlight.enabled");
 const QString kForceKey = QStringLiteral("nightlight.force");
 constexpr int kRestartDelayMs = 1000;
 constexpr int kTerminateWaitMs = 500;
+constexpr int kHealthyRunMs = 60000;
 
 // wlsunset cycles its manual override on SIGUSR1: off -> high -> low -> off.
 int forceIndex(const QString &force) {
@@ -54,6 +55,10 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
         setActive(false);
         setTemperature(0);
         if (m_stopping || !m_enabled) return;
+
+        // A process that ran for a while and then died is a new problem, not a
+        // continuation of a crash loop.
+        if (m_uptime.isValid() && m_uptime.elapsed() > kHealthyRunMs) m_restarts = 0;
 
         // A compositor restart or a killed process ends wlsunset; try once more
         // before reporting, so a transient failure does not leave the screen cold.
@@ -231,6 +236,7 @@ void NightLightController::startEngine() {
 
     m_stopping = false;
     m_appliedForce = QStringLiteral("off"); // a fresh process starts unforced
+    m_gammaRetryUsed = false;
     // Without this a shell restart would leave the old wlsunset alive, and the
     // two gamma-control clients would fight over the same outputs.
 #ifdef Q_OS_LINUX
@@ -239,6 +245,7 @@ void NightLightController::startEngine() {
     m_process.setProgram(binary);
     m_process.setArguments(args);
     m_process.start();
+    m_uptime.start();
 }
 
 void NightLightController::stopEngine() {
@@ -307,8 +314,8 @@ void NightLightController::readEngineOutput() {
             // the output: the previous wlsunset during a QML reload, or one left
             // by an earlier shell. Restart once, by which time it is gone.
             if (line.contains(QLatin1String("gamma control"))
-                && line.contains(QLatin1String("failed")) && m_restarts < 1) {
-                m_restarts++;
+                && line.contains(QLatin1String("failed")) && !m_gammaRetryUsed) {
+                m_gammaRetryUsed = true;
                 m_restartTimer.start();
             }
         }
