@@ -6,13 +6,9 @@
 #include <QTimer>
 #include <QtQml/qqml.h>
 
-// Night light: warms the screen after sunset and cools it back during the day.
-//
-// The gamma ramp is applied by the upstream `wlsunset` process, which owns its
-// own Wayland connection, so this controller only supervises it: one process,
-// the temperature read back from its stderr, and the manual override forwarded
-// as SIGUSR1 (wlsunset's own off -> high -> low cycle). Changing an option
-// restarts the process; the GUI thread is never blocked on it.
+// Night light via the upstream `wlsunset` process: this controller spawns it,
+// reads the applied temperature from its stderr and forwards the manual
+// override as SIGUSR1. Changing an option restarts the process.
 class NightLightController final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -64,13 +60,7 @@ public:
     // Drops the explicit location, letting the automatic one take over again.
     Q_INVOKABLE void clearLocationOverride();
 
-    // Starts the night light when it is enabled. Safe to call twice.
     Q_INVOKABLE void start();
-    // Disables the night light and stops the process; the configuration is
-    // kept, so start() revives it.
-    Q_INVOKABLE void stop();
-    // Restarts the process, re-reading the current configuration.
-    Q_INVOKABLE void reload();
 
 signals:
     void enabledChanged();

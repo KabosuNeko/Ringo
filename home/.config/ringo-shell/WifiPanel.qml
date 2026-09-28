@@ -191,9 +191,6 @@ PanelWindow {
         id: focusTimer
         interval: 100
         onTriggered: {
-          // The window itself takes the keyboard from WlrLayershell.keyboardFocus
-          // (Exclusive while the password prompt is up); this only moves focus
-          // inside it. PanelWindow has no requestActivate().
           passwordField.forceActiveFocus()
         }
       }

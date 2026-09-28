@@ -34,8 +34,6 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
     const QString force = StateStore::instance().get(kForceKey).toString();
     if (force == QLatin1String("high") || force == QLatin1String("low")) m_force = force;
 
-    // wlsunset reports the applied temperature on stderr; readLine() needs the
-    // read channel pointed at it.
     m_process.setReadChannel(QProcess::StandardError);
 
     m_restartTimer.setSingleShot(true);
@@ -56,12 +54,9 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
         setTemperature(0);
         if (m_stopping || !m_enabled) return;
 
-        // A process that ran for a while and then died is a new problem, not a
-        // continuation of a crash loop.
         if (m_uptime.isValid() && m_uptime.elapsed() > kHealthyRunMs) m_restarts = 0;
 
-        // A compositor restart or a killed process ends wlsunset; try once more
-        // before reporting, so a transient failure does not leave the screen cold.
+        // Compositor restart or a killed process: retry once before reporting.
         if (m_restarts < 1) {
             m_restarts++;
             m_restartTimer.start();
@@ -191,20 +186,9 @@ void NightLightController::setForce(const QString &force) {
 }
 
 void NightLightController::start() {
-    // Called at startup: the toggle the UI left behind is restored from the
-    // state store, so this only has to bring the process up.
     m_restarts = 0;
     if (!m_enabled) return;
     if (m_process.state() == QProcess::NotRunning) startEngine();
-}
-
-void NightLightController::stop() {
-    setEnabled(false);
-}
-
-void NightLightController::reload() {
-    m_restarts = 0;
-    restartEngine();
 }
 
 void NightLightController::restartEngine() {
@@ -216,8 +200,7 @@ void NightLightController::restartEngine() {
 void NightLightController::startEngine() {
     stopEngine();
 
-    // wlsunset ships in /usr/sbin on some builds, which a desktop session's PATH
-    // does not always carry.
+    // Some builds install it in /usr/sbin, which a session PATH may lack.
     const QString binary = QStandardPaths::findExecutable(
         kBinary, {QStringLiteral("/usr/local/bin"), QStringLiteral("/usr/bin"), QStringLiteral("/usr/sbin")});
     if (binary.isEmpty()) {
@@ -225,8 +208,6 @@ void NightLightController::startEngine() {
         return;
     }
 
-    // wlsunset follows the sun for the configured coordinates, or forces one
-    // temperature when the override is on (SIGUSR1 after the start).
     QStringList args;
     args << "-t" << QString::number(m_lowTemperature)
          << "-T" << QString::number(m_highTemperature)
@@ -237,8 +218,7 @@ void NightLightController::startEngine() {
     m_stopping = false;
     m_appliedForce = QStringLiteral("off"); // a fresh process starts unforced
     m_gammaRetryUsed = false;
-    // Without this a shell restart would leave the old wlsunset alive, and the
-    // two gamma-control clients would fight over the same outputs.
+    // Otherwise a shell restart leaves the old client holding the outputs.
 #ifdef Q_OS_LINUX
     m_process.setChildProcessModifier([] { prctl(PR_SET_PDEATHSIG, SIGTERM); });
 #endif
@@ -265,7 +245,6 @@ void NightLightController::stopEngine() {
 void NightLightController::applyForce() {
     if (m_process.state() != QProcess::Running) return;
 
-    // Walk wlsunset's own cycle until it reports the requested state.
     const int steps = (forceIndex(m_force) - forceIndex(m_appliedForce) + 3) % 3;
     for (int i = 0; i < steps; ++i) {
         ::kill(static_cast<pid_t>(m_process.processId()), SIGUSR1);
@@ -286,8 +265,7 @@ void NightLightController::readEngineOutput() {
                 setTemperature(value);
                 setActive(true);
                 setError(QString());
-                // Only now is the signal handler installed: sending SIGUSR1
-                // earlier would kill the process with the default action.
+                // SIGUSR1 before the handler is installed would kill it.
                 if (m_force != m_appliedForce) applyForce();
             }
             continue;
@@ -310,9 +288,8 @@ void NightLightController::readEngineOutput() {
         if (line.contains(QLatin1String("failed")) || line.contains(QLatin1String("could not"))
             || line.contains(QLatin1String("must be"))) {
             setError(line);
-            // A gamma-control failure is usually a client that is still holding
-            // the output: the previous wlsunset during a QML reload, or one left
-            // by an earlier shell. Restart once, by which time it is gone.
+            // A held output (the previous wlsunset during a QML reload) clears
+            // by itself: restart once.
             if (line.contains(QLatin1String("gamma control"))
                 && line.contains(QLatin1String("failed")) && !m_gammaRetryUsed) {
                 m_gammaRetryUsed = true;
