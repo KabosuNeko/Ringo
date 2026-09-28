@@ -2,7 +2,7 @@
 # generates docs/KEYBINDS.md from the niri keybinds and the shell's ipc targets.
 set -euo pipefail
 
-root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 binds=$root/home/.config/niri/keybinds.kdl
 shell=$root/home/.config/ringo-shell/shell.qml
 doc=$root/docs/KEYBINDS.md
