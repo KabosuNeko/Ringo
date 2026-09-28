@@ -3,8 +3,7 @@
 #include <QString>
 #include <QtQml/qqml.h>
 
-// Host facts QML cannot answer on its own, used by Doctor.qml to produce the
-// `ringo-shell call doctor check` report.
+// Host facts QML cannot answer on its own, used by the doctor report.
 class Tools final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -22,4 +21,8 @@ public:
     Q_INVOKABLE QString readText(const QString &path) const;
 
     Q_INVOKABLE QString version() const;
+
+    // Empty when the deployed plugin is current, or when the config is not a
+    // stow checkout of this repo.
+    Q_INVOKABLE QString backendStale() const;
 };

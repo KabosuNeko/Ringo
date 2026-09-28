@@ -278,6 +278,8 @@ function doctorReport(): string {
   if (nl.enabled && !nl.active && nl.error === "")
     problems.push("night light: enabled but wlsunset is not running")
   else if (nl.enabled && nl.error.length > 0) problems.push("night light: " + nl.error)
+  const stale = Tools.backendStale()
+  if (stale.length > 0) problems.push(stale)
   out.push("")
   out.push(problems.length === 0 ? "verdict: ok" : "verdict: " + problems.join(" | "))
   return out.join("\n")
