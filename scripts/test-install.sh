@@ -49,8 +49,9 @@ rm -f "$FAKE_HOME/.config/niri/config.kdl"
 run_install "$FAKE_HOME" --yes --non-interactive --profile core
 [ "$STATUS" -eq 0 ] || fail "core install should succeed (status $STATUS)"
 pass "core install exits 0"
-[ "$(links "$FAKE_HOME")" -eq 55 ] || fail "expected 55 symlinks, got $(links "$FAKE_HOME")"
-pass "55 symlinks deployed into \$HOME"
+expected="$(find "$REPO_DIR/home" -type f | wc -l | tr -d ' ')"
+[ "$(links "$FAKE_HOME")" -eq "$expected" ] || fail "expected $expected symlinks, got $(links "$FAKE_HOME")"
+pass "$expected symlinks deployed into \$HOME"
 [ -e "$FAKE_HOME/.config/ringo-shell/IslandBackend/libIslandBackend.so" ] || fail "IslandBackend/libIslandBackend.so missing"
 pass "IslandBackend/libIslandBackend.so installed"
 
