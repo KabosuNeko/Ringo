@@ -63,7 +63,7 @@ tail -f /run/user/1000/quickshell/by-id/*/log.log     # ERROR / TypeError lines
 niri validate
 scripts/gen-keybinds-doc.sh && scripts/gen-keybinds-doc.sh --check
 sh -n install.sh
-grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* | xargs shellcheck --severity=warning
+grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* scripts/*.sh | xargs shellcheck --severity=warning
 ./install.sh --dry-run --non-interactive --profile core
 ```
 
@@ -129,9 +129,9 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 
 ## Testing & QA
 
-There is **no automated test suite** — no `tests/`, no CTest registration, no `add_test()` (see `ringo-shell/CMakeLists.txt`). Verification has three layers:
+Two automated checks run in CI, both without a compositor: a CTest over the wallpaper scaling modes (`ringo-shell/tests/`, wired in `ringo-shell/CMakeLists.txt`) and an end-to-end test of the installer in a throwaway `$HOME` (`scripts/test-install.sh`, which stubs `yay`/`sudo`/`systemctl`/`gsettings`/`xdg-mime` and asserts the stow pre-flight, the 55 deployed symlinks and the rollback path). Verification has three layers:
 
-1. **CI** (`.github/workflows/build.yml`): builds the backend on Ubuntu, `sh -n install.sh`, `shellcheck --severity=warning` over POSIX-shebang scripts, and `scripts/gen-keybinds-doc.sh --check`. It catches compile breaks, shell syntax, and stale generated docs.
+1. **CI** (`.github/workflows/build.yml`): builds the backend on Ubuntu, runs `ctest` and `scripts/test-install.sh`, `sh -n install.sh`, `shellcheck --severity=warning` over POSIX-shebang scripts, and `scripts/gen-keybinds-doc.sh --check`. It catches compile breaks, shell syntax, stale generated docs, and installer regressions.
 2. **Runtime self-check**: `ringo-shell call doctor check` prints the wallpaper engine's state, the night light's, , the palette/state files, and every external tool, with a `verdict:` line. It has caught real bugs (a night light that held no output, a dead weather refresh) — run it after any backend change.
 3. **Manual smoke**: build → deploy → restart → check the log for `ERROR` → look at the surface (a screenshot; `niri msg action screenshot-screen`) → exercise the IPC command you touched. Never claim a UI or engine change works without having seen the surface or the reported state.
 
@@ -152,4 +152,4 @@ gcc -o harness *.o -lwayland-client -lm
 
 Useful invariants for such a harness: three sequential runs in one process must each return 0; a run started after a stop must not exit immediately; a NULL image or an unknown mode must return -1 with a message instead of killing the process.
 
-What a future suite should cover, if one is added (wire it as CTest in `ringo-shell/CMakeLists.txt`): the wallpaper engine's run/stop/re-run contract and failure paths, the five scaling modes, and the IPC surface (target + function names) against `docs/KEYBINDS.md`.
+What is still uncovered: the wallpaper engine's run/stop/re-run contract and failure paths (needs a compositor, so the harness above is the way in) and the IPC surface (target + function names) against `docs/KEYBINDS.md`.

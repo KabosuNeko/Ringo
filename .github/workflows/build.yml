@@ -26,13 +26,20 @@ jobs:
             qt6-declarative-dev \
             libpam0g-dev \
             libwayland-dev \
-            wayland-protocols
+            wayland-protocols \
+            stow
 
       - name: Configure
         run: cmake -S ringo-shell -B build -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build -j"$(nproc)"
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Installer end-to-end
+        run: sh scripts/test-install.sh
 
   scripts:
     name: lint scripts
@@ -52,7 +59,7 @@ jobs:
         run: |
           # scratchpad.sh is Python behind a .sh name: lint only POSIX shebangs.
           # SC2086 on install.sh's intentionally word-split package list is fine.
-          grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* \
+          grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* scripts/*.sh \
             | xargs shellcheck --severity=warning
 
       - name: Docs are in sync

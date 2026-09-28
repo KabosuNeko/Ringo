@@ -13,8 +13,11 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui DBus Qml Network)
 # The wallpaper engine speaks to the compositor directly, so it needs
 # wayland-client plus the three protocol code generators at build time.
 find_package(PkgConfig REQUIRED)
+find_package(Threads REQUIRED)
 pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
 find_program(WAYLAND_SCANNER NAMES wayland-scanner REQUIRED)
+
+enable_testing()
 
 set(WALLPAPER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/backend/engines/wallpaper)
 set(WALLPAPER_PROTO_DIR ${CMAKE_CURRENT_BINARY_DIR}/wallpaper-proto)
@@ -113,3 +116,23 @@ add_custom_command(TARGET IslandBackendPlugin POST_BUILD
     COMMAND sed -i "/^prefer/d" ${CMAKE_CURRENT_BINARY_DIR}/qmldir
     COMMENT "Stripping prefer line from generated qmldir"
 )
+
+# Wallpaper scaling-mode tests: drive the engine's static image_* helpers
+# directly (the test #includes wallpaper.c), so the maths is exercised with no
+# compositor, display server, root or network. The generated protocol sources
+# are linked in because the engine references their symbols.
+add_executable(test_wallpaper_modes
+    tests/test_wallpaper_modes.c
+    ${WALLPAPER_PROTO_DIR}/xdg-shell-protocol.c
+    ${WALLPAPER_PROTO_DIR}/xdg-output-unstable-v1-protocol.c
+    ${WALLPAPER_PROTO_DIR}/wlr-layer-shell-unstable-v1-protocol.c)
+
+target_compile_definitions(test_wallpaper_modes PRIVATE _GNU_SOURCE)
+
+target_include_directories(test_wallpaper_modes PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/backend ${WALLPAPER_DIR} ${WALLPAPER_PROTO_DIR})
+
+target_link_libraries(test_wallpaper_modes PRIVATE
+    PkgConfig::WAYLAND_CLIENT m Threads::Threads)
+
+add_test(NAME wallpaper_modes COMMAND test_wallpaper_modes)
