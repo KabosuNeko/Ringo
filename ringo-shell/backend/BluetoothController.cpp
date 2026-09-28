@@ -19,7 +19,7 @@ constexpr const char *kBatteryIface = "org.bluez.Battery1";
 
 BluetoothController::BluetoothController(QObject *parent)
     : QObject(parent), m_devices(new BluetoothDeviceModel(this)) {
-    // watch bluez appearing/disappearing on the bus, same pattern as pairing agent
+    // bluez appearing/disappearing on the bus
     QDBusConnection::systemBus().connect(
         QString(), "/org/freedesktop/DBus", "org.freedesktop.DBus",
         "NameOwnerChanged", this, SLOT(handleBluezNameOwnerChanged(QString, QString, QString)));
@@ -27,9 +27,8 @@ BluetoothController::BluetoothController(QObject *parent)
     connect(this, &BluetoothController::scanningChanged, this, &BluetoothController::statusTextChanged);
     connect(this, &BluetoothController::busyChanged, this, &BluetoothController::statusTextChanged);
 
-    // covers the cold-boot race: bluetoothd claims the bus name before hci0 finishes
-    // firmware init and gets registered as org.bluez.Adapter1, a single failed lookup
-    // at startup shouldn't be permanent
+    // cold boot: bluetoothd claims the bus name before hci0 finishes firmware init,
+    // so a failed adapter lookup at startup must not be permanent
     m_adapterRetryTimer = new QTimer(this);
     m_adapterRetryTimer->setInterval(1500);
     connect(m_adapterRetryTimer, &QTimer::timeout, this, &BluetoothController::retryFindAdapter);
@@ -92,7 +91,7 @@ void BluetoothController::setErrorMessage(const QString &error) {
 void BluetoothController::connectToBluez() {
     auto bus = QDBusConnection::systemBus();
 
-    // live device add/remove (e.g., new devices appearing during discovery)
+    // live device add/remove
     bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
                 "InterfacesAdded", this, SLOT(handleInterfacesAdded(QDBusMessage)));
     bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
@@ -166,8 +165,8 @@ bool BluetoothController::findAdapter() {
         manager.call("GetManagedObjects");
 
     if (!reply.isValid()) {
-        // whatever the exact D-Bus reason (bluetoothd off, activation race, etc.), it all
-        // means the same thing to the user - show our own custom message, not bluez's raw error text
+        // whatever the D-Bus reason (bluetoothd off, activation race), it means the
+        // same thing to the user, so show our own message, not bluez's raw text
         setErrorMessage("No Bluetooth adapter found");
         return false;
     }
@@ -220,8 +219,8 @@ void BluetoothController::applyDeviceProperties(const QString &objectPath, const
     BluetoothDeviceModel::Device d;
     d.objectPath = objectPath;
 
-    // start from whatever's already known, then overlay the changed props
-    // (PropertiesChanged only carries the fields that actually changed)
+    // start from what is known, then overlay the changed props (PropertiesChanged
+    // carries only the fields that changed)
     if (existingIdx >= 0) {
         // just re-fetch full props on update
         QDBusInterface devIface(kBluezService, objectPath, "org.freedesktop.DBus.Properties",
@@ -257,7 +256,7 @@ void BluetoothController::handleInterfacesAdded(const QDBusMessage &msg) {
     const QString path = args.at(0).value<QDBusObjectPath>().path();
     const auto interfaces = qdbus_cast<QMap<QString, QVariantMap>>(args.at(1));
 
-    // adapter showing up late (bluetoothd claims the bus name before hci0 is registered)
+    // adapter showing up late
     if (m_adapterPath.isEmpty() && interfaces.contains(kAdapterIface)) {
         m_adapterPath = path;
         m_adapterRetryTimer->stop();
@@ -294,7 +293,7 @@ void BluetoothController::handleInterfacesRemoved(const QDBusMessage &msg) {
 }
 
 void BluetoothController::handlePropertiesChanged(const QDBusMessage &msg) {
-    // PropertiesChanged(interface, changed_props, invalidated_props). path comes from the message itself
+    // path comes from the message, not the PropertiesChanged args
     const QString path = msg.path();
     const QList<QVariant> args = msg.arguments();
     if (args.isEmpty()) return;
@@ -368,7 +367,7 @@ void BluetoothController::refreshDevices(bool discover) {
         setBusy(false);
         QDBusPendingReply<> reply = *watcher;
         if (reply.isError()) {
-            // "already in progress" is not a real failure - surface anything else
+            // "already in progress" is not a real failure
             if (reply.error().name() != "org.bluez.Error.InProgress")
                 setErrorMessage(reply.error().message());
         } else {
@@ -393,7 +392,7 @@ void BluetoothController::pairDevice(const QString &address) {
         if (reply.isError()) {
             setErrorMessage("Pairing with " + address + " failed: " + reply.error().message());
         } else {
-            // trust it once paired so future connects don't need re-authorization
+            // trust it once paired so future connects need no re-authorization
             asyncCallNoReply(devicePathForAddress(address), "org.freedesktop.DBus.Properties", "Set",
                 { QVariant("org.bluez.Device1"), QVariant("Trusted"), QVariant::fromValue(QDBusVariant(true)) });
         }
@@ -442,7 +441,7 @@ void BluetoothController::forgetDevice(const QString &address) {
 
     setBusy(true);
     setErrorMessage(QString());
-    // RemoveDevice lives on the adapter, not the device - it unpairs and drops the object entirely
+    // RemoveDevice lives on the adapter, not the device: it unpairs and drops the object
     QDBusMessage call = QDBusMessage::createMethodCall(kBluezService, m_adapterPath, kAdapterIface, "RemoveDevice");
     call.setArguments({ QVariant::fromValue(QDBusObjectPath(path)) });
     auto pending = QDBusConnection::systemBus().asyncCall(call);
@@ -454,8 +453,8 @@ void BluetoothController::forgetDevice(const QString &address) {
         if (reply.isError()) {
             setErrorMessage("Forgetting " + address + " failed: " + reply.error().message());
         } else {
-            // InterfacesRemoved should also fire this, but do it eagerly so the UI
-            // updates immediately instead of waiting on the signal round-trip
+            // InterfacesRemoved also fires this, but do it eagerly so the UI does
+            // not wait on the signal round-trip
             m_devices->removeDeviceByPath(path);
             refreshCurrentDeviceName();
         }

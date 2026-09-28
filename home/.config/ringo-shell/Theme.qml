@@ -9,24 +9,20 @@ Singleton {
     // surface opacity - matches foot alpha (0.8); niri blurs the layer behind
     property real surfaceOpacity: 0.8
 
-    // Accepts a hex string or a color, returns the same color with `alpha`.
+    // accepts a hex string or a color
     function surface(c: color, alpha: real): color {
         return Qt.rgba(c.r, c.g, c.b, alpha)
     }
 
-    // -- pywal base colors (fallbacks = default gray palette) --
     property string fallbackBg: "#161616"
     property string fallbackFg: "#dadada"
     property string fallbackAccent: "#979797"
 
-    // special.background / special.foreground / colors.color1 from
-    // ~/.cache/wal/colors.json; every palette below derives from these so
-    // the whole shell follows the wallpaper (live-reload on wal change).
+    // wal keys: special.background/foreground, colors.color1 (~/.cache/wal/colors.json)
     property string walBg: root.fallbackBg
     property string walFg: root.fallbackFg
     property string walAccent: root.fallbackAccent
 
-    // more darker (descending)
     property color bg: surface(root.walBg, root.surfaceOpacity)
     property color bg1: surface(Qt.lighter(root.walBg, 1.5), root.surfaceOpacity)
     property color bg2: surface(Qt.lighter(root.walBg, 1.59), root.surfaceOpacity)
@@ -38,7 +34,6 @@ Singleton {
     property color bgD: surface(Qt.darker(root.walBg, 1.1), root.surfaceOpacity)
     property color bgD1: surface(Qt.darker(root.walBg, 1.02), root.surfaceOpacity)
 
-    // more darker (ascending)
     property color fg: root.walFg
     property color fg1: Qt.lighter(root.walFg, 1.06)
     property color fg2: Qt.lighter(root.walFg, 1.02)
@@ -72,7 +67,6 @@ Singleton {
     // accent follows pywal color1 (live)
     property string accent: root.walAccent
 
-    // Colors from pywal (~/.cache/wal/colors.json); live-reloads on wal change.
     FileView {
         id: walColors
         path: Quickshell.env("HOME") + "/.cache/wal/colors.json"
@@ -80,17 +74,12 @@ Singleton {
         blockLoading: true
         onFileChanged: {
             reload()
-            // applyWal() is NOT called here: reload() loads asynchronously,
-            // so text() would still hold the OLD content. Wait for onLoaded
-            // below, which fires after the new content is actually in place.
+            // reload() is async: text() here still holds the old content, hence onLoaded below
         }
         onLoaded: {
             root.applyWal()
         }
     }
-
-    property string currentWallpaper: ""
-    property int wallpaperVersion: 0
 
     function applyWal(): void {
         try {
@@ -101,8 +90,6 @@ Singleton {
                     if (data.special && data.special.background) root.walBg = data.special.background
                     if (data.special && data.special.foreground) root.walFg = data.special.foreground
                     if (data.colors.color1) root.walAccent = data.colors.color1
-                    if (data.wallpaper) root.currentWallpaper = data.wallpaper
-                    root.wallpaperVersion++
                     return
                 }
             }
@@ -118,7 +105,6 @@ Singleton {
 
 
 
-    // Modern Pill & Card tokens
     property color pillBorder: Qt.alpha(root.walFg, 0.08)
     property color cardBg: surface(Qt.lighter(root.walBg, 1.25), root.surfaceOpacity * 0.95)
     property color cardBorder: Qt.alpha(root.walFg, 0.09)

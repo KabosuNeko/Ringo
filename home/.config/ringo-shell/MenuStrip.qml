@@ -1,11 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
 
-// Parameterised icon strip shared by the power menu and the record menu: one
-// selectable tile per entry, arrow keys to move, Return/Space to activate,
-// Escape (or activating an entry) closes through closeRequested.
-//
-// Entries are objects with an `icon`, a `label` and an `action` callable.
 Rectangle {
   id: strip
 

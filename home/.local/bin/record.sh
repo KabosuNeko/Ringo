@@ -1,9 +1,6 @@
 #!/bin/sh
-# Ringo screen recorder — wl-screenrec based, bound to Mod+F11
-# Toggle: first press -> Quickshell menu -> start wl-screenrec
-#         second press -> stop (SIGINT) + notify
-# Modes: only-sound | micro | no-sound (args)
-# When called without arg and not recording, delegates to Quickshell RecordMenu.
+# Screen recorder (wl-screenrec) on Mod+F11: first press opens the shell's menu,
+# second stops it. Modes: only-sound | micro | no-sound.
 
 # Notifications go through the shell's own server when it is running.
 notify() { # summary, body, icon, urgency

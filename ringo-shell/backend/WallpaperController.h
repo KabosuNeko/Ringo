@@ -6,14 +6,8 @@
 #include <QThread>
 #include <QtQml/qqml.h>
 
-// Owns the whole wallpaper pipeline: pywal palette regeneration, the blurred
-// niri-backdrop image, and the in-process layer-shell renderer
-// (backend/engines/wallpaper/wallpaper.c).
-//
-// The renderer owns a Wayland connection and a layer surface, so it runs on its
-// own thread; switching wallpaper tears that thread down and starts a new one
-// with the new image. Every step is asynchronous; the GUI thread is never
-// blocked on wal, the blur or the renderer.
+// Owns the wallpaper pipeline: pywal palette, blurred niri backdrop, and the
+// layer-shell renderer, which owns a Wayland connection and runs on its own thread.
 class WallpaperController final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -41,25 +35,22 @@ public:
     int slideshowIntervalMinutes() const { return m_slideshowIntervalMinutes; }
     QString slideshowDir() const { return m_slideshowDir; }
 
-    // Valid values: fill, fit, spread, stretch, tile. Anything else is rejected
-    // with `error` set, leaving the current mode untouched.
+    // Valid values: fill, fit, spread, stretch, tile; anything else sets
+    // `error` and leaves the current mode untouched.
     void setMode(const QString &mode);
 
-    // Rotates the wallpaper on a timer, picking a random image from
-    // slideshowDir. `slideshowIntervalMinutes` <= 0 keeps the timer off.
+    // Rotates the wallpaper on a timer, picking a random image from slideshowDir.
     void setSlideshowEnabled(bool enabled);
     void setSlideshowIntervalMinutes(int minutes);
     void setSlideshowDir(const QString &dir);
-    // Advances the slideshow immediately.
     Q_INVOKABLE void nextSlide();
 
     // Reads ~/.cache/wal/colors.json and applies its .wallpaper entry.
     Q_INVOKABLE void start();
     // Full pipeline for one file: wal -> blurred backdrop -> restart ringo-wallpaper.
     Q_INVOKABLE void apply(const QString &path);
-    // Re-applies the current path.
     Q_INVOKABLE void reload();
-    // Stops the wallpaper engine. The path is kept, so a later reload() revives it.
+    // Stops the engine; the path is kept, so a later reload() revives it.
     Q_INVOKABLE void stop();
 
 signals:
@@ -108,6 +99,6 @@ private:
     bool m_spawnWithMode = true;
     bool m_modeFallbackTried = false;
     int m_restarts = 0;
-    QElapsedTimer m_engineAlive;      // how long the current engine has been up
-    QThread *m_engineThread = nullptr; // resident wallpaper engine thread
+    QElapsedTimer m_engineAlive;
+    QThread *m_engineThread = nullptr;
 };

@@ -4,8 +4,7 @@ import Quickshell.Io
 import QtQuick
 import IslandBackend
 
-// Screen recording state, taken from the pid file record.sh keeps in the
-// runtime directory. The bar shows a red dot while a recording is running.
+// recording state from the pid file record.sh keeps in XDG_RUNTIME_DIR
 Singleton {
   id: root
 
@@ -17,9 +16,7 @@ Singleton {
     root.active = Tools.fileExists(root.pidFile)
   }
 
-  // The file is written once when a recording starts and removed when it stops,
-  // so watch it instead of polling once a second. No pid file is the normal idle
-  // state, hence printErrors: false.
+  // pid file absent is the normal idle state, hence printErrors: false
   FileView {
     path: root.pidFile
     watchChanges: true

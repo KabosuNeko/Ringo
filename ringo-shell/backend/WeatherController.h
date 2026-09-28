@@ -30,8 +30,8 @@ class WeatherController final : public QObject {
     Q_PROPERTY(QString weatherLocation READ weatherLocation WRITE setWeatherLocation NOTIFY weatherLocationChanged)
     Q_PROPERTY(QString weatherUnits READ weatherUnits WRITE setWeatherUnits NOTIFY weatherUnitsChanged)
     Q_PROPERTY(int refreshInterval READ refreshInterval WRITE setRefreshInterval NOTIFY refreshIntervalChanged)
-    // Set from QML while the weather UI is on screen: the interval timer only
-    // runs then, so nothing polls the network behind a closed popup.
+    // Set from QML while the weather UI is on screen; the interval timer only
+    // runs then.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:

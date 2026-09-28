@@ -63,8 +63,7 @@ Rectangle {
                         fillMode: Image.PreserveAspectCrop
                         visible: MprisController.artUrl !== "" && status !== Image.Error
                         asynchronous: true
-                        // the album art does not need to stay decoded once the
-                        // control center is closed
+                        // album art need not stay decoded once the control center is closed
                         cache: false
                         sourceSize: Qt.size(108 * Config.dpiScale, 108 * Config.dpiScale)
                     }

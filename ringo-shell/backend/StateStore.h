@@ -6,13 +6,8 @@
 
 class QTimer;
 
-// Tiny persistent key/value store for runtime state that should survive a shell
-// restart (wallpaper mode, night light toggle). It lives in the XDG state
-// directory, not next to the user's configuration: config.jsonc is what the
-// user edits, this is what the UI changed.
-//
-// Values are held in memory and written out debounced, so a burst of changes
-// costs one write.
+// Tiny persistent key/value store for runtime state that survives a shell restart
+// (wallpaper mode, night light toggle); lives in the XDG state dir, debounced.
 class StateStore final : public QObject {
     Q_OBJECT
 

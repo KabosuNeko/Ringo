@@ -6,9 +6,8 @@
 #include <QTimer>
 #include <QtQml/qqml.h>
 
-// Night light via the upstream `wlsunset` process: this controller spawns it,
-// reads the applied temperature from its stderr and forwards the manual
-// override as SIGUSR1. Changing an option restarts the process.
+// Night light via the upstream `wlsunset` process: reads the applied temperature
+// from its stderr and forwards the manual override as SIGUSR1.
 class NightLightController final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -48,16 +47,14 @@ public:
     void setLowTemperature(int kelvin);
     void setHighTemperature(int kelvin);
     void setGamma(double gamma);
-    // off, high (day temperature) or low (night temperature). "high"/"low"
-    // pin the screen regardless of the sun, which is what the testing and the
-    // manual override in the control center use.
+    // off, high (day) or low (night); "high"/"low" pin the screen regardless of
+    // the sun, which is what the control center's manual override uses.
     void setForce(const QString &force);
 
-    // Coordinates from the weather widget. Ignored while the location was set
-    // explicitly (config.jsonc or the IPC), so a city change cannot silently
-    // move a location the user pinned by hand.
+    // Coordinates from the weather widget; ignored while the location is pinned
+    // explicitly (config.jsonc or IPC).
     Q_INVOKABLE void setAutoLocation(double latitude, double longitude);
-    // Drops the explicit location, letting the automatic one take over again.
+    // Drops the explicit location.
     Q_INVOKABLE void clearLocationOverride();
 
     Q_INVOKABLE void start();
@@ -101,7 +98,7 @@ private:
     int m_restarts = 0;
     bool m_stopping = false;
     bool m_gammaRetryUsed = false; // one retry per start for a held output
-    QElapsedTimer m_uptime;        // how long the current process has been up
+    QElapsedTimer m_uptime;
     QString m_appliedForce = QStringLiteral("off"); // what wlsunset reported back
     QProcess m_process;
     QTimer m_restartTimer;

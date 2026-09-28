@@ -24,11 +24,6 @@ BrightnessController::BrightnessController(QObject *parent) : QObject(parent) {
         connect(&m_watcher, &QFileSystemWatcher::directoryChanged, this, &BrightnessController::onDirectoryChanged);
     }
 
-    // A 2.5s fallback poll used to live here. It is not needed: inotify on the
-    // sysfs attribute delivers external changes (logind, the compositor, Fn
-    // keys) and this is verified empirically. The two cases the poll was papering
-    // over - the attribute being replaced, and the node disappearing across
-    // suspend/resume - are handled explicitly below without polling.
     QDBusConnection::systemBus().connect(
         QStringLiteral("org.freedesktop.login1"),
         QStringLiteral("/org/freedesktop/login1"),
@@ -49,9 +44,8 @@ void BrightnessController::rearmWatcher() {
 
 void BrightnessController::onPrepareForSleep(bool goingToSleep) {
     if (goingToSleep) return;
-    // The backlight class device can be unregistered and re-registered across a
-    // suspend/resume cycle, which drops the inotify watch silently. Re-arm and
-    // re-read so the bar cannot show a stale value after waking.
+    // Suspend/resume can re-register the class device and silently drop the
+    // inotify watch, so re-arm and re-read.
     rearmWatcher();
     readBrightness();
 }
@@ -86,7 +80,6 @@ void BrightnessController::readBrightness() {
         m_maxBrightness = maxVal;
     }
 
-    // Try actual_brightness first, fallback to brightness
     QString currentStr = readSysfsFile(m_devicePath + QStringLiteral("/actual_brightness"));
     if (currentStr.isEmpty()) {
         currentStr = readSysfsFile(m_devicePath + QStringLiteral("/brightness"));
@@ -101,15 +94,14 @@ void BrightnessController::readBrightness() {
 
 void BrightnessController::onFileChanged(const QString &path) {
     readBrightness();
-    // QFileSystemWatcher drops the watch when a sysfs attribute is replaced (the
-    // new inode is not watched). Re-arm everything so we keep receiving events.
+    // The watcher drops the watch when a sysfs attribute is replaced (new inode
+    // is not watched), so re-arm.
     rearmWatcher();
     Q_UNUSED(path);
 }
 
 void BrightnessController::onDirectoryChanged(const QString &path) {
-    // The backlight class directory changed: the attribute may have been
-    // recreated (driver reload, resume). Re-arm and re-read.
+    // The attribute may have been recreated (driver reload, resume).
     rearmWatcher();
     readBrightness();
     Q_UNUSED(path);
@@ -124,7 +116,7 @@ void BrightnessController::setBrightness(int value) {
     m_brightness = clamped;
     emit brightnessChanged();
 
-    // Call systemd-logind via DBus to set brightness without root permissions
+    // logind owns the sysfs writes, so this needs no root
     QDBusMessage msg = QDBusMessage::createMethodCall(
         QStringLiteral("org.freedesktop.login1"),
         QStringLiteral("/org/freedesktop/login1/session/auto"),
@@ -145,9 +137,8 @@ void BrightnessController::setPercent(double pct) {
 void BrightnessController::step(double deltaPercent) {
     if (m_maxBrightness <= 0) return;
 
-    // Same curve as `brightnessctl -e4`: the value the user sees is
-    // (raw / max)^(1/4) * 100, so a step is applied on that percentage and
-    // mapped back to a raw value through the exponent.
+    // Same curve as `brightnessctl -e4`: the user sees (raw / max)^(1/4), so
+    // step that and map back through the exponent.
     constexpr double kExponent = 4.0;
     const double rawFraction = static_cast<double>(m_brightness) / m_maxBrightness;
     const double currentPct = std::pow(rawFraction, 1.0 / kExponent) * 100.0;

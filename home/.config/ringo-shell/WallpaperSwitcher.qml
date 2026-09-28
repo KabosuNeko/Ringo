@@ -25,18 +25,16 @@ Rectangle {
   signal closeRequested()
 
   function fileUrl(path: string): string {
-    // A local path is not a URL: '#' would be parsed as a fragment and '?' as a
-    // query, so the file would never open. Encode each segment instead.
-    // Qt.resolvedUrl() does not encode (verified: it leaves both raw).
+    // a local path is not a URL: '#'/'?' would parse as fragment/query and the file never opens;
+    // Qt.resolvedUrl() does not encode, so encode each segment
     return "file://" + path.split("/").map(encodeURIComponent).join("/")
   }
 
   function applyWallpaper(path) {
     wallpaperPopup.selectedWallpaper = fileUrl(path)
-    // pywal palette, the blurred niri-overview backdrop and the ringo-wallpaper process are
-    // all owned by the backend controller.
+    // palette, blurred niri-overview backdrop and the wallpaper process are backend-owned
     WallpaperController.apply(path)
-    // Reload foot so it picks up the new colors-foot-dark.ini
+    // foot must reload to pick up the new colors-foot-dark.ini
     footReloadTimer.restart()
   }
 
@@ -73,7 +71,6 @@ Rectangle {
     anchors.margins: 8
     spacing: 15
 
-    // fallback: no wallpapers found
     Text {
       visible: wallpaperModel.status === FolderListModel.Ready
                 && wallpaperModel.count === 0
@@ -160,15 +157,13 @@ Rectangle {
               source: wallUrl
               fillMode: Image.PreserveAspectCrop
               asynchronous: true
-              // 37 thumbnails at 200x150 do not need to stay decoded once the
-              // switcher is closed; they reload on the next open.
+              // thumbnails need not stay decoded while the switcher is closed
               cache: false
               sourceSize.width: 200
               sourceSize.height: 150
             }
 
-            // A wallpaper file that cannot be decoded would otherwise show up as a
-            // blank cell; this is the only place the failure is reported.
+            // the only place an undecodable wallpaper is reported
             Text {
               anchors.centerIn: parent
               visible: preview.status === Image.Error
@@ -184,7 +179,6 @@ Rectangle {
               Behavior on opacity { NumberAnimation { duration: 115 } }
             }
 
-            // filename shadowed bar
             Rectangle {
               anchors.left: parent.left
               anchors.right: parent.right

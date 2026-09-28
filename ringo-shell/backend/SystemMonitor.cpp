@@ -15,9 +15,8 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
     m_telemetryTimer.setSingleShot(false);
     connect(&m_telemetryTimer, &QTimer::timeout, this, &SystemMonitor::pollTelemetry);
 
-    // Network + uptime feed only the mini dashboard, so they are started and
-    // stopped together with telemetry (see setTelemetryActive) instead of running
-    // unconditionally for the whole session.
+    // Network and uptime only feed the mini dashboard, so they share the
+    // telemetry timer's lifetime (see setTelemetryActive).
     m_netTimer.setInterval(30000);
     m_netTimer.setSingleShot(false);
     connect(&m_netTimer, &QTimer::timeout, this, &SystemMonitor::pollNetwork);
@@ -26,10 +25,8 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
     m_uptimeTimer.setSingleShot(false);
     connect(&m_uptimeTimer, &QTimer::timeout, this, &SystemMonitor::pollUptime);
 
-    // UPower DBus PropertiesChanged - verified to fire on this exact object and
-    // interface (observed live), which makes a polling timer for the battery
-    // redundant. The bar's battery display is fed by this signal plus the one
-    // initial read below.
+    // UPower PropertiesChanged fires reliably on this object, so there is no
+    // polling timer; the bar is fed by this signal plus the initial read below.
     QDBusConnection::systemBus().connect(
         QStringLiteral("org.freedesktop.UPower"),
         QStringLiteral("/org/freedesktop/UPower/devices/DisplayDevice"),
@@ -37,7 +34,7 @@ SystemMonitor::SystemMonitor(QObject *parent) : QObject(parent) {
         QStringLiteral("PropertiesChanged"),
         this, SLOT(handleUPowerPropertiesChanged(QString,QVariantMap,QStringList)));
 
-    // One initial battery read so the bar has a value before the first signal.
+    // One read so the bar has a value before the first signal.
     pollBattery();
 }
 
@@ -211,7 +208,7 @@ void SystemMonitor::pollRam() {
 }
 
 void SystemMonitor::pollNetwork() {
-    // default route iface from /proc/net/route
+    // default route iface
     QString defaultIface;
     {
         QFile f(QStringLiteral("/proc/net/route"));
@@ -244,7 +241,7 @@ void SystemMonitor::pollNetwork() {
             }
         }
     }
-    // fallback: if defaultIface empty, try first non-loopback ipv4
+    // no default route: fall back to the first non-loopback ipv4
     if (ipStr == QStringLiteral("unknown")) {
         for (const auto &iface : ifaces) {
             if (iface.flags().testFlag(QNetworkInterface::IsUp) && !iface.flags().testFlag(QNetworkInterface::IsLoopBack)) {
@@ -288,7 +285,7 @@ void SystemMonitor::pollBattery() {
     };
     QVariant isPresent = getProp(QStringLiteral("IsPresent"));
     bool present = isPresent.isValid() ? isPresent.toBool() : true;
-    // If DisplayDevice not present, try BAT0
+    // DisplayDevice absent: try BAT0
     if (!present) {
         QDBusInterface iface2(QStringLiteral("org.freedesktop.UPower"),
                               QStringLiteral("/org/freedesktop/UPower/devices/battery_BAT0"),

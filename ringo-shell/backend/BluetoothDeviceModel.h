@@ -18,7 +18,7 @@ public:
     };
 
     struct Device {
-        QString objectPath;   // e.g., /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF
+        QString objectPath;   // /org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF
         QString address;      // AA:BB:CC:DD:EE:FF
         QString name;
         bool paired = false;

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Ringo Shell launcher (user-level)
-# QML config lives in ~/.config/ringo-shell, backend module in
-# ~/.config/ringo-shell/IslandBackend (built by Ringo install.sh).
+# QML in ~/.config/ringo-shell, built backend module in its IslandBackend/.
 
 RINGO_DIR="$HOME/.config/ringo-shell"
 

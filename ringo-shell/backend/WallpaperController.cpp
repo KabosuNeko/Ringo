@@ -33,9 +33,8 @@ constexpr int kStopAttempts = 4;
 constexpr int kEngineRestartDelayMs = 1000;
 constexpr qint64 kImmediateExitMs = 2000;
 
-// A QThread must never be destroyed while it is still running: Qt treats that
-// as fatal. Ask the engine to return, wait, and if it refuses, hand the object
-// over to the event loop instead of deleting it here.
+// Qt treats destroying a running QThread as fatal; if the engine refuses to
+// return, hand the object to the event loop instead of deleting it here.
 bool stopThread(QThread *thread, const std::function<void()> &requestStop) {
     for (int attempt = 0; attempt < kStopAttempts; ++attempt) {
         requestStop();
@@ -56,12 +55,8 @@ QString stderrTail(const QByteArray &output) {
     return QString::fromUtf8(trimmed);
 }
 
-/* The engine blocks in its own Wayland event loop, so it owns a thread. stop()
- * is asynchronous: it wakes the loop through the engine's self-pipe, and the
- * loop disconnects and returns by itself.
- *
- * The decode runs on this thread too: Qt is the process's only image decoder,
- * and the engine takes the decoded pixels rather than a path. */
+/* The engine blocks in its own Wayland event loop, so it owns a thread; stop()
+ * is async and wakes that loop through the engine's self-pipe. */
 class EngineThread final : public QThread {
 public:
     EngineThread(const QString &mode, const QString &path, QObject *parent = nullptr)
@@ -79,15 +74,13 @@ protected:
             return;
         }
 
-        // tile repeats the image at its own size, so downscaling it would change
-        // what the mode means; every other mode scales per output anyway.
+        // tile repeats the image at its own size, so it is never downscaled
         const bool nativePixels = m_mode == QByteArrayLiteral("tile");
         const QSize screen = nativePixels ? QSize() : largestScreen();
         const QSize full = reader.size();
         if (screen.isValid() && full.width() > 0 && full.height() > 0) {
-            // Cover the largest screen like PreserveAspectCrop: everything
-            // smaller would be upscaled by the engine, everything larger would
-            // only make the shell hold pixels no output can show.
+            // Cover the largest screen like PreserveAspectCrop; anything larger
+            // would just be pixels no output can show.
             const double scale = std::max(double(screen.width()) / full.width(),
                                           double(screen.height()) / full.height());
             if (scale < 1.0)
@@ -95,9 +88,8 @@ protected:
                                            std::max(1, int(std::ceil(full.height() * scale)))));
         }
 
-        // m_image owns the pixels: the engine reads that buffer for the whole
-        // run, so it must outlive ringo_wallpaper_run() and is dropped right
-        // after it returns.
+        // The engine reads m_image for the whole run, so it must outlive
+        // ringo_wallpaper_run().
         const QImage decoded = reader.read();
         if (decoded.isNull()) {
             m_error = QStringLiteral("cannot decode %1: %2")
@@ -122,8 +114,8 @@ protected:
     }
 
 private:
-    // The largest screen in device pixels. Empty when the shell reports no
-    // screens, in which case the image is decoded at its full size.
+    // The largest screen in device pixels; empty when the shell reports none,
+    // in which case the image is decoded at its full size.
     static QSize largestScreen() {
         QSize largest;
         for (const QScreen *screen : QGuiApplication::screens())
@@ -161,8 +153,8 @@ WallpaperController::WallpaperController(QObject *parent) : QObject(parent) {
 }
 
 WallpaperController::~WallpaperController() {
-    // A Quickshell config reload destroys and recreates the singleton; stop the
-    // engine thread instead of leaving it drawing behind the new instance.
+    // A config reload recreates the singleton; stop the thread instead of
+    // leaving it drawing behind the new instance.
     stopEngine();
 }
 
@@ -226,8 +218,7 @@ void WallpaperController::setSlideshowIntervalMinutes(int minutes) {
 }
 
 void WallpaperController::setSlideshowDir(const QString &dir) {
-    // config.jsonc is written by hand, so "~/Pictures/Wallpapers" has to work
-    // here exactly like it does in the wallpaper switcher.
+    // config.jsonc is hand-written, so "~/" has to expand here too.
     QString normalized = dir;
     if (normalized.startsWith(QStringLiteral("~/")))
         normalized = QDir::homePath() + normalized.mid(1);
@@ -271,10 +262,8 @@ QString WallpaperController::pickRandomImage() const {
 }
 
 void WallpaperController::start() {
-    // Older Ringo releases ran the wallpaper engine as a standalone process; a
-    // shell that died without cleaning up would leave one behind, drawing a
-    // stale wallpaper on top of ours. The engine is in-process now, so any
-    // leftover of that design has to go.
+    // The engine used to run as a standalone process; reap any leftover so a
+    // stale renderer cannot draw over ours.
     reapLegacyEngines();
 
     QFile config(walConfigPath());
@@ -369,10 +358,8 @@ void WallpaperController::runWal(const QString &path) {
 }
 
 namespace {
-// Three box-blur passes of width 12 approximate a Gaussian: the variance of one
-// box of width w is (w^2-1)/12, so three of them give sigma = sqrt(3*(w^2-1)/12)
-// = 5.98 for w = 12 - matching the `-blur 0x6` the ImageMagick pipeline applied
-// in the 25% space, which is why the blur can move in-process unnoticed.
+// Three box-blur passes of width 12 give sigma ~6, matching the `-blur 0x6`
+// the ImageMagick pipeline applied.
 constexpr int kBlurBoxWidth = 12;
 constexpr int kBlurPasses = 3;
 constexpr int kBlurTargetWidth = 1920;
@@ -436,7 +423,7 @@ void blurColumns(QImage &img) {
 }
 
 // Reproduces `magick <src> -resize 25% -blur 0x6 -resize 1920x1080^ -gravity
-// center -extent 1920x1080 <target>` without ImageMagick.
+// center -extent 1920x1080` without ImageMagick.
 bool writeBlurredWallpaper(const QString &source, const QString &target, QString *error) {
     const QImage src(source);
     if (src.isNull()) {
@@ -457,8 +444,8 @@ bool writeBlurredWallpaper(const QString &source, const QString &target, QString
     big = big.copy((big.width() - kBlurTargetWidth) / 2, (big.height() - kBlurTargetHeight) / 2,
                    kBlurTargetWidth, kBlurTargetHeight);
 
-    // Write beside the target and rename, so Backdrop's file watcher can never
-    // observe a half-written JPEG.
+    // Write beside the target and rename so Backdrop's watcher never sees a
+    // half-written JPEG.
     const QString tmp = target + QStringLiteral(".tmp");
     if (!big.save(tmp, "JPG", kBlurJpegQuality)) {
         QFile::remove(tmp);
@@ -478,8 +465,8 @@ bool writeBlurredWallpaper(const QString &source, const QString &target, QString
 void WallpaperController::runBlur(const QString &path) {
     const QString out = blurredPath();
 
-    // Off the GUI thread: decoding and blurring a 1080p wallpaper is a few
-    // milliseconds of CPU that the shell must not spend on the event loop.
+    // Off the GUI thread: blurring a 1080p wallpaper is milliseconds the shell
+    // must not spend on the event loop.
     QThreadPool::globalInstance()->start([this, path, out]() {
         QString error;
         const bool ok = writeBlurredWallpaper(path, out, &error);
@@ -521,8 +508,8 @@ void WallpaperController::startEngine(const QString &path) {
 
 void WallpaperController::onEngineFinished(QThread *thread) {
     if (thread != m_engineThread) {
-        // A replaced engine: stopEngine() detached it before waking it, so this
-        // exit is expected and must not touch the engine that replaced it.
+        // Replaced engine: stopEngine() detached it before waking it, so this
+        // exit is expected and must not touch its replacement.
         if (thread) thread->deleteLater();
         return;
     }
@@ -535,10 +522,8 @@ void WallpaperController::onEngineFinished(QThread *thread) {
 
     if (m_stopped) return;
 
-    // A mode this engine build rejects dies immediately; retry without it rather
-    // than leaving no wallpaper at all. A run that survived a while and then
-    // stopped is a real failure: retrying it without the mode would silently
-    // drop the mode.
+    // A mode the engine rejects dies immediately, so retry without it rather
+    // than show nothing; a run that survived a while is a real failure.
     const bool diedImmediately = m_engineAlive.isValid()
         && m_engineAlive.elapsed() < kImmediateExitMs;
     if (diedImmediately && m_spawnWithMode && !m_modeFallbackTried) {
@@ -565,8 +550,7 @@ void WallpaperController::stopEngine() {
     auto *thread = static_cast<EngineThread *>(m_engineThread);
     if (!thread) return;
 
-    // Detach first: the exit of a replaced engine is not an unexpected one, so
-    // its finished handler must not run the supervision path.
+    // Detach first: a replaced engine's exit must not run the supervision path.
     m_engineThread = nullptr;
     setReady(false);
 
@@ -577,8 +561,8 @@ void WallpaperController::stopEngine() {
 }
 
 void WallpaperController::reapLegacyEngines() {
-    // Older Ringo releases ran the engine as a process; reap any leftover so an
-    // upgrade cannot leave a stale renderer drawing over ours.
+    // The engine used to run as a process; reap any leftover so an upgrade
+    // cannot leave a stale renderer drawing over ours.
     QDir procDir(QStringLiteral("/proc"));
     const QStringList entries = procDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
     for (const QString &entry : entries) {

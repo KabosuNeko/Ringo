@@ -12,9 +12,8 @@
 
 namespace {
 
-// PAM conversation: the only prompt we expect is the password echo-off prompt.
-// We answer it with the password supplied by tryUnlock(). Every other message
-// style (errors, text info) is left untouched so PAM can surface it itself.
+// Answers the password echo-off prompt with the password from tryUnlock();
+// other message styles are left to PAM so it can surface them itself.
 struct ConversationData {
     const char *password;
 };
@@ -46,8 +45,7 @@ int conversation(int numMsg, const struct pam_message **msg,
     return PAM_SUCCESS;
 }
 
-// Runs the whole PAM conversation on the calling (worker) thread. `password`
-// is owned by the caller, which wipes it once this returns.
+// Runs on the calling (worker) thread; `password` is owned and wiped by the caller.
 bool authenticate(const QByteArray &user, const QByteArray &password) {
     ConversationData data{password.constData()};
     struct pam_conv conv = {conversation, &data};
@@ -89,8 +87,7 @@ void LockController::unlock() {
 }
 
 void LockController::tryUnlock(const QString &password) {
-    // A conversation is already running: drop this attempt instead of stacking
-    // a second PAM conversation on top of it.
+    // Drop rather than stack a second PAM conversation.
     if (m_authenticating) {
         return;
     }
@@ -103,8 +100,7 @@ void LockController::tryUnlock(const QString &password) {
 
     setAuthenticating(true);
 
-    // The singleton outlives every attempt, but guard anyway so a late worker
-    // result can never touch a destroyed object.
+    // Guard so a late worker result cannot touch a destroyed object.
     QPointer<LockController> guard(this);
     QThreadPool::globalInstance()->start(
         [guard, user, password = password.toUtf8()]() mutable {

@@ -134,14 +134,14 @@ PanelWindow {
 
                 Text {
                   anchors.verticalCenter: parent.verticalCenter
-                  text: connected ? "\uf5b0" : paired ? "\uf0c1" : "\uf294" // dynamic glyph
+                  text: connected ? "\uf5b0" : paired ? "\uf0c1" : "\uf294"
                   font { family: Theme.nerdFontFamily; pixelSize: 12 * dpi }
                   color: connected ? Theme.fgL : Theme.fg4
                 }
 
                 Column {
                   anchors.verticalCenter: parent.verticalCenter
-                  width: parent.width - 20 - 20 // minus icon width + spacing, roughly
+                  width: parent.width - 20 - 20 // minus icon width + spacing
                   spacing: 2 * dpi
                   Text {
                     text: name

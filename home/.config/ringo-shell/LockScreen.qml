@@ -5,9 +5,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
 
-// Fullscreen lock screen. Shown when LockController.locked becomes true.
-// Covers the whole output on the overlay layer, grabs exclusive keyboard
-// focus and authenticates the password against PAM via the backend.
+// fullscreen lock on the overlay layer; PAM password check via the backend
 PanelWindow {
   visible: LockController.locked
   WlrLayershell.layer: WlrLayershell.Overlay
@@ -18,8 +16,7 @@ PanelWindow {
   WlrLayershell.keyboardFocus: LockController.locked ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
   color: "transparent"
 
-  // Backdrop: niri applies the ringo-lock layer-rule background-effect
-  // (xray + blur) on this surface; we darken it further on top.
+  // niri applies the ringo-lock layer-rule (xray + blur) on this surface; darkened further on top
   Rectangle {
     anchors.fill: parent
     color: Qt.rgba(0.08, 0.08, 0.10, 0.6)
@@ -52,8 +49,7 @@ PanelWindow {
         Layout.topMargin: 24
         implicitWidth: 260
         implicitHeight: 44
-        // Input is neutralised while a PAM conversation is in flight so a
-        // second Enter cannot queue another attempt.
+        // input neutralised while a PAM conversation is in flight so a second Enter cannot queue
         enabled: !LockController.authenticating
         placeholderText: LockController.authenticating ? "Checking…" : "Password"
         echoMode: TextInput.Password
@@ -176,7 +172,6 @@ PanelWindow {
     target: LockController
     function onUnlockResult(success) {
       if (success) {
-        // LockController flips locked=false, the panel hides itself.
         errorText.visible = false
       } else {
         errorText.visible = true

@@ -4,11 +4,7 @@
 #include <QtQml/qqml.h>
 
 // Posts desktop notifications through the shell's own notification server.
-//
-// The shell *is* the org.freedesktop.Notifications service, so this is a
-// fire-and-forget D-Bus call to itself: no notify-send process, and no reply to
-// wait for (a blocking call would deadlock, since the answer would have to be
-// produced by this same event loop).
+// Fire-and-forget call to itself: waiting for the reply would deadlock.
 class Notifier final : public QObject {
     Q_OBJECT
     QML_ELEMENT
@@ -17,8 +13,7 @@ class Notifier final : public QObject {
 public:
     explicit Notifier(QObject *parent = nullptr);
 
-    // `icon` is a themed icon name or an absolute path; `urgency` is 0 low,
-    // 1 normal, 2 critical; `timeoutMs` < 0 lets the server decide.
+    // `icon` is a themed name or absolute path; `timeoutMs` < 0 lets the server decide.
     Q_INVOKABLE void post(const QString &summary,
                           const QString &body = QString(),
                           const QString &icon = QString(),

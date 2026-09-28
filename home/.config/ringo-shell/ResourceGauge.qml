@@ -13,10 +13,7 @@ Rectangle {
     border.width: 1
     border.color: Theme.cardBorder
 
-    // The shell pins this card to 52 px (shell.qml telemetry row), which leaves
-    // 32 px of content after the 10 px paddings: the two gauges sit side by side
-    // in one 16 px row. The user and uptime live in the dashboard header, so
-    // this card does not repeat them.
+    // shell.qml pins this card to 52 px; user and uptime live in the dashboard header
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 10

@@ -19,8 +19,7 @@ StateStore &StateStore::instance() {
 }
 
 StateStore::StateStore(QObject *parent) : QObject(parent) {
-    // QStandardPaths::StateLocation only exists from Qt 6.9; below that, spell
-    // out what it returns so the file lands in the same place either way.
+    // QStandardPaths::StateLocation only exists from Qt 6.9.
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
     const QString stateRoot = QStandardPaths::writableLocation(QStandardPaths::StateLocation);
 #else

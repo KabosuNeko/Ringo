@@ -28,8 +28,7 @@ int forceIndex(const QString &force) {
 } // namespace
 
 NightLightController::NightLightController(QObject *parent) : QObject(parent) {
-    // The toggles the UI changes are remembered; everything else is
-    // configuration and lives in config.jsonc.
+    // Only the UI toggles persist; everything else is config.jsonc's job.
     m_enabled = StateStore::instance().get(kEnabledKey, true).toBool();
     const QString force = StateStore::instance().get(kForceKey).toString();
     if (force == QLatin1String("high") || force == QLatin1String("low")) m_force = force;
@@ -56,7 +55,7 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
 
         if (m_uptime.isValid() && m_uptime.elapsed() > kHealthyRunMs) m_restarts = 0;
 
-        // Compositor restart or a killed process: retry once before reporting.
+        // Compositor restart or killed process: retry once before reporting.
         if (m_restarts < 1) {
             m_restarts++;
             m_restartTimer.start();
@@ -200,7 +199,7 @@ void NightLightController::restartEngine() {
 void NightLightController::startEngine() {
     stopEngine();
 
-    // Some builds install it in /usr/sbin, which a session PATH may lack.
+    // Some builds install it in /usr/sbin, which a session PATH lacks.
     const QString binary = QStandardPaths::findExecutable(
         kBinary, {QStringLiteral("/usr/local/bin"), QStringLiteral("/usr/bin"), QStringLiteral("/usr/sbin")});
     if (binary.isEmpty()) {
@@ -218,7 +217,7 @@ void NightLightController::startEngine() {
     m_stopping = false;
     m_appliedForce = QStringLiteral("off"); // a fresh process starts unforced
     m_gammaRetryUsed = false;
-    // Otherwise a shell restart leaves the old client holding the outputs.
+    // Without this a shell restart leaves the old client holding the outputs.
 #ifdef Q_OS_LINUX
     m_process.setChildProcessModifier([] { prctl(PR_SET_PDEATHSIG, SIGTERM); });
 #endif
@@ -265,7 +264,7 @@ void NightLightController::readEngineOutput() {
                 setTemperature(value);
                 setActive(true);
                 setError(QString());
-                // SIGUSR1 before the handler is installed would kill it.
+                // SIGUSR1 before the handler is installed would kill wlsunset.
                 if (m_force != m_appliedForce) applyForce();
             }
             continue;
@@ -288,8 +287,8 @@ void NightLightController::readEngineOutput() {
         if (line.contains(QLatin1String("failed")) || line.contains(QLatin1String("could not"))
             || line.contains(QLatin1String("must be"))) {
             setError(line);
-            // A held output (the previous wlsunset during a QML reload) clears
-            // by itself: restart once.
+            // A held output (previous wlsunset during a QML reload) clears by
+            // itself: restart once.
             if (line.contains(QLatin1String("gamma control"))
                 && line.contains(QLatin1String("failed")) && !m_gammaRetryUsed) {
                 m_gammaRetryUsed = true;

@@ -36,9 +36,8 @@ class MprisController final : public QObject, protected QDBusContext {
     Q_PROPERTY(double polledPosition READ polledPosition NOTIFY polledPositionChanged)
     Q_PROPERTY(double polledLength READ polledLength NOTIFY polledLengthChanged)
     Q_PROPERTY(double progress READ progress NOTIFY progressChanged)
-    // Set from QML while the media widget is on screen. The 500 ms position
-    // timer only runs then, so music does not keep the GUI thread awake behind
-    // a closed control center.
+    // Set from QML while the media widget is on screen; the 500 ms position
+    // timer only runs then.
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
 
 public:

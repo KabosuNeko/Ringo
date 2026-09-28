@@ -1,6 +1,5 @@
 import Quickshell
 
-// Screen recording strip; all rendering, keys and selection live in MenuStrip.
 MenuStrip {
   items: [
     { icon: "󰕾", label: "System", action: () => record("only-sound") },

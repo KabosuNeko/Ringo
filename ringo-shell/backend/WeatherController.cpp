@@ -136,8 +136,7 @@ void WeatherController::parseAndApply(const QByteArray &data) {
     int hum = current.value(QStringLiteral("humidity")).toString().toInt();
     double wind = isMetric ? current.value(QStringLiteral("windspeedKmph")).toString().toDouble() : current.value(QStringLiteral("windspeedMiles")).toString().toDouble();
     QString cond = current.value(QStringLiteral("weatherDesc")).toArray().first().toObject().value(QStringLiteral("value")).toString();
-    // Upstream wttr.in field name, consumed only by iconForCode() below - not a
-    // property of this controller.
+    // wttr.in field name, consumed only by iconForCode() below.
     QString code = current.value(QStringLiteral("weatherCode")).toString();
     QVariantMap iconData = iconForCode(code.toInt());
     QString glyph = iconData.value(QStringLiteral("glyph")).toString();

@@ -7,15 +7,12 @@
 #include <algorithm>
 
 namespace {
-// Decoded clipboard images are only ever displayed at <=500px (see the QML
-// delegates' sourceSize), so cache downscaled copies instead of the raw
-// full-resolution decode. Keeps the on-disk cache ~10x smaller.
+// QML delegates never show clipboard images above 500px, so cache downscaled
+// copies instead of the full-resolution decode.
 constexpr int kThumbMaxEdge = 512;
 
-// Hard ceiling for the on-disk thumbnail cache. The observed cliphist history is
-// ~46 entries (a few dozen images at most); at <=512px a thumbnail is ~150-250 KB,
-// so 32 MB holds roughly 130-210 images - several times any realistic history -
-// while bounding the cache well below the 113 MB it grew to with full-size PNGs.
+// Hard ceiling for the on-disk thumbnail cache: 32 MB at ~200 KB per 512px
+// thumbnail holds far more images than any realistic cliphist history.
 constexpr qint64 kCacheCapBytes = 32LL * 1024 * 1024;
 }
 
@@ -25,14 +22,13 @@ CliphistModel::CliphistModel(QObject *parent)
     m_cacheDir = QDir::homePath() + QStringLiteral("/.cache/ringo-shell/cliphist-imgs");
     QDir().mkpath(m_cacheDir);
 
-    // Thumbnail jobs shell out to `cliphist decode` and scale the result with
-    // Qt, on a private pool capped at 2 workers; cache filling is background
-    // work and a burst of new images must not spike RSS.
+    // Decode jobs run on a private 2-worker pool, so a burst of new images
+    // cannot spike RSS.
     m_thumbPool = new QThreadPool(this);
     m_thumbPool->setMaxThreadCount(2);
 
-    // No prune here: pruning needs the live entry list to detect orphans, which
-    // only exists after the first `cliphist list` completes.
+    // No prune here: it needs the live entry list, which only exists after the
+    // first `cliphist list` completes.
     refresh();
 }
 
@@ -116,16 +112,16 @@ void CliphistModel::onListProcessFinished(int exitCode, QProcess::ExitStatus exi
 {
     if (!m_listProcess) return;
 
-    // Orphan pruning deletes every cache file whose id is missing from the list,
-    // so an empty/failed `cliphist list` must never be treated as "no entries".
+    // Pruning deletes every file whose id is missing from the list, so a failed
+    // `cliphist list` must never be treated as "no entries".
     m_listValid = (exitStatus == QProcess::NormalExit && exitCode == 0);
 
     const QByteArray output = m_listProcess->readAllStandardOutput();
     m_listProcess->deleteLater();
     m_listProcess = nullptr;
 
-    // Thumbnail jobs for this batch are queued inside the loop below; the
-    // counter is decremented as each one finishes on the main thread.
+    // Jobs are queued in the loop below and the counter decremented on the main
+    // thread as each finishes.
     m_pendingThumbs = 0;
 
     QVector<ClipEntry> newEntries;
@@ -179,9 +175,8 @@ void CliphistModel::decodeThumbnail(const ClipEntry &entry)
     m_thumbPool->start([rawLine, targetPath, id, this]() {
         bool wrote = false;
 
-        // `cliphist decode` (the same process pipe copyById() uses for
-        // `cliphist decode | wl-copy`) into Qt: decode, shrink to <=512px and
-        // store a PNG. No external image tool is involved.
+        // `cliphist decode` piped into Qt, shrunk and stored as a PNG; no
+        // external image tool involved.
         QProcess decode;
         decode.start(QStringLiteral("cliphist"), {QStringLiteral("decode")});
         if (decode.waitForStarted(1000)) {
@@ -211,13 +206,12 @@ void CliphistModel::decodeThumbnail(const ClipEntry &entry)
         }
 
         if (!wrote) {
-            // Never leave a truncated/empty file behind - the QML would show a
-            // broken image instead of falling back to the text label.
+            // Never leave a truncated file: QML would show a broken image
+            // instead of the text label.
             QFile::remove(targetPath);
         }
 
-        // Notify the model on the main thread. The last job of a batch re-runs
-        // the prune so the size cap is enforced after thumbnails are generated.
+        // Notify on the main thread; the last job of a batch re-runs the prune.
         QMetaObject::invokeMethod(this, [id, wrote, this]() {
             if (wrote) {
                 for (int i = 0; i < m_filteredEntries.size(); ++i) {
@@ -280,8 +274,8 @@ void CliphistModel::copyById(const QString &id)
                 wlCopyProc->deleteLater();
             };
             connect(wlCopyProc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), cleanup);
-            // A start failure (or a dead peer) never reaches `finished` on the
-            // other process, which would leave it running for the shell's lifetime.
+            // A start failure never reaches `finished`, which would leave the
+            // process alive for the shell's lifetime.
             connect(decodeProc, &QProcess::errorOccurred, cleanup);
             connect(wlCopyProc, &QProcess::errorOccurred, cleanup);
             break;
@@ -334,7 +328,6 @@ void CliphistModel::clearAll()
     emit countChanged();
     emit totalCountChanged();
 
-    // Clean cache directory
     QDir dir(m_cacheDir);
     const auto files = dir.entryInfoList(QDir::Files);
     for (const auto &file : files) {
@@ -364,11 +357,8 @@ void CliphistModel::pruneCache()
     QDir dir(m_cacheDir);
     const QFileInfoList files = dir.entryInfoList(QDir::Files);
 
-    // 1. Drop files whose cliphist entry no longer exists. `cliphist delete` and
-    //    `cliphist wipe` also run outside this model (the Mod+Shift+C keybind
-    //    calls `cliphist wipe` directly), so without this the cache accumulates
-    //    thumbnails for entries that are long gone - 88 of 122 files were
-    //    orphans when this was measured.
+    // Drop files whose entry is gone: `cliphist wipe` also runs outside this
+    // model (the Mod+Shift+C keybind calls it directly).
     QSet<QString> liveIds;
     liveIds.reserve(m_allEntries.size());
     for (const ClipEntry &entry : m_allEntries) {
@@ -387,7 +377,7 @@ void CliphistModel::pruneCache()
         kept.append(file);
     }
 
-    // 2. Enforce the size ceiling, evicting the least recently written first.
+    // Evict the least recently written first.
     if (totalBytes > kCacheCapBytes) {
         std::sort(kept.begin(), kept.end(), [](const QFileInfo &a, const QFileInfo &b) {
             return a.lastModified() < b.lastModified();

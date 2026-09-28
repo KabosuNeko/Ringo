@@ -33,8 +33,8 @@ void MprisController::setActive(bool v) {
     if (m_active == v) return;
     m_active = v;
     emit activeChanged();
-    // Re-run the update so the position timer starts (or stops) right away
-    // instead of waiting for the next D-Bus event.
+    // Starts/stops the position timer right away instead of waiting for the
+    // next D-Bus event.
     updateActivePlayer();
 }
 
@@ -268,7 +268,7 @@ void MprisController::updatePolledValues() {
     setArtist(info.artist);
     setArtUrl(info.artUrl);
     double lenSec = info.lengthUs / 1e6;
-    // fallback if length <= position (fork bug) -> keep length as is, no extra metadata fallback here because length already from metadata
+    // some players (fork bug) report length <= position, so keep length as is
     if (lenSec <= 0) lenSec = 0;
     setPolledLength(lenSec);
     // position with elapsed

@@ -22,8 +22,7 @@ public:
 
     Q_INVOKABLE void setBrightness(int value);
     Q_INVOKABLE void setPercent(double pct);
-    // Steps the reported percentage (exponential curve, exponent 4) by
-    // `deltaPercent` points, mirroring `brightnessctl -e4 -n2 set N%+-`.
+    // Mirrors `brightnessctl -e4 -n2 set N%+-`.
     Q_INVOKABLE void step(double deltaPercent);
     Q_INVOKABLE void dim();
     Q_INVOKABLE void restore();

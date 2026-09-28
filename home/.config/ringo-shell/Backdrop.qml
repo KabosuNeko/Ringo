@@ -52,7 +52,7 @@ PanelWindow {
         source: "file://" + Quickshell.env("HOME") + "/.cache/wal/wallpaper_blurred.jpg"
     }
 
-    // Subtle dark overlay to give high contrast for floating workspaces in overview
+    // contrast for floating workspaces in overview
     Rectangle {
         anchors.fill: parent
         color: Qt.rgba(0, 0, 0, 0.25)

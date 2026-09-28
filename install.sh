@@ -211,10 +211,7 @@ if ask "===> Deploy dotfiles via GNU Stow (symlinks)?"; then
     echo ":: Deploying configs and scripts to \$HOME..."
     cd "$RINGO_DIR"
 
-    # stow walks the package tree by tree and aborts on the first target it does
-    # not own, so a conflict can leave part of the dotfiles already linked.
-    # Simulate first: -n reports every conflict, changes nothing, and exits
-    # non-zero. Anyone coming from a hand-written niri config hits this.
+    # stow aborts mid-tree on the first target it does not own: simulate first.
     if ! run stow -n --restow --no-folding -t "$HOME" home; then
         echo "XXX [ERROR] Stow would refuse to replace files already in \$HOME (listed above)." >&2
         echo "    Nothing was changed. Move each one aside and re-run:" >&2
@@ -344,9 +341,7 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
         echo ":: Installing ringo-shell backend to ~/.config/ringo-shell/IslandBackend..."
         run mkdir -p "$ISLAND_BACKEND_DIR"
 
-        # Keep the previous plugin so --rollback can restore it; the snapshot is
-        # replaced on every install run. .backup lives inside the directory it
-        # snapshots, so copy entry by entry and never recurse into the backup.
+        # --rollback snapshot; .backup sits inside the directory it snapshots.
         echo ":: Backend backup path: $BACKUP_DIR"
         if [ -d "$ISLAND_BACKEND_DIR" ]; then
             run rm -rf "$BACKUP_DIR"

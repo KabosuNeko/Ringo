@@ -30,7 +30,7 @@ QString SoundController::resolveSoundPath(const QString &sound) const
         return path;
     }
 
-    // Try standard freedesktop stereo directory
+    // standard freedesktop theme directory
     const QString baseDir = QStringLiteral("/usr/share/sounds/freedesktop/stereo/");
     const QStringList extensions = {QStringLiteral(".oga"), QStringLiteral(".ogg"), QStringLiteral(".wav")};
 
@@ -52,7 +52,7 @@ void SoundController::play(const QString &soundNameOrPath)
     QString resolved = resolveSoundPath(soundNameOrPath);
     if (resolved.isEmpty()) {
         if (m_playerBinary == QStringLiteral("canberra-gtk-play")) {
-            // canberra-gtk-play can take event id directly: -i <event_id>
+            // canberra-gtk-play takes an event id directly
             QProcess::startDetached(QStringLiteral("canberra-gtk-play"), {QStringLiteral("-i"), soundNameOrPath});
             return;
         }

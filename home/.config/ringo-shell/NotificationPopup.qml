@@ -29,13 +29,10 @@ Item {
       Layout.preferredHeight: 23 * Config.dpiScale
       fillMode: Image.PreserveAspectCrop
       source: {
-        // Only show the app icon. Attached images (e.g. screenshots) are
-        // hidden: a dark 16:9 image cropped to a tiny square renders as a
-        // broken-looking black box instead of a useful preview.
+        // only the app icon: a 16:9 attachment cropped to a tiny square renders as a black box
         if (root.notif && root.notif.appIcon) {
           if (root.notif.appIcon.startsWith("/")) return "file://" + root.notif.appIcon
-          // iconPath(icon, true) returns "" if the icon is missing from the
-          // theme, so we never see the black/purple "missing texture" block.
+          // iconPath(icon, true) returns "" when the icon is missing from the theme
           return Quickshell.iconPath(root.notif.appIcon, true)
         }
         return ""

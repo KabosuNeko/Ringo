@@ -64,7 +64,7 @@ int FuzzySearch::score(const QString &pattern, const QString &target) const
     }
 
     if (pIdx < pLen) {
-        return 0; // Not all pattern characters were found in sequence
+        return 0;
     }
 
     // Small penalty for total string length to prefer tighter matches

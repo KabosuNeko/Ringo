@@ -4,9 +4,8 @@ import QtQuick
 import QtQuick.Layouts
 import IslandBackend
 
-// Searchable view of ~/.config/niri/keybinds.kdl plus the shell's own IPC
-// commands, so the bindings can be looked up without reading the config.
-// Opened with Mod+/ or `ringo-shell call keybinds toggle`.
+// ~/.config/niri/keybinds.kdl plus the shell's own IPC commands
+// opened with Mod+/ or `ringo-shell call keybinds toggle`
 Item {
   id: root
   clip: true
@@ -14,8 +13,7 @@ Item {
   property bool shown: false
   property string searchQuery: ""
   property int selectedIndex: 0
-  // [{ keys, action, section, name, comment }] - name/comment are what
-  // FuzzySearch scores, the rest is what we render.
+  // [{ keys, action, section, name, comment }]; FuzzySearch scores name/comment
   property var bindings: []
   property var sectionNames: ["All"]
   property string activeSection: "All"
@@ -41,9 +39,7 @@ Item {
     list.positionViewAtIndex(selectedIndex, ListView.Contain)
   }
 
-  // ---- keybinds.kdl parsing -------------------------------------------------
-  // niri's syntax is small enough for a line parser: a binding starts with
-  // `Mod+Key` followed by an optional hotkey-overlay-title and a brace block.
+  // niri syntax: `Mod+Key`, optional hotkey-overlay-title, then a brace block
   function parse(text) {
     const entries = []
     let section = "General"
@@ -123,8 +119,8 @@ Item {
 
   readonly property string keybindPath: Quickshell.env("HOME") + "/.config/niri/keybinds.kdl"
 
-  // FileView only watches here: its text accessor is not a plain string from a
-  // handler, so the contents come from the backend.
+  // FileView only watches; text comes from the backend since its accessor is not
+  // a plain string from a handler
   FileView {
     id: keybindFile
     path: root.keybindPath
@@ -139,7 +135,6 @@ Item {
 
   Component.onCompleted: reloadBindings()
 
-  // ---- ui -------------------------------------------------------------------
   Rectangle {
     anchors.fill: parent
     radius: 16

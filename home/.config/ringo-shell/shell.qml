@@ -195,13 +195,11 @@ ShellRoot {
     function step(delta: real): void { BrightnessController.step(delta) }
   }
 
-  // The pill has to be opaque enough for pywal's bg/fg pair to decide contrast:
-  // at 0.5 the wallpaper showed through and light text sat on a light pill.
+  // 0.5 let the wallpaper show through and broke pywal's bg/fg contrast
   property real barSurfaceOpacity: 0.85
 
 
-  // Tools the shell drives; `needed: false` means the feature that uses them
-  // degrades gracefully.
+  // needed: false means the feature that uses the tool degrades gracefully
   readonly property var doctorToolChecks: [
     { name: "niri",              needed: true,  why: "compositor" },
     { name: "qs",                needed: true,  why: "shell runtime" },
@@ -232,13 +230,11 @@ ShellRoot {
     NightLightController.start()
   }
 
-  // The night light follows config.jsonc when it pins a location, and the
-  // weather widget's city otherwise.
+  // pinned location from config.jsonc, else the weather widget's city
 function doctorReport(): string {
   const out = []
   out.push(Tools.version())
 
-  // --- engines ---
   const wall = WallpaperController
   out.push("")
   out.push("[wallpaper] " + wall.mode + " · " + (wall.path.length > 0 ? wall.path : "(no image)"))
@@ -257,7 +253,6 @@ function doctorReport(): string {
            + " · " + nl.lowTemperature + "K night / " + nl.highTemperature + "K day")
   if (nl.error.length > 0) out.push("  error: " + nl.error)
 
-  // --- files ---
   const wal = Quickshell.env("HOME") + "/.cache/wal/colors.json"
   const state = Quickshell.env("HOME") + "/.local/state/quickshell/ringo-shell/state.json"
   out.push("")
@@ -265,7 +260,6 @@ function doctorReport(): string {
   out.push("  palette: " + (Tools.fileExists(wal) ? "ok" : "missing") + "  " + wal)
   out.push("  state:   " + (Tools.fileExists(state) ? "ok" : "absent") + "  " + state)
 
-  // --- tools ---
   const missingRequired = []
   const missingOptional = []
   for (const tool of doctorToolChecks) {
@@ -278,7 +272,6 @@ function doctorReport(): string {
   out.push("  missing required: " + (missingRequired.length > 0 ? missingRequired.join(", ") : "none"))
   out.push("  missing optional: " + (missingOptional.length > 0 ? missingOptional.join(", ") : "none"))
 
-  // --- verdict ---
   const problems = []
   if (missingRequired.length > 0) problems.push(missingRequired.length + " required tool(s) missing")
   if (wall.error.length > 0) problems.push("wallpaper: " + wall.error)
@@ -320,11 +313,9 @@ function doctorReport(): string {
     function onWallpapersDirChanged() { WallpaperController.slideshowDir = Config.wallpapersDir }
   }
 
-  // Weather is fetched on demand: the controller only runs its refresh timer
-  // while the weather UI (mini dashboard or weather popup) is on screen.
+  // refresh timer only runs while the weather UI is on screen
   readonly property bool weatherUiVisible: weatherPopup.shown || box.miniDashboard
-  // The media widget lives in the control center: while it is closed nothing
-  // reads the playback position, so the controller's 500 ms timer stays off.
+  // playback timer stays off while the control center is closed
   Binding {
     target: MprisController
     property: "active"
@@ -357,21 +348,17 @@ function doctorReport(): string {
                                  : (fullKeyboardOverlay
                                     ? WlrKeyboardFocus.Exclusive
                                     : (box.controlCenter || box.miniDashboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None))
-    // Height and width follow the actual content: pill box capsule
     implicitWidth: Math.ceil(box.width * box.dpi)
     implicitHeight: Math.ceil((box.y + box.height) * box.dpi)
-    onScreenChanged: { }
 
     anchors {
       top: true
     }
 
-    // fixed gap of the active window for the top bar
     margins.top: Config.pillTopMargin
     exclusiveZone: root.barHidden ? 0 : Config.pillBottomMargin
     color: "transparent"
 
-    // Mask input to only the capsule
     mask: Region {
       x: Math.floor(box.x - box.width * (box.dpi - 1) / 2)
       y: Math.floor(box.y)
@@ -379,7 +366,6 @@ function doctorReport(): string {
       height: Math.ceil(box.height * box.dpi)
     }
 
-    // main dynamic pill bar
     Rectangle {
       id: box
       anchors.top: parent.top
@@ -422,8 +408,7 @@ function doctorReport(): string {
       property int sliderHeight: 6
       property int sliderRadius: 3
       property string sliderColor: Theme.accent
-      // invisible extra clickable area above/below the thin slider bars
-      // (proportional to the bar height, so it scales with sliderHeight)
+      // extra clickable area above/below the thin slider bars, scales with sliderHeight
       property int sliderHitSlop: 12
 
       property string activeOsd: "" // volume, brightness, battery
@@ -433,9 +418,7 @@ function doctorReport(): string {
         onTriggered: box.activeOsd = ""
       }
 
-      // adjust box shape conditionally
-      // 1080p is the reference: 1440p is 1.33x, a 4K logical desktop 2x,
-      // anything smaller stays 1x. Config.dpiScale remains the manual override.
+      // 1080p is the reference: 1440p is 1.33x, a 4K logical desktop 2x, smaller stays 1x
       readonly property real dpi: Config.dpiScale * Math.max(1, (panelWindow.screen ? panelWindow.screen.height : 1080) / 1080)
 
       property bool cliphistPreviewing: false
@@ -508,14 +491,12 @@ function doctorReport(): string {
 
         onClicked: (mouse) => {
 
-          // restrict control center to only accept left click
           if (box.controlCenter) {
             if (mouse.button === Qt.LeftButton)
                 box.controlCenter = false
             return
           }
 
-          // same, cliphist accept middle
           if (box.cliphistOpen) {
             if (mouse.button === Qt.MiddleButton) {
               box.cliphistOpen = false
@@ -523,7 +504,6 @@ function doctorReport(): string {
             return
           }
 
-          // mini dashboard accept only right
           if (box.miniDashboard) {
             if (mouse.button === Qt.RightButton) {
               box.miniDashboard = false
@@ -580,10 +560,7 @@ function doctorReport(): string {
       }
 
 
-      // One compact line: time, date, weather, control center and
-      // notifications. Battery, volume and brightness live in the control
-      // center and the mini dashboard now, but their modules stay instantiated
-      // (invisible) because they drive the OSDs.
+      // battery, volume and brightness modules stay instantiated (invisible) since they drive the OSDs
       RowLayout {
         id: barRow
         anchors.centerIn: parent
@@ -669,9 +646,7 @@ function doctorReport(): string {
             color: "#ff453a"
 
             SequentialAnimation on opacity {
-              // An idle animation keeps the whole scene repainting at the
-              // monitor's rate even while the dot is invisible, so it only runs
-              // while a recording does.
+              // an idle animation repaints the scene at monitor rate, so it only runs while recording
               running: Recorder.active
               loops: Animation.Infinite
               NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
@@ -1133,7 +1108,6 @@ function doctorReport(): string {
             Layout.fillWidth: true
           }
 
-          // 5. Bento Notifications Pod
           Rectangle {
             Layout.fillWidth: true
             radius: 12
@@ -1238,7 +1212,6 @@ function doctorReport(): string {
                 }
               }
 
-              // add/append notifications in the stack
               delegate: Item {
                 width: ListView.view.width
                 height: contentColumn.implicitHeight + 7
@@ -1496,20 +1469,17 @@ function doctorReport(): string {
 
             Item { Layout.fillWidth: true }
 
-            // Battery Indicator
             Battery {
               fontSize: 10
               Layout.alignment: Qt.AlignVCenter
             }
           }
 
-          // 2. Dual Bento Telemetry Pods (Network Radar & Resource Gauge)
           RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 52
             spacing: 8
 
-            // Left Pod: Network Radar
             Rectangle {
               Layout.fillWidth: true
               Layout.fillHeight: true
@@ -1536,14 +1506,12 @@ function doctorReport(): string {
               }
             }
 
-            // Right Pod: Resource Gauge (CPU & RAM)
             ResourceGauge {
               Layout.fillWidth: true
               Layout.fillHeight: true
             }
           }
 
-          // 3. Cockpit Footer: Datetime & Weather Card
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: 30
@@ -1582,20 +1550,17 @@ function doctorReport(): string {
 
     }
 
-  // calendar popup window
   CalendarBox {
     id: calendarPopup
     datetimeItem: datetimeItem
     anchorY: Config.pillTopMargin + Math.round(box.height * box.dpi) + 5 * Config.dpiScale
   }
 
-  // weather popup window
   WeatherPopup {
     id: weatherPopup
     anchorY: Config.pillTopMargin + Math.round(box.height * box.dpi) + 5 * Config.dpiScale
   }
 
-  // open calendar when click on date in mini dashboard
   Connections {
     target: datetimeItem
     function onToggleCalendar() {
@@ -1604,7 +1569,6 @@ function doctorReport(): string {
     }
   }
 
-  // open weather when click on weather in mini dashboard
   Connections {
     target: weatherIndicatorItem
     function onToggleWeather() {
@@ -1647,7 +1611,6 @@ function doctorReport(): string {
     }
   }
 
-  // --- Idle / power management (replaces swayidle) ---
   IdleMonitor {
     timeout: 300
     respectInhibitors: true
@@ -1690,8 +1653,7 @@ function doctorReport(): string {
     id: backdrop
   }
 
-  // The blurred backdrop is normally picked up by Backdrop's own file watcher;
-  // this fires the reload explicitly so a swap that lands mid-watch is not missed.
+  // explicit reload: a swap that lands mid-watch would otherwise be missed
   Connections {
     target: WallpaperController
     function onBackdropChanged(): void { backdrop.reloadImage() }

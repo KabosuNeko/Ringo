@@ -4,7 +4,6 @@ import QtQuick
 Item {
   id: root
 
-  // toast state
   property var queue: []
   property var current: null
   readonly property bool active: current !== null
@@ -48,7 +47,6 @@ Item {
   }
 
   function enqueue(notif): void {
-      // conditional duplicate check
       if (avoidDuplicateNotifications) {
         const dup = findDuplicate(notif)
         if (dup) {
@@ -82,8 +80,7 @@ Item {
     hideTimer.restart()
   }
 
-  // Drop the oldest entries beyond the stack limit and forget them everywhere
-  // they are still referenced, so no toast can outlive its entry.
+  // dropped entries are forgotten everywhere they were referenced, so no toast outlives its entry
   function trimStack(): void {
     while (notifications.length > maxStored) {
       const old = notifications.shift()
@@ -94,8 +91,7 @@ Item {
     }
   }
 
-  // Only stack entries are ever queued, and the pending queue is capped like
-  // the stack, so a burst cannot grow it without bound.
+  // pending queue is capped like the stack so a burst cannot grow it unbounded
   function schedule(entry): void {
     if (dndEnabled) return
     queue.push(entry)

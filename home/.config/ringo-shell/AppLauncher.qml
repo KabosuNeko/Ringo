@@ -50,10 +50,8 @@ Item {
         let expr = isExplicit ? t.slice(1).trim() : t
         if (expr.length === 0) return null
 
-        // Quick rejection for paths/URLs
         if (/^[a-zA-Z]+:\/\//.test(expr) || expr.startsWith("/") || expr.startsWith("~")) return null
 
-        // Must have at least one math operator or starts with '='
         let hasMathOp = /[+\-*/%^]/.test(expr) || /^(sqrt|abs|sin|cos|tan|log|pow)\b/i.test(expr)
         if (!isExplicit && !hasMathOp) return null
 
@@ -169,7 +167,6 @@ Item {
             if (!e || !e.name || e.name.trim().length === 0) continue
             if (e.noDisplay) continue
 
-            // Deduplicate by entry ID (e.g. "antigravity", "futon", "xfce4-about")
             let idKey = e.id ? e.id.toLowerCase().trim() : ""
             if (idKey.length > 0 && seenIds[idKey]) continue
 
@@ -246,11 +243,8 @@ Item {
 
     function launchEntry(app) {
       if (app.runInTerminal) {
-         // No terminal configured: nothing to launch.
          if (!Config.defaultTerminal || Config.defaultTerminal.length === 0) return
-         // Hand the parsed Exec argv to the terminal instead of joining it back
-         // into a shell string, which would split paths containing spaces.
-         // app.command is a QML list sequence, so copy it element by element.
+         // argv stays a list so paths with spaces survive; app.command is a QML sequence
          let argv = [Config.defaultTerminal, "-e"]
          for (let i = 0; i < app.command.length; i++) argv.push(app.command[i])
          Quickshell.execDetached(argv)
@@ -423,7 +417,6 @@ Item {
             }
         }
 
-        // Special Action Card (Inline Math Calculator / Web Search / Direct URL)
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: root.hasSpecialCard ? 50 : 0
@@ -521,7 +514,6 @@ Item {
                        : (rowHover.hovered ? Theme.chipBg : "transparent")
                 Behavior on color { ColorAnimation { duration: 120 } }
 
-                // Left accent indicator pill
                 Rectangle {
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter

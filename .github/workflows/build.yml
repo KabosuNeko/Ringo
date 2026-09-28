@@ -50,10 +50,8 @@ jobs:
 
       - name: Shellcheck
         run: |
-          # home/.local/bin/scratchpad.sh is Python behind a .sh name, so lint
-          # only files with a POSIX shell shebang. Warnings and errors fail the
-          # build; info-level findings such as SC2086 on install.sh's
-          # intentionally word-split package list are not actionable here.
+          # scratchpad.sh is Python behind a .sh name: lint only POSIX shebangs.
+          # SC2086 on install.sh's intentionally word-split package list is fine.
           grep -lE '^#!.*\b(sh|bash|dash|ksh)\b' install.sh home/.local/bin/* \
             | xargs shellcheck --severity=warning
 
