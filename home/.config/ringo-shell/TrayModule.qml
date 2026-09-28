@@ -18,7 +18,7 @@ Rectangle {
   border.color: Theme.cardBorder
   clip: true
 
-  Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutQuad } }
+  Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
 
   RowLayout {
     anchors.fill: parent

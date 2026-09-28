@@ -176,7 +176,7 @@ Rectangle {
               anchors.fill: parent
               color: mouseArea.containsMouse ? "white" : "transparent"
               opacity: mouseArea.containsMouse ? 0.06 : 0
-              Behavior on opacity { NumberAnimation { duration: 115 } }
+              Behavior on opacity { NumberAnimation { duration: 100 } }
             }
 
             Rectangle {
