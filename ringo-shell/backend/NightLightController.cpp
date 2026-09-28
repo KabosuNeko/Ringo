@@ -303,6 +303,14 @@ void NightLightController::readEngineOutput() {
         if (line.contains(QLatin1String("failed")) || line.contains(QLatin1String("could not"))
             || line.contains(QLatin1String("must be"))) {
             setError(line);
+            // A gamma-control failure is usually a client that is still holding
+            // the output: the previous wlsunset during a QML reload, or one left
+            // by an earlier shell. Restart once, by which time it is gone.
+            if (line.contains(QLatin1String("gamma control"))
+                && line.contains(QLatin1String("failed")) && m_restarts < 1) {
+                m_restarts++;
+                m_restartTimer.start();
+            }
         }
     }
 }
