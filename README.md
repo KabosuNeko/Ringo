@@ -137,8 +137,6 @@ ringo-shell call lock lock                         # or: unlock
 
 ## Credits
 
-Only the wallpaper engine is vendored; the night light runs the upstream `wlsunset` package instead:
-
 | Component | Author | License | Where |
 | :--- | :--- | :--- | :--- |
 | [wawa](https://codeberg.org/sewn/wawa) | sewn | MIT | `ringo-shell/backend/engines/wallpaper/` — layer-shell wallpaper renderer |
