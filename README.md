@@ -52,6 +52,8 @@ The installer asks before each step. Flags:
 
 It installs `yay` and the `pkg.txt` packages, deploys the dotfiles with GNU Stow, and builds the backend into `~/.config/ringo-shell/IslandBackend/` (the previous build is kept in `.backup/` before it is replaced).
 
+Stow refuses to replace files it does not own, so the deploy is simulated with `stow -n` first: if you already have a hand-written `~/.config/niri/config.kdl`, the installer stops, names every conflicting file and changes nothing. Move them aside (or copy in only what you want) and run it again.
+
 ## Maintenance
 
 ```sh
@@ -98,7 +100,7 @@ What the UI changes (night light on/off and force, wallpaper mode, slideshow on/
 
 ## Commands
 
-Every panel and engine is reachable from a keybind or a script through `ringo-shell call`:
+Every panel and every backend action is reachable from a keybind or a script through `ringo-shell call`:
 
 ```sh
 ringo-shell call doctor check                      # health report
@@ -135,7 +137,7 @@ ringo-shell call lock lock                         # or: unlock
 
 ## Credits
 
-One engine is vendored and adapted to run inside the shell; the night light uses the upstream `wlsunset` package:
+Only the wallpaper engine is vendored; the night light runs the upstream `wlsunset` package instead:
 
 | Component | Author | License | Where |
 | :--- | :--- | :--- | :--- |
