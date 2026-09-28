@@ -34,7 +34,11 @@ ringo_protocol(xdg-shell-protocol ${WALLPAPER_DIR}/proto/stable/xdg-shell/xdg-sh
 ringo_protocol(xdg-output-unstable-v1-protocol ${WALLPAPER_DIR}/proto/unstable/xdg-output/xdg-output-unstable-v1.xml ${WALLPAPER_PROTO_DIR})
 ringo_protocol(wlr-layer-shell-unstable-v1-protocol ${WALLPAPER_DIR}/wlr-layer-shell-unstable-v1.xml ${WALLPAPER_PROTO_DIR})
 
-set_source_files_properties(backend/engines/wallpaper/wallpaper.c PROPERTIES COMPILE_DEFINITIONS "_GNU_SOURCE")
+set_source_files_properties(backend/engines/wallpaper/wallpaper.c PROPERTIES
+    COMPILE_DEFINITIONS "_GNU_SOURCE"
+    # Wayland listeners must accept every argument the protocol passes, so
+    # unused parameters are inherent here; everything else stays enabled.
+    COMPILE_OPTIONS "-Wall;-Wextra;-Wno-unused-parameter")
 
 # The wallpaper engine includes the generated protocol headers, so the
 # generators must run before it is compiled.

@@ -149,14 +149,14 @@ image_tile(unsigned char *dst, struct output *o)
 {
 	unsigned char *to;
 	const unsigned char *src;
-	uint16_t off_x, off_y, w, h;
+	const int out_w = (int)o->width, out_h = (int)o->height;
 
 	/* implementation shamelessly stolen from xwallpaper, MIT:
 	 * 2025 Tobias Stoeckmann <tobias@stoeckmann.org> */
-	for (off_y = 0; off_y < o->height; off_y += image.height) {
-		h = (off_y + image.height > o->height) ? o->height - off_y : image.height;
-		for (off_x = 0; off_x < o->width; off_x += image.width) {
-			w = (off_x + image.width > o->width) ? o->width - off_x : image.width;
+	for (int off_y = 0; off_y < out_h; off_y += image.height) {
+		const int h = (off_y + image.height > out_h) ? out_h - off_y : image.height;
+		for (int off_x = 0; off_x < out_w; off_x += image.width) {
+			const int w = (off_x + image.width > out_w) ? out_w - off_x : image.width;
 			for (int y = 0; y < h; y++) {
 				to = dst + ((off_y + y) * o->stride);
 				src = image.pixels + (y * image.width * 4);
@@ -250,7 +250,8 @@ output_load_image(struct output *output)
 	image_modify(data, output);
 
 	/* RGBA->BGRA */
-	for (int i = 0; i < output->size; i += 4) {
+	const int size = (int)output->size;
+	for (int i = 0; i < size; i += 4) {
 		data[i] ^= data[i+2];
 		data[i+2] ^= data[i];
 		data[i] ^= data[i+2];

@@ -139,13 +139,14 @@ To test the wallpaper engine without the shell, compile it with the generated pr
 
 ```sh
 SRC=ringo-shell/backend/engines/wallpaper
-wayland-scanner client-header $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol-client-protocol.h
-wayland-scanner private-code  $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol-protocol.c
-wayland-scanner client-header $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol-client-protocol.h
-wayland-scanner private-code  $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol-protocol.c
-wayland-scanner client-header $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol-client-protocol.h
-wayland-scanner private-code  $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol-protocol.c
-gcc -std=gnu11 -O2 -Wall -Wextra -D_GNU_SOURCE -c $SRC/wallpaper.c *-protocol.c harness.c -I$SRC -I.
+wayland-scanner client-header $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.h
+wayland-scanner private-code  $SRC/proto/stable/xdg-shell/xdg-shell.xml xdg-shell-protocol.c
+wayland-scanner client-header $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol.h
+wayland-scanner private-code  $SRC/proto/unstable/xdg-output/xdg-output-unstable-v1.xml xdg-output-unstable-v1-protocol.c
+wayland-scanner client-header $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol.h
+wayland-scanner private-code  $SRC/wlr-layer-shell-unstable-v1.xml wlr-layer-shell-unstable-v1-protocol.c
+gcc -std=gnu11 -O2 -Wall -Wextra -D_GNU_SOURCE -c $SRC/wallpaper.c \
+    xdg-output-unstable-v1-protocol.c wlr-layer-shell-unstable-v1-protocol.c harness.c -I$SRC -I.
 gcc -o harness *.o -lwayland-client -lm
 ```
 
