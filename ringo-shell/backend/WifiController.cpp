@@ -1813,7 +1813,8 @@ bool WifiController::addAndActivateConnection(const QString &ssid, const QString
     connectionSection.insert(QStringLiteral("id"), ssid);
     connectionSection.insert(QStringLiteral("type"), QStringLiteral("802-11-wireless"));
     connectionSection.insert(QStringLiteral("uuid"), QUuid::createUuid().toString(QUuid::WithoutBraces));
-    connectionSection.insert(QStringLiteral("autoconnect"), false);
+    // NetworkManager's own default: a network you join once is joined again.
+    connectionSection.insert(QStringLiteral("autoconnect"), true);
     settings.insert(QStringLiteral("connection"), connectionSection);
 
     QVariantMap wirelessSection;
