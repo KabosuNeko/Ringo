@@ -135,8 +135,7 @@ Item {
               text: "Clipboard History"
               color: Theme.fg2
               font { family: Theme.fontFamily; pixelSize: 11; weight: 700 }
-              font.capitalization: Font.AllUppercase
-              font.letterSpacing: 0.5
+                font.letterSpacing: 0.5
               Layout.alignment: Qt.AlignLeft
               Layout.leftMargin: 4
           }

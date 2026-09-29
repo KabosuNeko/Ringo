@@ -43,7 +43,6 @@ PanelWindow {
         text: datetimeItem ? (datetimeItem.monthNames[datetimeItem.viewMonth] + " " + datetimeItem.viewYear) : ""
         color: Theme.fg
         font { family: Theme.fontFamily; pixelSize: 11 * dpi; weight: 600 }
-        font.capitalization: Font.AllUppercase
         font.letterSpacing: 0.5
       }
       Item { Layout.fillWidth: true }
@@ -61,7 +60,6 @@ PanelWindow {
         Text {
           width: 25 * dpi; text: modelData; color: Theme.fg5
           font { family: Theme.fontFamily; pixelSize: 8 * dpi; weight: 600 }
-          font.capitalization: Font.AllUppercase
           font.letterSpacing: 0.5
           horizontalAlignment: Text.AlignHCenter
         }

@@ -1133,8 +1133,7 @@ function doctorReport(): string {
                 text: "Notifications (" + notificationModule.notifications.length + ")"
                 color: Theme.fg2
                 font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
-                font.capitalization: Font.AllUppercase
-                font.letterSpacing: 0.5
+                    font.letterSpacing: 0.5
                 anchors.left: parent.left
                 anchors.leftMargin: 12
                 anchors.verticalCenter: parent.verticalCenter

@@ -45,13 +45,12 @@ Rectangle {
 
                 Text {
                     Layout.alignment: Qt.AlignVCenter
-                    text: "cpu"
+                    text: "CPU"
                     color: Theme.fg
                     font {
                         family: Theme.fontFamily
                         pixelSize: 8
                         weight: 600
-                        capitalization: Font.AllUppercase
                         letterSpacing: 0.5
                     }
                 }
@@ -86,13 +85,12 @@ Rectangle {
 
                 Text {
                     Layout.alignment: Qt.AlignVCenter
-                    text: "ram"
+                    text: "RAM"
                     color: Theme.fg
                     font {
                         family: Theme.fontFamily
                         pixelSize: 8
                         weight: 600
-                        capitalization: Font.AllUppercase
                         letterSpacing: 0.5
                     }
                 }
