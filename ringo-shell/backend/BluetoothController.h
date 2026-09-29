@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariant>
 #include <QDBusMessage>
 #include <QTimer>
 #include <QtQml/qqml.h>
@@ -74,11 +75,14 @@ private:
     void refreshCurrentDeviceName(); // scans the model for a connected device, emits if changed
     void setAdapterName(const QString &name);
     void startAdapterRetry(); // begin/continue polling for the adapter to appear
+    void restoreStoredEnabled(); // apply the saved toggle once, as soon as the adapter is known
 
     void asyncCallNoReply(const QString &objectPath, const QString &interface,
                            const QString &method, const QVariantList &args = {});
 
     QString m_adapterPath;
+    QVariant m_storedEnabled; // invalid until the toggle has ever been used
+    bool m_restoreDone = false;
     bool m_adapterPowered = false;
     bool m_scanning = false;
     bool m_busy = false;

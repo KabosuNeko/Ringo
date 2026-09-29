@@ -1,7 +1,9 @@
 #include "BluetoothController.h"
 #include "BluetoothDeviceModel.h"
+#include "StateStore.h"
 
 #include <QDBusConnection>
+#include <QDBusMetaType>
 #include <QDBusInterface>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
@@ -15,10 +17,18 @@ constexpr const char *kBluezService = "org.bluez";
 constexpr const char *kDeviceIface = "org.bluez.Device1";
 constexpr const char *kAdapterIface = "org.bluez.Adapter1";
 constexpr const char *kBatteryIface = "org.bluez.Battery1";
+const QString kEnabledKey = QStringLiteral("bluetooth.enabled");
 }
 
 BluetoothController::BluetoothController(QObject *parent)
     : QObject(parent), m_devices(new BluetoothDeviceModel(this)) {
+    // Without this the composite reply type has no D-Bus signature until some
+    // other controller registers it, and getManagedObjects() decodes as invalid.
+    qDBusRegisterMetaType<QMap<QDBusObjectPath, QMap<QString, QVariantMap>>>();
+
+    // Only the UI toggle persists; it is the user's intent, applied once the adapter shows up.
+    m_storedEnabled = StateStore::instance().get(kEnabledKey);
+
     // bluez appearing/disappearing on the bus
     QDBusConnection::systemBus().connect(
         QString(), "/org/freedesktop/DBus", "org.freedesktop.DBus",
@@ -110,6 +120,16 @@ void BluetoothController::connectToBluez() {
     }
 }
 
+void BluetoothController::restoreStoredEnabled() {
+    if (m_restoreDone) return; // apply once: from here on the user toggling by hand wins
+    m_restoreDone = true;
+
+    // First run (or the toggle never used): nothing stored, so adopt what the adapter says.
+    if (!m_storedEnabled.isValid() || m_storedEnabled.toBool() == m_adapterPowered) return;
+
+    setEnabled(m_storedEnabled.toBool());
+}
+
 void BluetoothController::startAdapterRetry() {
     if (!m_adapterPath.isEmpty()) return; // already have one, nothing to retry
     m_adapterRetriesLeft = 8; // ~12s of polling, generous for slow firmware init on cold boot
@@ -179,6 +199,7 @@ bool BluetoothController::findAdapter() {
         const QVariantMap adapterProps = interfaces.value(kAdapterIface);
         setEnabledState(adapterProps.value("Powered", false).toBool());
         setAdapterName(adapterProps.value("Alias", adapterProps.value("Name")).toString());
+        restoreStoredEnabled();
         setErrorMessage(QString()); // clear any stale "no adapter" error from an earlier failed lookup
         return true;
     }
@@ -264,6 +285,7 @@ void BluetoothController::handleInterfacesAdded(const QDBusMessage &msg) {
         const QVariantMap adapterProps = interfaces.value(kAdapterIface);
         setEnabledState(adapterProps.value("Powered", false).toBool());
         setAdapterName(adapterProps.value("Alias", adapterProps.value("Name")).toString());
+        restoreStoredEnabled();
         populateExistingDevices();
         return;
     }
@@ -347,6 +369,7 @@ void BluetoothController::setEnabled(bool on) {
         setErrorMessage(reply.error().message());
         return;
     }
+    StateStore::instance().set(kEnabledKey, on); // remember the intent for the next start
     // PropertiesChanged signal will flip m_adapterPowered once bluez confirms it
 }
 
