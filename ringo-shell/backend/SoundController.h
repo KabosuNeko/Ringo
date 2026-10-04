@@ -1,6 +1,7 @@
 #pragma once
 #include <QObject>
 #include <QString>
+#include <QHash>
 #include <QtQml/qqml.h>
 
 class SoundController final : public QObject {
@@ -18,4 +19,5 @@ public:
 private:
     QString resolveSoundPath(const QString &sound) const;
     QString m_playerBinary;
+    QHash<QString, QString> m_pathCache;
 };

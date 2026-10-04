@@ -325,7 +325,7 @@ Item {
         id: dndMouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
-        onClicked: notificationModule.dndEnabled = !notificationModule.dndEnabled
+        onClicked: Notifier.dndEnabled = !Notifier.dndEnabled
       }
     }
 

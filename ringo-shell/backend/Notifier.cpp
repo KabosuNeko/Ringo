@@ -1,10 +1,28 @@
 #include "Notifier.h"
 
+#include "StateStore.h"
+
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QVariantMap>
 
-Notifier::Notifier(QObject *parent) : QObject(parent) {}
+namespace {
+const QString kDndKey = QStringLiteral("notification.dnd");
+} // namespace
+
+Notifier::Notifier(QObject *parent) : QObject(parent) {
+    // Quiet Mode is user intent, so it is restored before the UI ever binds to it.
+    m_dndEnabled = StateStore::instance().get(kDndKey, false).toBool();
+}
+
+bool Notifier::dndEnabled() const { return m_dndEnabled; }
+
+void Notifier::setDndEnabled(bool on) {
+    if (m_dndEnabled == on) return;
+    m_dndEnabled = on;
+    StateStore::instance().set(kDndKey, on);
+    emit dndEnabledChanged();
+}
 
 void Notifier::post(const QString &summary, const QString &body, const QString &icon,
                     const QString &appName, int urgency, int timeoutMs) {

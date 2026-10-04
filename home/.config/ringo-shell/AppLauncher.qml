@@ -32,9 +32,19 @@ Item {
         { key: "gmail", name: "Gmail", url: "https://mail.google.com/" }
     ]
 
-    readonly property var appMatches: FuzzySearch.filterAndSort(appsCache, searchQuery, activeCategory)
-    readonly property var webMatches: resolveWebApps(searchQuery)
-    property var filteredApps: rankResults(appMatches, webMatches, searchQuery)
+    property var appMatches: []
+    property var webMatches: []
+    property var filteredApps: []
+
+    Timer {
+        id: searchDebounce
+        interval: 60
+        onTriggered: {
+            root.appMatches = FuzzySearch.filterAndSort(root.appsCache, root.searchQuery, root.activeCategory)
+            root.webMatches = root.resolveWebApps(root.searchQuery)
+            root.filteredApps = root.rankResults(root.appMatches, root.webMatches, root.searchQuery)
+        }
+    }
 
     readonly property var mathResult: evaluateMath(searchQuery)
     readonly property var specialAction: getSpecialAction(searchQuery)
@@ -127,6 +137,7 @@ Item {
     }
 
     onFilteredAppsChanged: selectedIndex = 0
+    onActiveCategoryChanged: searchDebounce.restart()
 
     Connections {
         target: DesktopEntries
@@ -146,6 +157,7 @@ Item {
             activeCategory = "All"
             searchInput.text = initialQuery
             initialQuery = ""
+            searchDebounce.triggered()
             selectedIndex = 0
             searchInput.forceActiveFocus()
         }
@@ -324,7 +336,7 @@ Item {
                     font { family: Theme.fontFamily; pixelSize: 11; weight: 500 }
                     clip: true
 
-                    onTextChanged: root.searchQuery = text
+                    onTextChanged: { root.searchQuery = text; searchDebounce.restart() }
 
                     Text {
                         text: "Type to search apps..."
@@ -532,18 +544,20 @@ Item {
                     spacing: 10
 
                     IconImage {
-                        visible: Quickshell.iconPath(modelData.icon, true)
+                        id: appIconImg
+                        readonly property string resolvedIcon: Quickshell.iconPath(modelData.icon, true)
+                        visible: resolvedIcon
                         Layout.preferredWidth: 26
                         Layout.preferredHeight: 26
                         Layout.alignment: Qt.AlignVCenter
-                        source: Quickshell.iconPath(modelData.icon, true)
+                        source: resolvedIcon
                         asynchronous: true
                         scale: index === root.selectedIndex ? 1.08 : (rowHover.hovered ? 1.05 : 1)
                         Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
                     }
 
                     Text {
-                        visible: !Quickshell.iconPath(modelData.icon, true)
+                        visible: !appIconImg.resolvedIcon
                         text: modelData.web ? "\uf0ac" : "󰣆"
                         color: Theme.accent
                         font { family: Theme.nerdFontFamily; pixelSize: 20 }

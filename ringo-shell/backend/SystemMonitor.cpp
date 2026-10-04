@@ -1,12 +1,10 @@
 #include "SystemMonitor.h"
 #include <QFile>
-#include <QTextStream>
 #include <QDBusConnection>
 #include <QDBusInterface>
 #include <QDBusReply>
 #include <QNetworkInterface>
 #include <QVariantMap>
-#include <QRegularExpression>
 #include <cmath>
 #include <algorithm>
 
@@ -103,27 +101,28 @@ void SystemMonitor::setUptime(const QString &v) { if (m_uptime==v) return; m_upt
 void SystemMonitor::pollBandwidth() {
     QFile f(QStringLiteral("/proc/net/dev"));
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return;
-    QTextStream in(&f);
-    QString line;
     // skip 2 header lines
-    in.readLine(); in.readLine();
+    f.readLine(); f.readLine();
     qint64 totalRx = 0, totalTx = 0;
-    while (!in.atEnd()) {
-        line = in.readLine().trimmed();
-        if (line.isEmpty()) continue;
+    while (!f.atEnd()) {
+        const QByteArray line = f.readLine();
         int colon = line.indexOf(':');
         if (colon < 0) continue;
-        QString iface = line.left(colon).trimmed();
-        if (iface == QStringLiteral("lo")) continue;
-        QString rest = line.mid(colon+1).trimmed();
-        QStringList parts = rest.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-        if (parts.size() < 10) continue;
-        bool ok1=false, ok2=false;
-        qint64 rx = parts[0].toLongLong(&ok1);
-        qint64 tx = parts[8].toLongLong(&ok2);
-        if (!ok1 || !ok2) continue;
-        totalRx += rx;
-        totalTx += tx;
+        // skip loopback
+        QByteArray iface = line.left(colon).trimmed();
+        if (iface == "lo") continue;
+        // fields after colon: rx_bytes ... (8th field) tx_bytes
+        const char *p = line.constData() + colon + 1;
+        qint64 vals[10];
+        int n = 0;
+        while (*p && n < 10) {
+            while (*p == ' ' || *p == '\t') ++p;
+            if (!*p || *p == '\n') break;
+            qint64 v = 0;
+            while (*p >= '0' && *p <= '9') { v = v * 10 + (*p - '0'); ++p; }
+            vals[n++] = v;
+        }
+        if (n >= 10) { totalRx += vals[0]; totalTx += vals[8]; }
     }
     double rx = double(totalRx);
     double tx = double(totalTx);
@@ -146,20 +145,21 @@ void SystemMonitor::pollCpu() {
     QByteArray line = f.readLine();
     if (!line.startsWith("cpu ")) return;
 
-    const auto parts = line.simplified().split(' ');
-    if (parts.size() < 5) return;
-
-    quint64 user = parts[1].toULongLong();
-    quint64 nice = parts[2].toULongLong();
-    quint64 system = parts[3].toULongLong();
-    quint64 idle = parts[4].toULongLong();
-    quint64 iowait = parts.size() > 5 ? parts[5].toULongLong() : 0;
-    quint64 irq = parts.size() > 6 ? parts[6].toULongLong() : 0;
-    quint64 softirq = parts.size() > 7 ? parts[7].toULongLong() : 0;
-    quint64 steal = parts.size() > 8 ? parts[8].toULongLong() : 0;
-
-    quint64 total = user + nice + system + idle + iowait + irq + softirq + steal;
-    quint64 idleAll = idle + iowait;
+    const char *p = line.constData() + 4; // skip "cpu "
+    quint64 vals[8] = {};
+    int n = 0;
+    while (*p && n < 8) {
+        while (*p == ' ') ++p;
+        if (!*p || *p == '\n') break;
+        quint64 v = 0;
+        while (*p >= '0' && *p <= '9') { v = v * 10 + (*p - '0'); ++p; }
+        vals[n++] = v;
+    }
+    if (n < 4) return;
+    // user nice system idle iowait irq softirq steal
+    quint64 total = 0;
+    for (int i = 0; i < n; ++i) total += vals[i];
+    quint64 idleAll = vals[3] + (n > 4 ? vals[4] : 0);
 
     if (m_prevCpuTotal > 0 && total > m_prevCpuTotal) {
         quint64 dTotal = total - m_prevCpuTotal;
@@ -208,17 +208,23 @@ void SystemMonitor::pollRam() {
 }
 
 void SystemMonitor::pollNetwork() {
-    // default route iface
     QString defaultIface;
     {
         QFile f(QStringLiteral("/proc/net/route"));
         if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
-            QTextStream in(&f);
-            in.readLine(); // header
-            while (!in.atEnd()) {
-                QString l = in.readLine();
-                QStringList p = l.split(QRegularExpression(QStringLiteral("\\s+")), Qt::SkipEmptyParts);
-                if (p.size() >= 2 && p[1] == QStringLiteral("00000000")) { defaultIface = p[0]; break; }
+            f.readLine(); // header
+            while (!f.atEnd()) {
+                const QByteArray line = f.readLine();
+                // fields are tab-separated: iface destination ...
+                int tab1 = line.indexOf('\t');
+                if (tab1 < 0) continue;
+                int tab2 = line.indexOf('\t', tab1 + 1);
+                if (tab2 < 0) continue;
+                QByteArray dest = line.mid(tab1 + 1, tab2 - tab1 - 1).trimmed();
+                if (dest == "00000000") {
+                    defaultIface = QString::fromLatin1(line.left(tab1).trimmed());
+                    break;
+                }
             }
         }
     }
@@ -241,7 +247,6 @@ void SystemMonitor::pollNetwork() {
             }
         }
     }
-    // no default route: fall back to the first non-loopback ipv4
     if (ipStr == QStringLiteral("unknown")) {
         for (const auto &iface : ifaces) {
             if (iface.flags().testFlag(QNetworkInterface::IsUp) && !iface.flags().testFlag(QNetworkInterface::IsLoopBack)) {

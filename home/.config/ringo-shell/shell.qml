@@ -114,6 +114,14 @@ ShellRoot {
   }
 
   IpcHandler {
+    target: "quietMode"
+    function toggle(): void { Notifier.dndEnabled = !Notifier.dndEnabled }
+    function on(): void { Notifier.dndEnabled = true }
+    function off(): void { Notifier.dndEnabled = false }
+    function status(): string { return Notifier.dndEnabled ? "on" : "off" }
+  }
+
+  IpcHandler {
     target: "keybinds"
     function toggle(): void { const next = !box.keybindViewer; root.closeOverlays(); box.keybindViewer = next }
     function open(): void { root.closeOverlays(); box.keybindViewer = true }
@@ -648,11 +656,10 @@ function doctorReport(): string {
             color: "#ff453a"
 
             SequentialAnimation on opacity {
-              // an idle animation repaints the scene at monitor rate, so it only runs while recording
               running: Recorder.active
               loops: Animation.Infinite
-              NumberAnimation { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
-              NumberAnimation { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
+              OpacityAnimator { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
+              OpacityAnimator { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
             }
           }
         }
@@ -1405,10 +1412,6 @@ function doctorReport(): string {
               color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
               border.width: 1
               border.color: Theme.cardBorder
-              layer.enabled: true
-              layer.smooth: true
-              layer.mipmap: true
-              layer.textureSize: Qt.size(38, 38)
 
               Image {
                 id: avatarImg
@@ -1601,11 +1604,11 @@ function doctorReport(): string {
     function onRunningChanged() {
       if (FocusTimer.autoDnd) {
         if (FocusTimer.running && FocusTimer.mode === "work") {
-          FocusTimer.dndWasEnabledBeforeFocus = notificationModule.dndEnabled
-          notificationModule.dndEnabled = true
+          FocusTimer.dndWasEnabledBeforeFocus = Notifier.dndEnabled
+          Notifier.dndEnabled = true
         } else if (!FocusTimer.running) {
           if (!FocusTimer.dndWasEnabledBeforeFocus) {
-            notificationModule.dndEnabled = false
+            Notifier.dndEnabled = false
           }
         }
       }

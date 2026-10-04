@@ -240,32 +240,28 @@ void BluetoothController::applyDeviceProperties(const QString &objectPath, const
     BluetoothDeviceModel::Device d;
     d.objectPath = objectPath;
 
-    // start from what is known, then overlay the changed props (PropertiesChanged
-    // carries only the fields that changed)
+    // When updating an existing device, start from the cached state and
+    // overlay only the fields that PropertiesChanged actually delivered.
+    // This avoids a synchronous D-Bus GetAll round-trip on every RSSI tick.
     if (existingIdx >= 0) {
-        // just re-fetch full props on update
-        QDBusInterface devIface(kBluezService, objectPath, "org.freedesktop.DBus.Properties",
-                                 QDBusConnection::systemBus());
-        QDBusReply<QVariantMap> allProps = devIface.call("GetAll", kDeviceIface);
-        if (allProps.isValid()) {
-            const QVariantMap &p = allProps.value();
-            d.address = p.value("Address").toString();
-            d.name = p.value("Alias", p.value("Name")).toString();
-            d.paired = p.value("Paired", false).toBool();
-            d.connected = p.value("Connected", false).toBool();
-            d.rssi = p.contains("RSSI") ? p.value("RSSI").toInt() : -1;
-            m_devices->upsertDevice(d);
-            refreshCurrentDeviceName();
-            return;
-        }
+        d = m_devices->deviceAt(existingIdx);
+    } else {
+        d.battery = -1;
     }
 
-    d.address = props.value("Address").toString();
-    d.name = props.value("Alias", props.value("Name")).toString();
-    d.paired = props.value("Paired", false).toBool();
-    d.connected = props.value("Connected", false).toBool();
-    d.rssi = props.contains("RSSI") ? props.value("RSSI").toInt() : -1;
-    d.battery = -1;
+    if (props.contains(QStringLiteral("Address")))
+        d.address = props.value(QStringLiteral("Address")).toString();
+    if (props.contains(QStringLiteral("Alias")))
+        d.name = props.value(QStringLiteral("Alias")).toString();
+    else if (props.contains(QStringLiteral("Name")))
+        d.name = props.value(QStringLiteral("Name")).toString();
+    if (props.contains(QStringLiteral("Paired")))
+        d.paired = props.value(QStringLiteral("Paired")).toBool();
+    if (props.contains(QStringLiteral("Connected")))
+        d.connected = props.value(QStringLiteral("Connected")).toBool();
+    if (props.contains(QStringLiteral("RSSI")))
+        d.rssi = props.value(QStringLiteral("RSSI")).toInt();
+
     m_devices->upsertDevice(d);
     refreshCurrentDeviceName();
 }

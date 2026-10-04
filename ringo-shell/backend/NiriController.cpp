@@ -26,20 +26,20 @@ QString NiriController::findNiriSocket() {
 
 void NiriController::action(const QString &actionName) {
     if (m_socketPath.isEmpty()) {
-        // niri may have (re)started since we resolved the socket - retry once.
         m_socketPath = findNiriSocket();
         if (m_socketPath.isEmpty()) return;
     }
 
-    QLocalSocket sock;
-    sock.connectToServer(m_socketPath);
-    if (sock.waitForConnected(300)) {
-        const QString cmd = QStringLiteral("{\"Action\":{\"%1\":{}}}\n").arg(actionName);
-        sock.write(cmd.toUtf8());
-        sock.flush();
-        sock.waitForBytesWritten(300);
-        sock.disconnectFromServer();
-    }
+    auto *sock = new QLocalSocket(this);
+    const QByteArray payload = QStringLiteral("{\"Action\":{\"%1\":{}}}\n").arg(actionName).toUtf8();
+    connect(sock, &QLocalSocket::connected, this, [sock, payload]() {
+        sock->write(payload);
+        sock->flush();
+        sock->disconnectFromServer();
+    });
+    connect(sock, &QLocalSocket::disconnected, sock, &QObject::deleteLater);
+    connect(sock, &QLocalSocket::errorOccurred, sock, &QObject::deleteLater);
+    sock->connectToServer(m_socketPath);
 }
 
 void NiriController::quit() {

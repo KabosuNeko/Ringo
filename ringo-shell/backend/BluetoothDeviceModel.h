@@ -43,6 +43,7 @@ public:
     int indexOfPath(const QString &objectPath) const;
     // empty string if nothing is currently connected
     QString connectedDeviceName() const;
+    const Device &deviceAt(int index) const { return m_devices.at(index); }
 
 private:
     QVector<Device> m_devices;

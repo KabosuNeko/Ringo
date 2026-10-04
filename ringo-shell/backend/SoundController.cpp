@@ -49,10 +49,17 @@ QString SoundController::resolveSoundPath(const QString &sound) const
 
 void SoundController::play(const QString &soundNameOrPath)
 {
-    QString resolved = resolveSoundPath(soundNameOrPath);
+    auto it = m_pathCache.constFind(soundNameOrPath);
+    QString resolved;
+    if (it != m_pathCache.constEnd()) {
+        resolved = it.value();
+    } else {
+        resolved = resolveSoundPath(soundNameOrPath);
+        m_pathCache.insert(soundNameOrPath, resolved);
+    }
+
     if (resolved.isEmpty()) {
         if (m_playerBinary == QStringLiteral("canberra-gtk-play")) {
-            // canberra-gtk-play takes an event id directly
             QProcess::startDetached(QStringLiteral("canberra-gtk-play"), {QStringLiteral("-i"), soundNameOrPath});
             return;
         }

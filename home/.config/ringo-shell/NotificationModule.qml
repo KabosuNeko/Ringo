@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import IslandBackend
 
 Item {
   id: root
@@ -10,7 +11,7 @@ Item {
   property int displayTime: Config.notificationDisplayTime
 
   property int _idCounter: 0
-  property bool dndEnabled: false
+  readonly property bool dndEnabled: Notifier.dndEnabled // single source of truth: the backend
   property var notifications: []
   property var notificationsReversed: [] // pre-computed. avoid recomputing per bindig
   property int maxStored: Config.maxNotificationsInStack

@@ -100,7 +100,6 @@ void MprisController::handleNameOwnerChanged(const QString &name, const QString 
 
 void MprisController::handlePropertiesChanged(const QString &interface, const QVariantMap &changed, const QStringList &) {
     if (interface != QStringLiteral("org.mpris.MediaPlayer2.Player")) return;
-    Q_UNUSED(changed)
 
     QString target;
     if (calledFromDBus()) {
@@ -112,10 +111,48 @@ void MprisController::handlePropertiesChanged(const QString &interface, const QV
         }
     }
 
+    auto applyDelta = [&](const QString &name) {
+        auto it = m_players.find(name);
+        if (it == m_players.end()) return;
+        if (changed.contains(QStringLiteral("PlaybackStatus")))
+            it->playbackStatus = unwrapDVariant(changed.value(QStringLiteral("PlaybackStatus"))).toString();
+        if (changed.contains(QStringLiteral("Metadata"))) {
+            QVariant vMeta = changed.value(QStringLiteral("Metadata"));
+            QVariant inner = unwrapDVariant(vMeta);
+            QVariantMap md;
+            if (inner.userType() == qMetaTypeId<QDBusArgument>())
+                md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
+            else
+                md = qdbus_cast<QVariantMap>(inner);
+            if (md.isEmpty()) md = inner.toMap();
+            if (!md.isEmpty()) {
+                it->track = trackFromMetadata(md);
+                it->artist = artistFromMetadata(md);
+                it->artUrl = artUrlFromMetadata(md);
+                qint64 len = lengthFromMetadata(md);
+                if (len > 0) it->lengthUs = len;
+            }
+        }
+        if (changed.contains(QStringLiteral("Position"))) {
+            it->positionUs = unwrapDVariant(changed.value(QStringLiteral("Position"))).toLongLong();
+            it->positionUpdatedUs = 0;
+        }
+        if (changed.contains(QStringLiteral("CanPlay")))
+            it->canPlay = unwrapDVariant(changed.value(QStringLiteral("CanPlay"))).toBool();
+        if (changed.contains(QStringLiteral("CanPause")))
+            it->canPause = unwrapDVariant(changed.value(QStringLiteral("CanPause"))).toBool();
+        if (changed.contains(QStringLiteral("CanGoNext")))
+            it->canGoNext = unwrapDVariant(changed.value(QStringLiteral("CanGoNext"))).toBool();
+        if (changed.contains(QStringLiteral("CanGoPrevious")))
+            it->canGoPrevious = unwrapDVariant(changed.value(QStringLiteral("CanGoPrevious"))).toBool();
+        if (changed.contains(QStringLiteral("CanSeek")))
+            it->canSeek = unwrapDVariant(changed.value(QStringLiteral("CanSeek"))).toBool();
+    };
+
     if (target.isEmpty()) {
-        for (auto it = m_players.begin(); it != m_players.end(); ++it) fetchPlayerState(it.key());
+        for (auto it = m_players.begin(); it != m_players.end(); ++it) applyDelta(it.key());
     } else {
-        fetchPlayerState(target);
+        applyDelta(target);
     }
     updateActivePlayer();
 }
