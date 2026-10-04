@@ -106,6 +106,7 @@ Every panel and every backend action is reachable from a keybind or a script thr
 ringo-shell call doctor check                      # health report
 ringo-shell call nightLight status                 # or: on / off / toggle
 ringo-shell call nightLight force low              # or: off / high
+ringo-shell call quietMode status                  # or: on / off / toggle
 ringo-shell call wallpaper status                  # or: next / reload
 ringo-shell call wallpaper setMode tile            # or: fill / fit / spread / stretch
 ringo-shell call wallpaper slideshow on            # or: off / toggle

@@ -165,6 +165,7 @@ Commands the shell exposes over IPC, called as `ringo-shell call <target> <funct
 | `wallpaperSwitcher` | `toggle` `open` `hide` |
 | `wallpaper` | `set` `reload` `setMode` `next` `slideshow` `interval` `status` |
 | `nightLight` | `toggle` `on` `off` `force` `status` |
+| `quietMode` | `toggle` `on` `off` `status` |
 | `keybinds` | `toggle` `open` `hide` `search` |
 | `doctor` | `check` |
 | `notify` | `post` |
