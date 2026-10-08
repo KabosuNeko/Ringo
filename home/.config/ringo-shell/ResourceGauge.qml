@@ -5,6 +5,13 @@ import IslandBackend
 Rectangle {
     id: root
 
+    // Percentages tick every second; a fixed slot stops the pill resizing.
+    TextMetrics {
+        id: pctMetrics
+        font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+        text: "100%"
+    }
+
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
 
@@ -60,6 +67,8 @@ Rectangle {
                     text: root.cpuPercent + "%"
                     color: Theme.fg4
                     font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    Layout.preferredWidth: pctMetrics.width
+                    horizontalAlignment: Text.AlignRight
                 }
             }
 
@@ -100,6 +109,8 @@ Rectangle {
                     text: root.ramPercent + "%"
                     color: Theme.fg4
                     font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    Layout.preferredWidth: pctMetrics.width
+                    horizontalAlignment: Text.AlignRight
                 }
             }
         }

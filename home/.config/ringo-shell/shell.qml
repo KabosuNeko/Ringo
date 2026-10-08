@@ -473,8 +473,10 @@ function doctorReport(): string {
       border.width: 1
       border.color: Theme.pillBorder
 
+      // Spring, not a fixed curve: a retarget mid-flight keeps its velocity,
+      // which is what makes a pill feel physical instead of scripted.
       Behavior on radius {
-          NumberAnimation { duration: 150; easing.type: Easing.OutCubic }
+          SpringAnimation { spring: 120; damping: 18; epsilon: 0.5 }
       }
 
       color: controlCenter
@@ -488,6 +490,9 @@ function doctorReport(): string {
           }
       }
 
+      // Width and height change on every telemetry tick (bandwidth, clock), so a
+      // spring here never rests. Keep the short ease; the spring lives on radius,
+      // which only moves on state changes.
       Behavior on implicitHeight { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
       Behavior on implicitWidth { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
 
@@ -669,6 +674,11 @@ function doctorReport(): string {
           spacing: 4 * Config.paddingScale
           Layout.alignment: Qt.AlignVCenter
 
+          TextMetrics {
+            id: focusTimeMetrics
+            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
+            text: "00:00"
+          }
           Text {
             text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
             color: Theme.accent
@@ -678,6 +688,8 @@ function doctorReport(): string {
             text: FocusTimer.formattedTime
             color: Theme.accent
             font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
+            Layout.preferredWidth: focusTimeMetrics.width
+            horizontalAlignment: Text.AlignRight
           }
         }
       }
