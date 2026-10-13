@@ -18,6 +18,8 @@ constexpr auto kBluezAgentManagerInterface = "org.bluez.AgentManager1";
 constexpr auto kBluezDeviceInterface = "org.bluez.Device1";
 constexpr auto kAgentObjectPath = "/com/tideisland/IslandBackend/BluetoothAgent";
 constexpr auto kCapability = "KeyboardDisplay";
+// bluez's own pairing window is about a minute; past that the request is dead.
+constexpr int kRequestTimeoutMs = 60000;
 
 constexpr auto kRejectedError = "org.bluez.Error.Rejected";
 constexpr auto kCanceledError = "org.bluez.Error.Canceled";
@@ -52,6 +54,10 @@ QVariant getBluezProperty(const QString &path, const QString &propertyName) {
 
 BluetoothPairingAgent::BluetoothPairingAgent(QObject *parent)
     : QObject(parent) {
+    m_requestTimeout.setSingleShot(true);
+    // bluez stops answering a dead request without calling Cancel(); dropping it
+    // closes the overlay instead of leaving its buttons talking to a dead call.
+    connect(&m_requestTimeout, &QTimer::timeout, this, [this] { clearRequest(); });
     QDBusConnection::systemBus().connect(
         kDbusService,
         kDbusPath,
@@ -428,6 +434,8 @@ void BluetoothPairingAgent::replaceRequest(PendingRequest request) {
     }
 
     m_request = std::move(request);
+
+    m_requestTimeout.start(kRequestTimeoutMs);
     emit requestChanged();
 }
 
@@ -435,6 +443,7 @@ void BluetoothPairingAgent::clearRequest() {
     if (m_request.kind == PromptKind::None)
         return;
 
+    m_requestTimeout.stop();
     m_request = PendingRequest {};
     emit requestChanged();
 }

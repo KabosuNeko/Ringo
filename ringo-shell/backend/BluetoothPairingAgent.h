@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QDBusContext>
+#include <QTimer>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QObject>
@@ -99,6 +100,10 @@ private:
     void setRegisteredState(bool registered);
     void replaceRequest(PendingRequest request);
     void clearRequest();
+
+    // bluez does not always call Cancel(); without this a request that stops
+    // being answered leaves the overlay up forever.
+    QTimer m_requestTimeout;
     void finishWithVoidReply();
     void finishWithStringReply(const QString &value);
     void finishWithUInt32Reply(quint32 value);
