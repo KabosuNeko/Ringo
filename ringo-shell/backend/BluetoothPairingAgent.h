@@ -4,13 +4,13 @@
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QObject>
+#include <QQmlEngine>
 #include <QtQml/qqml.h>
 
 class BluetoothPairingAgent final : public QObject, protected QDBusContext {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    QML_UNCREATABLE("Singleton")
     Q_CLASSINFO("D-Bus Interface", "org.bluez.Agent1")
 
     Q_PROPERTY(bool requestActive READ requestActive NOTIFY requestChanged)

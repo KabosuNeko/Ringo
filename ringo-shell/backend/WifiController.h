@@ -8,6 +8,7 @@
 #include <QHash>
 #include <QMap>
 #include <QObject>
+#include <QQmlEngine>
 #include <QTimer>
 #include <QVariant>
 #include <QVariantMap>
@@ -23,7 +24,6 @@ class WifiController final : public QObject {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
-    QML_UNCREATABLE("Singleton")
 
     Q_PROPERTY(QString backendName READ backendName NOTIFY backendNameChanged)
     Q_PROPERTY(bool supported READ supported NOTIFY supportedChanged)
