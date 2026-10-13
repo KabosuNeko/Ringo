@@ -164,7 +164,7 @@ PanelWindow {
       }
 
       Text {
-        visible: (WifiController.errorMessage || "").length > 0
+        visible: WifiController.errorMessage.length > 0
         text: WifiController.errorMessage
         color: Theme.deleting
         font { family: Theme.fontFamily; pixelSize: 11 * dpi }

@@ -86,8 +86,8 @@ Item {
 
           Text {
             text: !WifiController.enabled ? "Disabled"
-                : (WifiController.currentSsid || "").length > 0 ? WifiController.currentSsid
-                : ((WifiController.statusText || "").length > 0 ? WifiController.statusText : "Disconnected")
+                : WifiController.currentSsid.length > 0 ? WifiController.currentSsid
+                : (WifiController.statusText.length > 0 ? WifiController.statusText : "Disconnected")
             color: WifiController.enabled ? Theme.fg : Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
@@ -163,8 +163,8 @@ Item {
 
           Text {
             text: !BluetoothController.enabled ? "Disabled"
-                : (BluetoothController.currentDeviceName || "").length > 0 ? BluetoothController.currentDeviceName
-                : ((BluetoothController.statusText || "").length > 0 ? BluetoothController.statusText : "Disconnected")
+                : BluetoothController.currentDeviceName.length > 0 ? BluetoothController.currentDeviceName
+                : (BluetoothController.statusText.length > 0 ? BluetoothController.statusText : "Disconnected")
             color: BluetoothController.enabled ? Theme.fg : Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
@@ -461,7 +461,7 @@ Item {
           Text {
             text: !NightLightController.enabled ? "Disabled"
                 : NightLightController.active ? NightLightController.temperature + "K"
-                : (NightLightController.error || "").length > 0 ? "Unavailable" : "Starting"
+                : NightLightController.error.length > 0 ? "Unavailable" : "Starting"
             color: Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight

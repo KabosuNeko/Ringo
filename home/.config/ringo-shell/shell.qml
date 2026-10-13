@@ -106,10 +106,10 @@ ShellRoot {
     function force(mode: string): void { NightLightController.force = mode }
     function status(): string {
       const where = `${NightLightController.locationExplicit ? "pinned" : "auto"} `
-        + `${(NightLightController.latitude || 0).toFixed(2)},${(NightLightController.longitude || 0).toFixed(2)}`
+        + `${NightLightController.latitude.toFixed(2)},${NightLightController.longitude.toFixed(2)}`
       return NightLightController.active
         ? `${NightLightController.temperature}K · ${where}`
-        : (NightLightController.error !== "" ? "error: " + (NightLightController.error || "") : "off")
+        : (NightLightController.error !== "" ? "error: " + NightLightController.error : "off")
     }
   }
 
@@ -1461,7 +1461,7 @@ function doctorReport(): string {
                   Text {
                     id: hostText
                     anchors.centerIn: parent
-                    text: "@" + (SystemMonitor.hostname || "")
+                    text: "@" + SystemMonitor.hostname
                     color: Theme.accent
                     font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
                   }
@@ -1476,7 +1476,7 @@ function doctorReport(): string {
                   font { family: Theme.nerdFontFamily; pixelSize: 9 }
                 }
                 Text {
-                  text: "up " + (SystemMonitor.uptime || "")
+                  text: "up " + SystemMonitor.uptime
                   color: Theme.fg4
                   font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
                 }

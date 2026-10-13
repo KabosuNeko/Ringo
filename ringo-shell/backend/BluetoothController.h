@@ -39,8 +39,6 @@ public:
     Q_INVOKABLE void setEnabled(bool on);
     // discover=true also (re)starts a discovery scan; false just re-reads known devices
     Q_INVOKABLE void refreshDevices(bool discover);
-    // Stops an in-flight discovery; the Discovering signal updates `scanning`.
-    Q_INVOKABLE void stopScan();
     Q_INVOKABLE void pairDevice(const QString &address);
     Q_INVOKABLE void connectDevice(const QString &address);
     Q_INVOKABLE void disconnectDevice(const QString &address);

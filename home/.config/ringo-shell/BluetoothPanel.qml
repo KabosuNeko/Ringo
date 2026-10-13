@@ -5,12 +5,6 @@ import QtQuick.Layouts
 import IslandBackend
 
 PanelWindow {
-  id: btPanel
-
-  // A scan result must outlive bluez's own discovery timeout, or a device
-  // disappears while the user is still reaching for it. Held while the panel is
-  // open, instead of tracking `scanning`.
-  property bool showDiscovered: false
 
   readonly property real dpi: Config.dpiScale
 
@@ -35,9 +29,7 @@ PanelWindow {
   color: "transparent"
 
   onVisibleChanged: {
-    showDiscovered = visible
     if (visible && BluetoothController.enabled) BluetoothController.refreshDevices(true)
-    else if (!visible) BluetoothController.stopScan()
   }
 
   Rectangle {
@@ -58,8 +50,8 @@ PanelWindow {
       }
 
       Text {
-        visible: BluetoothController.enabled && (BluetoothController.adapterName || "").length > 0
-        text: "Visible as \u201c" + (BluetoothController.adapterName || "") + "\u201d"
+        visible: BluetoothController.enabled && BluetoothController.adapterName.length > 0
+        text: "Visible as \u201c" + BluetoothController.adapterName + "\u201d"
         color: Theme.fg4
         font { family: Theme.fontFamily; pixelSize: 10 * dpi }
         wrapMode: Text.Wrap
@@ -101,10 +93,6 @@ PanelWindow {
             model: BluetoothController.enabled ? BluetoothController.devices : null
 
             delegate: Rectangle {
-              // bluez keeps every device it has ever seen (89 here, mostly BLE
-              // privacy addresses). Show only what is ours, plus whatever the
-              // running scan turned up; Column drops the hidden rows.
-              visible: paired || connected || btPanel.showDiscovered
               width: deviceColumn.width
               height: Math.max(45, contentRow.implicitHeight + 15)
               radius: 16 * dpi
@@ -176,7 +164,7 @@ PanelWindow {
       }
 
       Text {
-        visible: (BluetoothController.errorMessage || "").length > 0
+        visible: BluetoothController.errorMessage.length > 0
         text: BluetoothController.errorMessage
         color: Theme.deleting
         font { family: Theme.fontFamily; pixelSize: 11 * dpi }
@@ -215,18 +203,16 @@ PanelWindow {
 
         Text {
           width: parent.width
-          // The singleton is not constructed during the first binding pass, so
-          // these reads land on undefined once per startup.
-          text: (BluetoothPairingAgent.promptTitle || "").length > 0
+          text: BluetoothPairingAgent.promptTitle.length > 0
                   ? BluetoothPairingAgent.promptTitle
-                  : ("Pair with " + (BluetoothPairingAgent.deviceName || "this device"))
+                  : ("Pair with " + BluetoothPairingAgent.deviceName)
           color: Theme.fg2
           font { family: Theme.fontFamily; pixelSize: 13 * dpi; weight: 600 }
           wrapMode: Text.Wrap
         }
 
         Text {
-          visible: (BluetoothPairingAgent.promptMessage || "").length > 0
+          visible: BluetoothPairingAgent.promptMessage.length > 0
           width: parent.width
           text: BluetoothPairingAgent.promptMessage
           color: Theme.fg4
@@ -268,7 +254,7 @@ PanelWindow {
         // case 2: agent just wants us to display a code (DisplayPinCode / DisplayPasskey)
         Text {
           visible: !BluetoothPairingAgent.requestRequiresInput && !BluetoothPairingAgent.requestRequiresConfirmation
-                   && (BluetoothPairingAgent.displayedCode || "").length > 0
+                   && BluetoothPairingAgent.displayedCode.length > 0
           width: parent.width
           horizontalAlignment: Text.AlignHCenter
           text: BluetoothPairingAgent.displayedCode
