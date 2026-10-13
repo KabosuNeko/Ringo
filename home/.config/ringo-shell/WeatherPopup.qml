@@ -102,7 +102,7 @@ PanelWindow {
           Layout.fillWidth: true
           Text {
             text: WeatherController.loading ? "..."
-                : WeatherController.errorMessage.length > 0 ? "—"
+                : (WeatherController.errorMessage || "").length > 0 ? "—"
                 : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
             color: Theme.fgL
             font.family: Theme.fontFamily
@@ -115,7 +115,7 @@ PanelWindow {
             font.family: Theme.fontFamily
             font.pixelSize: weatherWindow.fontSizeBody * dpi
             font.weight: 400
-            visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
+            visible: !WeatherController.loading && (WeatherController.errorMessage || "").length === 0
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -125,7 +125,7 @@ PanelWindow {
       RowLayout {
         Layout.fillWidth: true
         spacing: weatherWindow.tileSpacing * dpi
-        visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
+        visible: !WeatherController.loading && (WeatherController.errorMessage || "").length === 0
 
         Repeater {
           model: [
@@ -185,7 +185,7 @@ PanelWindow {
       RowLayout {
         Layout.fillWidth: true
         spacing: 0
-        visible: !WeatherController.loading && WeatherController.errorMessage.length === 0
+        visible: !WeatherController.loading && (WeatherController.errorMessage || "").length === 0
 
         RowLayout {
           spacing: 5 * dpi

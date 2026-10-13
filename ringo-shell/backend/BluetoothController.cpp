@@ -395,6 +395,15 @@ void BluetoothController::refreshDevices(bool discover) {
     });
 }
 
+void BluetoothController::stopScan() {
+    if (m_adapterPath.isEmpty() || !m_adapterPowered) return;
+
+    // Fire and forget: bluez answers with the Discovering property change.
+    QDBusMessage call = QDBusMessage::createMethodCall(kBluezService, m_adapterPath,
+                                                       kAdapterIface, "StopDiscovery");
+    QDBusConnection::systemBus().asyncCall(call);
+}
+
 void BluetoothController::pairDevice(const QString &address) {
     const QString path = devicePathForAddress(address);
     if (path.isEmpty()) return;
