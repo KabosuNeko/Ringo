@@ -94,8 +94,26 @@ void MprisController::removePlayer(const QString &name) {
 
 void MprisController::handleNameOwnerChanged(const QString &name, const QString &oldOwner, const QString &newOwner) {
     if (!name.startsWith(QStringLiteral("org.mpris.MediaPlayer2."))) return;
-    if (newOwner.isEmpty()) removePlayer(name);
-    else if (oldOwner.isEmpty()) addPlayer(name);
+    if (newOwner.isEmpty()) {
+        removePlayer(name);
+        return;
+    }
+    if (oldOwner.isEmpty()) {
+        addPlayer(name);
+        return;
+    }
+
+    // The well-known name moved between owners without passing through an
+    // empty owner. Refresh the cached unique name so PropertiesChanged
+    // signals from the new owner map to this player.
+    auto it = m_players.find(name);
+    if (it == m_players.end()) {
+        addPlayer(name);
+        return;
+    }
+    it->uniqueName = newOwner;
+    fetchPlayerState(name);
+    updateActivePlayer();
 }
 
 void MprisController::handlePropertiesChanged(const QString &interface, const QVariantMap &changed, const QStringList &) {
@@ -150,10 +168,11 @@ void MprisController::handlePropertiesChanged(const QString &interface, const QV
     };
 
     if (target.isEmpty()) {
-        for (auto it = m_players.begin(); it != m_players.end(); ++it) applyDelta(it.key());
-    } else {
-        applyDelta(target);
+        // Never broadcast one player's delta to every player: a stale or
+        // unknown unique name would corrupt the other players' state.
+        return;
     }
+    applyDelta(target);
     updateActivePlayer();
 }
 

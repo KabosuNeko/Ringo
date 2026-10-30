@@ -15,11 +15,10 @@ binds {
     Mod+B hotkey-overlay-title="Open Browser: firefox" { spawn "firefox"; }
 
     Mod+Ctrl+C hotkey-overlay-title="Control Center" { spawn-sh "ringo-shell call controlCenter toggle"; }
+    Mod+Ctrl+S hotkey-overlay-title="Settings" { spawn-sh "ringo-shell call settings toggle"; }
     Mod+Ctrl+B hotkey-overlay-title="Mini Dashboard" { spawn-sh "ringo-shell call miniDashboard toggle"; }
     Mod+Ctrl+W hotkey-overlay-title="Wallpaper Switcher" { spawn-sh "ringo-shell call wallpaperSwitcher toggle"; }
     Mod+Shift+P hotkey-overlay-title="Power Menu" { spawn-sh "ringo-shell call powerMenu toggle"; }
-
-    Mod+Alt+B hotkey-overlay-title="Toggle Bar" { spawn-sh "ringo-shell call bar toggle"; }
 
     // Screenshots & media
     Print { screenshot; }
@@ -58,7 +57,6 @@ binds {
     Mod+Ctrl+K     { move-window-up; }
     Mod+Ctrl+Up    { move-window-up; }
     Mod+Ctrl+L     { move-column-right; }
-    Mod+Ctrl+S     { move-column-right; }
     Mod+Ctrl+Right { move-column-right; }
 
     Mod+Home { focus-column-first; }

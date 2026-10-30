@@ -12,13 +12,36 @@ Item {
 
   default property alias payload: slot.data
 
-  anchors.centerIn: parent
-  width: box.implicitWidth - widthInset
-  height: open ? openHeight : 0
+  // true while the exit fade runs; hosts keep their Loader alive on this
+  readonly property bool closing: !open && opacity > 0
+  property real shownHeight: 0
+  property real shownWidth: 0
+
+  onOpenChanged: if (open) captureSize()
+  onOpenHeightChanged: if (open) captureSize()
+
+  function captureSize(): void {
+    shownHeight = openHeight
+    shownWidth = box.baseWidth
+  }
+
+  anchors.horizontalCenter: parent.horizontalCenter
+  anchors.top: parent.top
+  anchors.topMargin: 12
+  width: open ? Math.max(0, box.baseWidth - widthInset)
+             : (closing ? Math.max(0, shownWidth - widthInset) : 0)
+  // freeze the size during the exit so anchored children do not collapse
+  height: open ? openHeight : (closing ? shownHeight : 0)
   opacity: open && !blocked ? 1 : 0
   visible: opacity > 0
+  enabled: open
+  scale: open ? 1 : 0.96
+  transformOrigin: Item.Top
 
   Behavior on opacity {
-    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+    NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
+  }
+  Behavior on scale {
+    NumberAnimation { duration: Theme.motionOverlay; easing.type: Theme.easeOut }
   }
 }

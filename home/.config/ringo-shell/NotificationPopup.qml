@@ -7,10 +7,18 @@ Item {
   property bool active: false
   property var notif: null
 
+  readonly property var actions: {
+    if (!notif || !notif.actions) return []
+    return notif.actions.filter(a => a && a.text && a.text.length > 0)
+  }
+
+  // the host owns the queue, so the popup only asks for the dismissal
+  signal dismissRequested()
+
   anchors.centerIn: parent
   opacity: active ? 1 : 0
   visible: opacity > 0
-  Behavior on opacity { NumberAnimation { duration: 150 } }
+  Behavior on opacity { NumberAnimation { duration: Theme.motionBase } }
 
   RowLayout {
     anchors.centerIn: parent
@@ -66,6 +74,75 @@ Item {
         elide: Text.ElideRight
         Layout.maximumWidth: 220
         visible: text !== ""
+        onLinkActivated: (link) => {
+          Qt.openUrlExternally(link)
+          root.dismissRequested()
+        }
+      }
+
+      RowLayout {
+        Layout.fillWidth: true
+        Layout.topMargin: 2
+        spacing: 4
+        visible: root.actions.length > 0
+
+        Repeater {
+          model: root.actions
+
+          Rectangle {
+            implicitHeight: 20
+            implicitWidth: actionText.implicitWidth + 12
+            radius: 6
+            color: actionHover.containsMouse ? Theme.chipBgHover : Theme.chipBg
+            border.width: 1
+            border.color: Theme.chipBorder
+
+            Text {
+              id: actionText
+              anchors.centerIn: parent
+              text: modelData.text
+              color: Theme.fg
+              font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+            }
+
+            MouseArea {
+              id: actionHover
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: {
+                modelData.invoke()
+                root.dismissRequested()
+              }
+            }
+          }
+        }
+      }
+    }
+
+    Rectangle {
+      Layout.preferredWidth: 22
+      Layout.preferredHeight: 22
+      Layout.alignment: Qt.AlignVCenter
+      radius: 99
+      color: toastHover.containsMouse ? Theme.focusBgL : "transparent"
+      Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+
+      Text {
+        // nf-fa-times (U+F00D), needs the nerd font family to render
+        text: "\uf00d"
+        color: toastHover.containsMouse ? Theme.focusFg1 : Theme.fg5
+        anchors.centerIn: parent
+        font { family: Theme.nerdFontFamily; pixelSize: 11 }
+        Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      }
+
+      MouseArea {
+        id: toastHover
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.dismissRequested()
       }
     }
   }

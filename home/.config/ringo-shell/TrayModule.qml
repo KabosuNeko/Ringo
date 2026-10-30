@@ -10,15 +10,19 @@ Rectangle {
   readonly property int itemCount: SystemTray.items.values ? SystemTray.items.values.length : 0
   property string hoveredTitle: ""
 
-  visible: itemCount > 0
-  height: itemCount > 0 ? 36 : 0
+  signal settingsRequested(string page)
+
+  // Always visible: the settings gear lives in this row, and this module is only
+  // instantiated inside the control center column.
+  visible: true
+  height: 36
   radius: 10
   color: Theme.cardBg
   border.width: 1
   border.color: Theme.cardBorder
   clip: true
 
-  Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+  Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
 
   RowLayout {
     anchors.fill: parent
@@ -34,16 +38,17 @@ Rectangle {
         text: "󱊖"
         color: root.hoveredTitle !== "" ? Theme.accent : Theme.fg4
         font { family: Theme.nerdFontFamily; pixelSize: 12 }
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Theme.motionBase } }
       }
 
       Text {
-        text: root.hoveredTitle !== "" ? root.hoveredTitle : ("Apps (" + root.itemCount + ")")
+        text: root.hoveredTitle !== "" ? root.hoveredTitle
+            : (root.itemCount > 0 ? ("Apps (" + root.itemCount + ")") : "Apps")
         color: root.hoveredTitle !== "" ? Theme.fgL : Theme.fg4
         font { family: Theme.fontFamily; pixelSize: 9; weight: root.hoveredTitle !== "" ? 600 : 500 }
         elide: Text.ElideRight
         Layout.fillWidth: true
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Theme.motionBase } }
       }
     }
 
@@ -61,7 +66,7 @@ Rectangle {
           Layout.preferredHeight: 26
           radius: 7
           color: tileHover.containsMouse ? Theme.bg5 : "transparent"
-          Behavior on color { ColorAnimation { duration: 100 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
           IconImage {
             id: trayIconImage
@@ -104,6 +109,31 @@ Rectangle {
             }
           }
         }
+      }
+    }
+
+    Rectangle {
+      id: settingsBtn
+      Layout.preferredWidth: 26
+      Layout.preferredHeight: 26
+      radius: 7
+      color: settingsHover.hovered ? Theme.chipBgHover : "transparent"
+      Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+
+      Text {
+        anchors.centerIn: parent
+        text: "\uf013"
+        color: settingsHover.hovered ? Theme.accent : Theme.fg4
+        font { family: Theme.nerdFontFamily; pixelSize: 13 }
+        Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+      }
+
+      HoverHandler { id: settingsHover }
+
+      MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.PointingHandCursor
+        onClicked: root.settingsRequested("main")
       }
     }
   }

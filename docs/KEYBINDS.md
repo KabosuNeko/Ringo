@@ -29,10 +29,10 @@ Regenerate with `scripts/gen-keybinds-doc.sh` after changing either file
 | `Mod+E` | Open File Manager: thunar — `spawn "thunar"` |
 | `Mod+B` | Open Browser: firefox — `spawn "firefox"` |
 | `Mod+Ctrl+C` | Control Center — `spawn-sh "ringo-shell call controlCenter toggle"` |
+| `Mod+Ctrl+S` | Settings — `spawn-sh "ringo-shell call settings toggle"` |
 | `Mod+Ctrl+B` | Mini Dashboard — `spawn-sh "ringo-shell call miniDashboard toggle"` |
 | `Mod+Ctrl+W` | Wallpaper Switcher — `spawn-sh "ringo-shell call wallpaperSwitcher toggle"` |
 | `Mod+Shift+P` | Power Menu — `spawn-sh "ringo-shell call powerMenu toggle"` |
-| `Mod+Alt+B` | Toggle Bar — `spawn-sh "ringo-shell call bar toggle"` |
 
 ## Screenshots & media
 
@@ -73,7 +73,6 @@ Regenerate with `scripts/gen-keybinds-doc.sh` after changing either file
 | `Mod+Ctrl+K` | `move-window-up` |
 | `Mod+Ctrl+Up` | `move-window-up` |
 | `Mod+Ctrl+L` | `move-column-right` |
-| `Mod+Ctrl+S` | `move-column-right` |
 | `Mod+Ctrl+Right` | `move-column-right` |
 | `Mod+Home` | `focus-column-first` |
 | `Mod+End` | `focus-column-last` |
@@ -164,16 +163,17 @@ Commands the shell exposes over IPC, called as `ringo-shell call <target> <funct
 | `appLauncher` | `toggle` `open` `hide` `search` `launch` |
 | `wallpaperSwitcher` | `toggle` `open` `hide` |
 | `wallpaper` | `set` `reload` `setMode` `next` `slideshow` `interval` `status` |
-| `nightLight` | `toggle` `on` `off` `force` `status` |
+| `nightLight` | `toggle` `on` `off` `force` `low` `high` `gamma` `status` |
 | `quietMode` | `toggle` `on` `off` `status` |
+| `airplaneMode` | `toggle` `on` `off` `status` |
 | `keybinds` | `toggle` `open` `hide` `search` |
 | `doctor` | `check` |
 | `notify` | `post` |
 | `powerMenu` | `toggle` `open` `hide` |
+| `settings` | `toggle` `open` `hide` `page` |
 | `recordMenu` | `toggle` `open` `hide` |
-| `bar` | `toggle` `open` `hide` |
 | `calendar` | `toggle` `open` `hide` |
 | `weather` | `toggle` `open` `hide` |
-| `lock` | `unlock` `lock` |
+| `lock` | `lock` |
 | `media` | `playPause` `next` `prev` `stop` |
 | `brightness` | `up` `down` `step` |

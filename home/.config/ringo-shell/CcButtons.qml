@@ -8,26 +8,21 @@ Item {
 
   readonly property real dpi: Config.dpiScale
 
-  property bool notificationPopup: false
   property bool controlCenterOpen: false
-  property bool wifiPanelOpened: false
-  property bool btPanelOpened: false
+  readonly property bool airplaneMode: !WifiController.enabled && !BluetoothController.enabled
+
+  signal settingsRequested(string page)
+
+  function setAirplaneMode(on: bool): void {
+    WifiController.setEnabled(!on)
+    BluetoothController.setEnabled(!on)
+  }
+
+  function toggleAirplaneMode(): void {
+    setAirplaneMode(!airplaneMode)
+  }
 
   implicitHeight: bentoGrid.implicitHeight
-
-  onControlCenterOpenChanged: {
-    if (!controlCenterOpen) {
-      root.wifiPanelOpened = false
-      root.btPanelOpened = false
-    }
-  }
-
-  onNotificationPopupChanged: {
-    if (root.notificationPopup) {
-      root.wifiPanelOpened = false
-      root.btPanelOpened = false
-    }
-  }
 
   GridLayout {
     id: bentoGrid
@@ -46,10 +41,8 @@ Item {
               : (wifiHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
       border.color: WifiController.enabled ? Theme.accent : Theme.cardBorder
-      scale: wifiMouse.pressed ? 0.96 : (wifiHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -61,7 +54,7 @@ Item {
           Layout.preferredHeight: 28
           radius: 8
           color: WifiController.enabled ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
@@ -102,10 +95,10 @@ Item {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
+        // Right-click now opens the Wi-fi page inside the Settings menu.
         onClicked: (mouse) => {
           if (mouse.button === Qt.RightButton) {
-            root.wifiPanelOpened = !root.wifiPanelOpened
-            if (root.wifiPanelOpened && WifiController.enabled) WifiController.refreshNetworks(true)
+            root.settingsRequested("wifi")
             return
           }
           WifiController.setEnabled(!WifiController.enabled)
@@ -123,10 +116,8 @@ Item {
               : (btHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
       border.color: BluetoothController.enabled ? Theme.accent : Theme.cardBorder
-      scale: btMouse.pressed ? 0.96 : (btHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -138,7 +129,7 @@ Item {
           Layout.preferredHeight: 28
           radius: 8
           color: BluetoothController.enabled ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
@@ -179,10 +170,10 @@ Item {
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
+        // Right-click now opens the Bluetooth page inside the Settings menu.
         onClicked: (mouse) => {
           if (mouse.button === Qt.RightButton) {
-            root.btPanelOpened = !root.btPanelOpened
-            if (root.btPanelOpened && BluetoothController.enabled) BluetoothController.refreshDevices(true)
+            root.settingsRequested("bluetooth")
             return
           }
           BluetoothController.setEnabled(!BluetoothController.enabled)
@@ -203,10 +194,8 @@ Item {
              : (ppHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
       border.color: isCustomProfile ? Theme.accent : Theme.cardBorder
-      scale: ppMouse.pressed ? 0.96 : (ppHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -218,7 +207,7 @@ Item {
           Layout.preferredHeight: 28
           radius: 8
           color: ppBtn.isCustomProfile ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
@@ -272,10 +261,8 @@ Item {
               : (dndHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
       border.color: notificationModule.dndEnabled ? Theme.accent : Theme.cardBorder
-      scale: dndMouse.pressed ? 0.96 : (dndHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -287,7 +274,7 @@ Item {
           Layout.preferredHeight: 28
           radius: 8
           color: notificationModule.dndEnabled ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
@@ -330,18 +317,17 @@ Item {
     }
 
     Rectangle {
+      id: airplaneBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
       radius: 12
-      color: FocusTimer.running
-              ? (focusHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
-              : (focusHover.hovered ? Theme.chipBgHover : Theme.cardBg)
+      color: root.airplaneMode
+              ? (airplaneHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
+              : (airplaneHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
-      border.color: FocusTimer.running ? Theme.accent : Theme.cardBorder
-      scale: focusMouse.pressed ? 0.96 : (focusHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      border.color: root.airplaneMode ? Theme.accent : Theme.cardBorder
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -352,13 +338,13 @@ Item {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
           radius: 8
-          color: FocusTimer.running ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          color: root.airplaneMode ? Theme.accent : Theme.chipBg
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
-            text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
-            color: FocusTimer.running ? Theme.bg : Theme.fg4
+            text: "\uf072"
+            color: root.airplaneMode ? Theme.bg : Theme.fg4
             font { family: Theme.nerdFontFamily; pixelSize: 13 }
           }
         }
@@ -368,7 +354,7 @@ Item {
           spacing: 1
 
           Text {
-            text: FocusTimer.mode === "work" ? "Focus" : "Break"
+            text: "Airplane mode"
             color: Theme.fg
             font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
             font.letterSpacing: 0.5
@@ -377,10 +363,8 @@ Item {
           }
 
           Text {
-            text: FocusTimer.running
-                ? FocusTimer.formattedTime
-                : (FocusTimer.mode === "work" ? (Math.floor(FocusTimer.workDuration / 60) + " min") : (Math.floor(FocusTimer.breakDuration / 60) + " min"))
-            color: FocusTimer.running ? Theme.accent : Theme.fg5
+            text: root.airplaneMode ? "Wi-Fi + Bluetooth off" : "Wireless radios on"
+            color: root.airplaneMode ? Theme.fg : Theme.fg5
             font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -388,25 +372,12 @@ Item {
         }
       }
 
-      HoverHandler { id: focusHover }
+      HoverHandler { id: airplaneHover }
       MouseArea {
-        id: focusMouse
+        id: airplaneMouse
         anchors.fill: parent
-        acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
-        onClicked: (mouse) => {
-          if (mouse.button === Qt.RightButton) {
-            if (!FocusTimer.running) {
-              let currentMins = Math.floor(FocusTimer.workDuration / 60)
-              let nextMins = currentMins === 45 ? 60 : (currentMins === 60 ? 25 : 45)
-              FocusTimer.setWorkDuration(nextMins)
-            } else {
-              FocusTimer.skip()
-            }
-          } else {
-            FocusTimer.toggle()
-          }
-        }
+        onClicked: root.toggleAirplaneMode()
       }
     }
 
@@ -420,10 +391,8 @@ Item {
               : (nightLightHover.hovered ? Theme.chipBgHover : Theme.cardBg)
       border.width: 1
       border.color: NightLightController.enabled ? Theme.accent : Theme.cardBorder
-      scale: nightLightMouse.pressed ? 0.96 : (nightLightHover.hovered ? 1.01 : 1.0)
-      Behavior on color { ColorAnimation { duration: 120 } }
-      Behavior on border.color { ColorAnimation { duration: 120 } }
-      Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+      Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+      Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
       RowLayout {
         anchors.fill: parent
@@ -435,7 +404,7 @@ Item {
           Layout.preferredHeight: 28
           radius: 8
           color: NightLightController.enabled ? Theme.accent : Theme.chipBg
-          Behavior on color { ColorAnimation { duration: 120 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
           Text {
             anchors.centerIn: parent
@@ -478,21 +447,5 @@ Item {
         onClicked: NightLightController.enabled = !NightLightController.enabled
       }
     }
-  }
-
-  WifiPanel {
-    visible: root.wifiPanelOpened
-    anchorX: Math.max(8, root.mapToGlobal(root.width, 0).x + (20 * root.dpi))
-    anchorY: wifiBtn.mapToGlobal(0, 0).y + (46 * root.dpi)
-  }
-
-  BluetoothPanel {
-    visible: root.btPanelOpened
-    anchorX: Quickshell.screens[0]
-             ? Quickshell.screens[0].x + Quickshell.screens[0].width
-               - (root.mapToGlobal(root.width, 0).x + (20 * root.dpi))
-               - (238 * root.dpi)
-             : 0
-    anchorY: btBtn.mapToGlobal(0, 0).y + (46 * root.dpi)
   }
 }

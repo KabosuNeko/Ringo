@@ -82,10 +82,6 @@ void LockController::lock() {
     setLocked(true);
 }
 
-void LockController::unlock() {
-    setLocked(false);
-}
-
 void LockController::tryUnlock(const QString &password) {
     // Drop rather than stack a second PAM conversation.
     if (m_authenticating) {

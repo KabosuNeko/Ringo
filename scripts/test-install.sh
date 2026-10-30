@@ -27,11 +27,17 @@ BACKEND="$REAL_HOME/.config/ringo-shell/IslandBackend"
 real_before="$(stamp "$BACKEND/.backup")"
 
 # Stub the machine-facing commands: they only have to succeed, changing nothing.
-for tool in yay sudo systemctl gsettings xdg-mime; do
+for tool in yay sudo systemctl gsettings xdg-mime fc-list; do
     printf '#!/bin/sh\nexit 0\n' > "$STUB_BIN/$tool"
     chmod +x "$STUB_BIN/$tool"
 done
 PATH="$STUB_BIN:$PATH"; export PATH
+
+# install.sh downloads the Maple Mono NF font from the GitHub API. This stub
+# keeps the test offline and makes the font step take its "no download
+# available" path, which must not fail the install.
+printf '#!/bin/sh\nexit 1\n' > "$STUB_BIN/curl"
+chmod +x "$STUB_BIN/curl"
 
 # 2. a target file stow does not own must abort before anything is linked.
 mkdir -p "$FAKE_HOME/.config/niri"
@@ -55,19 +61,35 @@ pass "$expected symlinks deployed into \$HOME"
 [ -e "$FAKE_HOME/.config/ringo-shell/IslandBackend/libIslandBackend.so" ] || fail "IslandBackend/libIslandBackend.so missing"
 pass "IslandBackend/libIslandBackend.so installed"
 
-# 4. rollback without a snapshot fails cleanly.
+# 4. the font step runs (--yes), cannot download (curl stub) and must stay soft:
+grep -q "Install the MapleMono-NF-unhinted.zip release into" "$LOG" ||
+    fail "font step should print the manual hint when the download is unavailable"
+pass "failed font download falls back to the manual hint"
+[ ! -e "$FAKE_HOME/.local/share/fonts" ] ||
+    fail "font step wrote font files without a successful download"
+pass "no font files written when the download fails"
+
+# 5. --rollback really restores the snapshot, not just reports success.
+FAKE_BACKEND="$FAKE_HOME/.config/ringo-shell/IslandBackend"
+printf 'rollback-sentinel\n' > "$FAKE_BACKEND/.backup/qmldir"
+run_install "$FAKE_HOME" --rollback
+[ "$STATUS" -eq 0 ] || fail "--rollback with a snapshot should exit 0 (got $STATUS)"
+[ "$(cat "$FAKE_BACKEND/qmldir")" = "rollback-sentinel" ] || fail "--rollback did not restore qmldir"
+pass "--rollback restores a backup file"
+
+# 6. rollback without a snapshot fails cleanly.
 run_install "$OTHER_HOME" --rollback
 [ "$STATUS" -eq 1 ] || fail "--rollback without a backup should exit 1 (got $STATUS)"
 pass "--rollback without a backup exits 1"
 grep -q 'No backend backup found' "$LOG" || fail "rollback error message missing"
 pass "'No backend backup found' printed"
 
-# 5. dry run changes nothing and succeeds.
+# 7. dry run changes nothing and succeeds.
 run_install "$OTHER_HOME" --dry-run --non-interactive --profile core
 [ "$STATUS" -eq 0 ] || fail "--dry-run should exit 0 (status $STATUS)"
 pass "--dry-run --non-interactive --profile core exits 0"
 
-# 6. the real $HOME was never touched by any of the above.
+# 8. the real $HOME was never touched by any of the above.
 [ "$(stamp "$BACKEND/.backup")" = "$real_before" ] || fail "real \$HOME backend backup changed"
 pass "real \$HOME untouched"
 

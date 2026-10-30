@@ -45,7 +45,7 @@ Rectangle {
         color: (strip.selectedIndex === index || itemHover.containsMouse) ? Theme.bg5 : Theme.bg2
         border.width: strip.selectedIndex === index ? 2 : 0
         border.color: Theme.accent
-        Behavior on color { ColorAnimation { duration: 120 } }
+        Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
         ColumnLayout {
           anchors.centerIn: parent

@@ -3,8 +3,8 @@
   "clockFormat": "hh:mm",
   "pillTopMargin": 9,
   "pillBottomMargin": 26,
-  "textFontFamily": "JetBrainsMono Nerd Font",
-  "nerdFontFamily": "JetBrainsMono Nerd Font Propo",
+  "textFontFamily": "Maple Mono NF",
+  "nerdFontFamily": "Maple Mono NF",
   "notificationDisplayTime": 3000,
   "maxNotificationsInStack": 20,
   "osdDuration": 800,
@@ -20,6 +20,7 @@
   "wsAnimation": true,
   "nightLightLowTemperature": 4000,
   "nightLightHighTemperature": 6500,
+  "nightLightGamma": 1.0,
   "nightLightLatitude": 0,
   "nightLightLongitude": 0,
   "slideshowIntervalMinutes": 30

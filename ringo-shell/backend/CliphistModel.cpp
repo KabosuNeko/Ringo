@@ -110,7 +110,9 @@ void CliphistModel::refresh()
 
 void CliphistModel::onListProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
-    if (!m_listProcess) return;
+    // refresh() may have replaced m_listProcess while the old process was
+    // dying; its queued finished signal must not consume the new process.
+    if (!m_listProcess || sender() != m_listProcess) return;
 
     // Pruning deletes every file whose id is missing from the list, so a failed
     // `cliphist list` must never be treated as "no entries".

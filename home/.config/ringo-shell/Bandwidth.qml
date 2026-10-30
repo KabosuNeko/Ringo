@@ -11,7 +11,7 @@ Item {
         spacing: 1
 
         // Rates tick every second; a fixed slot keeps the pill from resizing with
-        // them. JetBrains Mono means the widest sample bounds every value.
+        // them. The font is monospace, so the widest sample bounds every value.
         TextMetrics {
             id: rateMetrics
             font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }

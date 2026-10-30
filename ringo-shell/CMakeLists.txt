@@ -79,8 +79,6 @@ qt_add_qml_module(IslandBackend
         backend/NiriController.cpp
         backend/PowerProfileController.h
         backend/PowerProfileController.cpp
-        backend/SoundController.h
-        backend/SoundController.cpp
         backend/FuzzySearch.h
         backend/FuzzySearch.cpp
         backend/CliphistModel.h

@@ -130,7 +130,7 @@ Rectangle {
                     font.family: Theme.nerdFontFamily
                     font.pixelSize: 15
                     color: prevHover.hovered ? Theme.fg : Theme.fg5
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                     HoverHandler { id: prevHover }
                     MouseArea {
                         anchors.fill: parent
@@ -143,9 +143,10 @@ Rectangle {
                     Layout.preferredWidth: 34
                     Layout.preferredHeight: 34
                     radius: 17
-                    color: Theme.accent
-                    scale: playMouse.pressed ? 0.92 : (playHover.hovered ? 1.05 : 1.0)
-                    Behavior on scale { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+                    color: playMouse.pressed ? Qt.darker(Theme.accent, 1.25)
+                         : playHover.hovered ? Qt.lighter(Theme.accent, 1.12)
+                         : Theme.accent
+                    Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
                     Text {
                         anchors.centerIn: parent
@@ -169,7 +170,7 @@ Rectangle {
                     font.family: Theme.nerdFontFamily
                     font.pixelSize: 15
                     color: nextHover.hovered ? Theme.fg : Theme.fg5
-                    Behavior on color { ColorAnimation { duration: 100 } }
+                    Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                     HoverHandler { id: nextHover }
                     MouseArea {
                         anchors.fill: parent
@@ -192,14 +193,14 @@ Rectangle {
                 border.width: 1
                 border.color: Theme.cardBorder
 
-                Behavior on Layout.preferredHeight { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                Behavior on Layout.preferredHeight { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
 
                 Rectangle {
                     width: parent.width * mediaCard.mprisProgress
                     height: parent.height
                     radius: 3
                     color: Theme.accent
-                    Behavior on width { NumberAnimation { duration: 400; easing.type: Easing.Linear } }
+                    Behavior on width { NumberAnimation { duration: Theme.motionProgress; easing.type: Theme.easeLinear } }
                 }
 
                 MouseArea {

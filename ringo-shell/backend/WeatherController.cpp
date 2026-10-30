@@ -81,7 +81,6 @@ void WeatherController::saveCache(const QByteArray &data) {
 }
 
 void WeatherController::refresh() {
-    if (m_loading && m_reply) return;
     if (m_weatherLocation.trimmed().isEmpty()) { setErrorMessage(QStringLiteral("No location set")); return; }
     setLoading(true);
     setErrorMessage(QString());
@@ -89,7 +88,16 @@ void WeatherController::refresh() {
     QNetworkRequest req{QUrl(urlStr)};
     req.setHeader(QNetworkRequest::UserAgentHeader, QStringLiteral("ringo-shell/1.0"));
     req.setTransferTimeout(15000);
-    if (m_reply) { m_reply->abort(); m_reply->deleteLater(); }
+    // A location/unit change during a fetch must restart it, not be dropped
+    // until the next hourly poll. Detach the old reply first so its finished
+    // signal cannot overwrite the new request's error state.
+    if (m_reply) {
+        QNetworkReply *old = m_reply;
+        m_reply = nullptr;
+        old->disconnect(this);
+        old->abort();
+        old->deleteLater();
+    }
     m_reply = m_nam.get(req);
     connect(m_reply, &QNetworkReply::finished, this, &WeatherController::onReplyFinished);
     // A manual refresh never disturbs the polling timer.

@@ -22,6 +22,7 @@ ShellRoot {
     box.powerMenuOpen = false
     box.recordMenuOpen = false
     box.keybindViewer = false
+    box.settingsOpen = false
   }
 
   IpcHandler {
@@ -104,6 +105,15 @@ ShellRoot {
     function on(): void { NightLightController.enabled = true }
     function off(): void { NightLightController.enabled = false }
     function force(mode: string): void { NightLightController.force = mode }
+    function low(kelvin: int): void {
+      Config.setNightLight(kelvin, Config.nightLightHighTemperature, Config.nightLightGamma)
+    }
+    function high(kelvin: int): void {
+      Config.setNightLight(Config.nightLightLowTemperature, kelvin, Config.nightLightGamma)
+    }
+    function gamma(value: real): void {
+      Config.setNightLight(Config.nightLightLowTemperature, Config.nightLightHighTemperature, value)
+    }
     function status(): string {
       const where = `${NightLightController.locationExplicit ? "pinned" : "auto"} `
         + `${NightLightController.latitude.toFixed(2)},${NightLightController.longitude.toFixed(2)}`
@@ -119,6 +129,14 @@ ShellRoot {
     function on(): void { Notifier.dndEnabled = true }
     function off(): void { Notifier.dndEnabled = false }
     function status(): string { return Notifier.dndEnabled ? "on" : "off" }
+  }
+
+  IpcHandler {
+    target: "airplaneMode"
+    function toggle(): void { ccButtons.toggleAirplaneMode() }
+    function on(): void { ccButtons.setAirplaneMode(true) }
+    function off(): void { ccButtons.setAirplaneMode(false) }
+    function status(): string { return ccButtons.airplaneMode ? "on" : "off" }
   }
 
   IpcHandler {
@@ -155,17 +173,18 @@ ShellRoot {
   }
 
   IpcHandler {
+    target: "settings"
+    function toggle(): void { const next = !box.settingsOpen; box.settingsPage = "main"; root.closeOverlays(); box.settingsOpen = next }
+    function open(): void { box.settingsPage = "main"; root.closeOverlays(); box.settingsOpen = true }
+    function hide(): void { box.settingsOpen = false }
+    function page(name: string): void { root.closeOverlays(); box.settingsPage = name; box.settingsOpen = true }
+  }
+
+  IpcHandler {
     target: "recordMenu"
     function toggle(): void { const next = !box.recordMenuOpen; root.closeOverlays(); box.recordMenuOpen = next }
     function open(): void { root.closeOverlays(); box.recordMenuOpen = true }
     function hide(): void { box.recordMenuOpen = false }
-  }
-
-  IpcHandler {
-    target: "bar"
-    function toggle(): void { root.barHidden = !root.barHidden }
-    function open(): void { root.barHidden = false }
-    function hide(): void { root.barHidden = true }
   }
 
   IpcHandler {
@@ -184,7 +203,7 @@ ShellRoot {
 
   IpcHandler {
     target: "lock"
-    function unlock(): void { LockController.unlock() }
+    // No unlock() here: only LockScreen.qml's PAM path may dismiss the lock.
     function lock(): void { LockController.lock() }
   }
 
@@ -217,12 +236,15 @@ ShellRoot {
     { name: "wl-paste",          needed: true,  why: "clipboard watcher" },
     { name: "foot",              needed: false, why: "default terminal" },
     { name: "wl-screenrec",      needed: false, why: "screen recording" },
+    { name: "fd",                needed: false, why: "launcher file search" },
+    { name: "nmcli",             needed: false, why: "Ethernet/VPN controls" },
     { name: "fcitx5",            needed: false, why: "input method" },
-    { name: "canberra-gtk-play", needed: false, why: "sound events" },
-    { name: "mpv",               needed: false, why: "alarm sounds" }
+    { name: "canberra-gtk-play", needed: false, why: "sound events" }
   ]
 
-  property bool barHidden: false
+  // The diagnostics verdict outlives the panel: the Settings Loader is destroyed
+  // on close, so the row reads it from the host instead of itself.
+  property string diagnosticVerdict: ""
 
   Component.onCompleted: {
     WeatherController.weatherLocation = Config.weatherLocation
@@ -231,6 +253,7 @@ ShellRoot {
     WeatherController.refresh()
     NightLightController.lowTemperature = Config.nightLightLowTemperature
     NightLightController.highTemperature = Config.nightLightHighTemperature
+    NightLightController.gamma = Config.nightLightGamma
     WallpaperController.slideshowDir = Config.wallpapersDir
     WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes
     applyNightLightLocation()
@@ -258,7 +281,8 @@ function doctorReport(): string {
                                      : nl.error.length > 0 ? "unavailable" : "stopped"))
   out.push("  location: " + (nl.locationExplicit ? "pinned" : "auto") + " "
            + nl.latitude.toFixed(2) + "," + nl.longitude.toFixed(2)
-           + " · " + nl.lowTemperature + "K night / " + nl.highTemperature + "K day")
+           + " · " + nl.lowTemperature + "K night / " + nl.highTemperature + "K day"
+           + " · gamma " + nl.gamma.toFixed(2))
   if (nl.error.length > 0) out.push("  error: " + nl.error)
 
   const wal = Quickshell.env("HOME") + "/.cache/wal/colors.json"
@@ -317,6 +341,7 @@ function doctorReport(): string {
     function onWeatherRefreshIntervalChanged() { WeatherController.refreshInterval = Config.weatherRefreshInterval }
     function onNightLightLowTemperatureChanged() { NightLightController.lowTemperature = Config.nightLightLowTemperature }
     function onNightLightHighTemperatureChanged() { NightLightController.highTemperature = Config.nightLightHighTemperature }
+    function onNightLightGammaChanged() { NightLightController.gamma = Config.nightLightGamma }
     function onNightLightLatitudeChanged() { root.applyNightLightLocation() }
     function onNightLightLongitudeChanged() { root.applyNightLightLocation() }
     function onSlideshowIntervalMinutesChanged() { WallpaperController.slideshowIntervalMinutes = Config.slideshowIntervalMinutes }
@@ -347,33 +372,49 @@ function doctorReport(): string {
 
   PanelWindow {
     id: panelWindow
-    visible: !LockController.locked && !root.barHidden
-    readonly property bool overlayActive: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer
-    readonly property bool popupsOpen: typeof ccButtons !== "undefined" && (ccButtons.wifiPanelOpened || ccButtons.btPanelOpened)
-    readonly property bool fullKeyboardOverlay: box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer
+    visible: !LockController.locked
+    readonly property bool overlayActive: box.controlCenter || box.miniDashboard || box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer || box.settingsOpen
+    readonly property bool fullKeyboardOverlay: box.cliphistOpen || box.appLauncher || box.wallpaperSwitcherOpen || box.powerMenuOpen || box.recordMenuOpen || box.keybindViewer || box.settingsOpen
     WlrLayershell.layer: overlayActive ? WlrLayershell.Overlay : WlrLayershell.Top
     WlrLayershell.namespace: "ringo-shell"
-    WlrLayershell.keyboardFocus: popupsOpen
-                                 ? WlrKeyboardFocus.None
-                                 : (fullKeyboardOverlay
-                                    ? WlrKeyboardFocus.Exclusive
-                                    : (box.controlCenter || box.miniDashboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None))
-    implicitWidth: Math.ceil(box.width * box.dpi)
-    implicitHeight: Math.ceil((box.y + box.height) * box.dpi)
+    WlrLayershell.keyboardFocus: fullKeyboardOverlay
+                                 ? WlrKeyboardFocus.Exclusive
+                                 : (box.controlCenter || box.miniDashboard ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None)
+    // one fixed surface: the island morphs inside it, so Wayland never resizes
+    readonly property real surfaceWidth: 640
+    readonly property real surfaceHeight: 640
+    implicitWidth: Math.ceil(surfaceWidth * box.dpi)
+    implicitHeight: Math.ceil((box.y + surfaceHeight) * box.dpi)
 
     anchors {
       top: true
     }
 
     margins.top: Config.pillTopMargin
-    exclusiveZone: root.barHidden ? 0 : Config.pillBottomMargin
+    exclusiveZone: Config.pillBottomMargin
     color: "transparent"
 
     mask: Region {
-      x: Math.floor(box.x - box.width * (box.dpi - 1) / 2)
-      y: Math.floor(box.y)
-      width: Math.ceil(box.width * box.dpi)
-      height: Math.ceil(box.height * box.dpi)
+      x: box.popoverActive ? 0 : Math.floor(box.x - box.width * (box.dpi - 1) / 2)
+      y: box.popoverActive ? 0 : Math.floor(box.y)
+      width: box.popoverActive
+             ? Math.ceil(panelWindow.surfaceWidth * box.dpi)
+             : Math.ceil(box.width * box.dpi)
+      height: box.popoverActive
+              ? Math.ceil(panelWindow.surfaceHeight * box.dpi)
+              : Math.ceil(box.height * box.dpi)
+    }
+
+    // click outside a popover closes it
+    MouseArea {
+      anchors.fill: parent
+      visible: box.popoverActive
+      enabled: box.popoverActive
+      acceptedButtons: Qt.LeftButton | Qt.MiddleButton | Qt.RightButton
+      onClicked: {
+        root.closeOverlays()
+        box.activeOsd = ""
+      }
     }
 
     Rectangle {
@@ -382,6 +423,7 @@ function doctorReport(): string {
       anchors.horizontalCenter: parent.horizontalCenter
       opacity: !LockController.locked ? 1 : 0
       visible: opacity > 0
+      // the island clips its growing content, like a Dynamic Island
       clip: true
       focus: true
 
@@ -402,10 +444,16 @@ function doctorReport(): string {
       property bool wallpaperSwitcherOpen: false
       property bool powerMenuOpen: false
       property bool recordMenuOpen: false
+      property bool settingsOpen: false
+      property string settingsPage: "main"
 
       readonly property bool hasBattery: SystemMonitor.hasBattery
       readonly property bool charging: SystemMonitor.charging
-      readonly property string batteryIconColor: SystemMonitor.batteryIconColor
+      readonly property string batteryIconColor: !SystemMonitor.hasBattery
+        || SystemMonitor.charging
+        || SystemMonitor.batteryPercentage >= 40
+        ? Theme.batteryGood
+        : SystemMonitor.batteryPercentage >= 20 ? Theme.batteryWarn : Theme.batteryCritical
       readonly property int batteryLevel: SystemMonitor.batteryPercentage
       readonly property string batteryIcon: SystemMonitor.batteryIcon
 
@@ -433,7 +481,26 @@ function doctorReport(): string {
 
       property bool cliphistPreviewing: false
 
-      readonly property real barContentOpacity: !box.cliphistOpen && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" && !box.appLauncher && !box.powerMenuOpen && !box.recordMenuOpen && !box.keybindViewer ? 1 : 0
+      readonly property bool slotOpenActive: cliphistOpen || appLauncher
+          || wallpaperSwitcherOpen || powerMenuOpen || recordMenuOpen
+          || keybindViewer || settingsOpen
+      readonly property bool slotOverlayActive: slotOpenActive
+          || cliphistSlot.closing || appLauncherSlot.closing
+          || wallpaperSlot.closing || powerSlot.closing
+          || recordSlot.closing || keybindSlot.closing || settingsSlot.closing
+      readonly property bool popoverClosing: (!controlCenter && controlCenterPanel.opacity > 0)
+          || (!miniDashboard && miniDashboardPanel.opacity > 0)
+      readonly property bool popoverActive: slotOverlayActive || controlCenter || miniDashboard || popoverClosing
+
+      readonly property real barContentOpacity: !popoverActive && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" ? 1 : 0
+
+      readonly property real barWidth: activeOsd !== "" ? 220
+                     : notificationModule.active ? 320
+                     : barRow.implicitWidth + (hovered && !popoverActive ? 68 : 58) * Config.paddingScale
+
+      readonly property real barHeight: activeOsd !== "" ? 40
+                  : notificationModule.active ? (notificationModule.currentHasActions ? 78 : 52)
+                  : (Math.max(barRow.implicitHeight, centerClock.implicitHeight) * Config.pillScale) + 10
 
       readonly property real baseWidth: activeOsd !== "" ? 220
                      : notificationModule.active ? 320
@@ -441,26 +508,28 @@ function doctorReport(): string {
                      : appLauncher ? 420
                      : keybindViewer ? 560
                      : wallpaperSwitcherOpen ? 600
+                     : settingsOpen ? 460
                      : powerMenuOpen ? 400
                      : recordMenuOpen ? 360
-                     : miniDashboard ? 410
+                     : miniDashboard ? 460
                       : (cliphistOpen && cliphistPreviewing) ? 400
                       : cliphistOpen ? 460
-                        : barRow.implicitWidth + (hovered ? 68 : 58) * Config.paddingScale
+                        : barWidth
 
       readonly property real baseHeight: activeOsd !== "" ? 40
-                  : notificationModule.active ? 52
+                  : notificationModule.active ? (notificationModule.currentHasActions ? 78 : 52)
                   : controlCenter
                       ? (ccColumn.implicitHeight + 24)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
-                   : miniDashboard ? 160
+                   : miniDashboard ? 176
                    : appLauncher ? 410
                     : keybindViewer ? 400
                     : wallpaperSwitcherOpen ? 308
+                    : settingsOpen ? 584
                     : powerMenuOpen ? 90
                     : recordMenuOpen ? 90
-                    : (Math.max(barRow.implicitHeight, centerClock.implicitHeight) * Config.pillScale) + 10
+                    : barHeight
 
       readonly property real baseRadius: 20 * Config.pillScale
 
@@ -473,10 +542,9 @@ function doctorReport(): string {
       border.width: 1
       border.color: Theme.pillBorder
 
-      // Spring, not a fixed curve: a retarget mid-flight keeps its velocity,
-      // which is what makes a pill feel physical instead of scripted.
+      // crisp, not springy: the pill resizes on the same clock as everything else
       Behavior on radius {
-          SpringAnimation { spring: 120; damping: 18; epsilon: 0.5 }
+          NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut }
       }
 
       color: controlCenter
@@ -490,11 +558,20 @@ function doctorReport(): string {
           }
       }
 
-      // Width and height change on every telemetry tick (bandwidth, clock), so a
-      // spring here never rests. Keep the short ease; the spring lives on radius,
-      // which only moves on state changes.
-      Behavior on implicitHeight { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
-      Behavior on implicitWidth { NumberAnimation { duration: 70; easing.type: Easing.OutCubic } }
+      Behavior on implicitHeight {
+        enabled: !(notificationModule.active || box.activeOsd !== "")
+        NumberAnimation {
+          duration: box.popoverActive ? Theme.motionOverlay : Theme.motionResize
+          easing.type: Theme.easeOut
+        }
+      }
+      Behavior on implicitWidth {
+        enabled: !(notificationModule.active || box.activeOsd !== "")
+        NumberAnimation {
+          duration: box.popoverActive ? Theme.motionOverlay : Theme.motionResize
+          easing.type: Theme.easeOut
+        }
+      }
 
       MouseArea {
         anchors.fill: parent
@@ -528,6 +605,10 @@ function doctorReport(): string {
 
           if (box.powerMenuOpen) {
             if (mouse.button === Qt.LeftButton) box.powerMenuOpen = false
+            return
+          }
+          if (box.settingsOpen) {
+            if (mouse.button === Qt.LeftButton) box.settingsOpen = false
             return
           }
           if (box.recordMenuOpen) {
@@ -582,7 +663,10 @@ function doctorReport(): string {
         spacing: 9 * Config.paddingScale
         opacity: box.barContentOpacity
         visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 100 } }
+        Behavior on opacity {
+          enabled: !box.popoverActive
+          OpacityAnimator { duration: Theme.motionFast }
+        }
 
         Clock {
           id: centerClock
@@ -627,7 +711,7 @@ function doctorReport(): string {
               text: "\uf0f3"
               color: bellHover.hovered ? Theme.accent : Theme.fg4
               font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-              Behavior on color { ColorAnimation { duration: 120 } }
+              Behavior on color { ColorAnimation { duration: Theme.motionBase } }
             }
 
             Text {
@@ -663,35 +747,12 @@ function doctorReport(): string {
             SequentialAnimation on opacity {
               running: Recorder.active
               loops: Animation.Infinite
-              OpacityAnimator { to: 0.35; duration: 800; easing.type: Easing.InOutQuad }
-              OpacityAnimator { to: 1.0; duration: 800; easing.type: Easing.InOutQuad }
+              OpacityAnimator { to: 0.35; duration: Theme.motionBlink; easing.type: Theme.easeInOut }
+              OpacityAnimator { to: 1.0; duration: Theme.motionBlink; easing.type: Theme.easeInOut }
             }
           }
         }
 
-        RowLayout {
-          visible: FocusTimer.running
-          spacing: 4 * Config.paddingScale
-          Layout.alignment: Qt.AlignVCenter
-
-          TextMetrics {
-            id: focusTimeMetrics
-            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
-            text: "00:00"
-          }
-          Text {
-            text: FocusTimer.mode === "work" ? "\uf252" : "\uf0f4"
-            color: Theme.accent
-            font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
-          }
-          Text {
-            text: FocusTimer.formattedTime
-            color: Theme.accent
-            font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 600 }
-            Layout.preferredWidth: focusTimeMetrics.width
-            horizontalAlignment: Text.AlignRight
-          }
-        }
       }
 
       // hidden, but they still report volume/battery changes for the OSDs
@@ -713,13 +774,37 @@ function doctorReport(): string {
         }
       }
 
+      // No surface of its own: the pairing agent is a singleton whose constructor
+      // registers it on the system bus, and the Settings panel only exists while
+      // it is open, so something always-instantiated has to reference it. This
+      // item is also where a request that arrives with Settings closed lands.
+      Item {
+        id: btPairingHost
+
+        width: 0
+        height: 0
+
+        readonly property bool requestActive: BluetoothPairingAgent.requestActive
+
+        // A pending request has no UI anywhere but the Bluetooth page.
+        function openForRequest(): void {
+          root.closeOverlays()
+          box.settingsPage = "bluetooth"
+          box.settingsOpen = true
+        }
+
+        onRequestActiveChanged: {
+          if (requestActive) openForRequest()
+        }
+      }
+
       OsdBar {
           active: box.activeOsd === "volume"
           icon: volumeModule.icon
           iconColor: volumeModule.muted ? volumeModule.mutedFg : Theme.fg
           percent: volumeModule.vol / 100
           muted: volumeModule.muted
-          barWidth: volumeModule.mutedFg ? 90 : 110
+          barWidth: volumeModule.muted ? 90 : 110
           valueText: volumeModule.muted ? "muted" : volumeModule.vol + "%"
       }
 
@@ -741,22 +826,30 @@ function doctorReport(): string {
       }
 
       NotificationPopup {
+        id: toastPopup
         active: notificationModule.active
                 && box.activeOsd === ""
         notif: notificationModule.current
+        onDismissRequested: {
+          // dismiss() drops the entry from the stack and the queue; advance()
+          // retires the toast it was showing (and picks up the next queued one)
+          notificationModule.dismiss(notificationModule.current)
+          notificationModule.advance()
+        }
       }
 
       // cliphist opens on middle click
       OverlaySlot {
+        id: cliphistSlot
         open: box.cliphistOpen
-        openHeight: box.implicitHeight - 26
+        openHeight: box.baseHeight - 26
         widthInset: 26
         blocked: notificationModule.active
                  || box.activeOsd !== ""
                  || box.controlCenter
 
         Cliphist {
-          shown: box.cliphistOpen
+          shown: box.cliphistOpen || cliphistSlot.closing
           anchors.fill: parent
           onCloseRequested: box.cliphistOpen = false
           onPreviewToggled: (active) => box.cliphistPreviewing = active
@@ -765,6 +858,7 @@ function doctorReport(): string {
 
       // wallpaper switcher opens through IPC
       OverlaySlot {
+        id: wallpaperSlot
         open: box.wallpaperSwitcherOpen
         openHeight: 280
         blocked: notificationModule.active
@@ -777,10 +871,10 @@ function doctorReport(): string {
         Loader {
           id: wallpaperLoader
           anchors.fill: parent
-          active: box.wallpaperSwitcherOpen
+          active: box.wallpaperSwitcherOpen || wallpaperSlot.closing
 
           sourceComponent: WallpaperSwitcher {
-            shown: box.wallpaperSwitcherOpen
+            shown: box.wallpaperSwitcherOpen || wallpaperSlot.closing
             onCloseRequested: box.wallpaperSwitcherOpen = false
           }
           onLoaded: item.forceActiveFocus()
@@ -797,6 +891,7 @@ function doctorReport(): string {
 
       // power menu opens through IPC
       OverlaySlot {
+        id: powerSlot
         open: box.powerMenuOpen
         openHeight: 70
         blocked: notificationModule.active
@@ -810,10 +905,10 @@ function doctorReport(): string {
         Loader {
           id: powerMenuLoader
           anchors.fill: parent
-          active: box.powerMenuOpen
+          active: box.powerMenuOpen || powerSlot.closing
 
           sourceComponent: PowerMenu {
-            shown: box.powerMenuOpen
+            shown: box.powerMenuOpen || powerSlot.closing
             onCloseRequested: box.powerMenuOpen = false
           }
           onLoaded: item.forceActiveFocus()
@@ -828,8 +923,80 @@ function doctorReport(): string {
         }
       }
 
+      // settings overlay opens through IPC or the control center gear
+      OverlaySlot {
+        id: settingsSlot
+        open: box.settingsOpen
+        openHeight: 560
+        blocked: notificationModule.active
+                 || box.activeOsd !== ""
+                 || box.controlCenter
+                 || box.miniDashboard
+                 || box.cliphistOpen
+                 || box.appLauncher
+                 || box.wallpaperSwitcherOpen
+                 || box.powerMenuOpen
+                 || box.recordMenuOpen
+                 || box.keybindViewer
+
+        Loader {
+          id: settingsLoader
+          anchors.fill: parent
+          active: box.settingsOpen || settingsSlot.closing
+
+          sourceComponent: SettingsPanel {
+            shown: box.settingsOpen || settingsSlot.closing
+            page: box.settingsPage
+            diagnosticVerdict: root.diagnosticVerdict
+            onCloseRequested: box.settingsOpen = false
+            onPageRequested: (name) => box.settingsPage = name
+
+            onOpenWallpaperSwitcher: {
+              root.closeOverlays()
+              box.wallpaperSwitcherOpen = true
+            }
+            onOpenKeybinds: {
+              root.closeOverlays()
+              box.keybindViewer = true
+            }
+            onOpenClipboard: {
+              root.closeOverlays()
+              box.cliphistOpen = true
+            }
+            onDiagnosticsRequested: {
+              const report = root.doctorReport()
+              root.diagnosticVerdict = report.split("\n").pop()
+              Notifier.post("Diagnostics", report, "stethoscope", "Ringo", 0)
+            }
+            onOpenConfigFile: {
+              const term = Config.defaultTerminal
+              if (!term || term.length === 0) return
+              // the overlay holds an exclusive keyboard grab, so it has to go
+              // before the editor can take keys
+              root.closeOverlays()
+              Quickshell.execDetached(["sh", "-c",
+                "command -v " + term + " >/dev/null 2>&1 || exit 0; "
+                + "ed=\"${EDITOR:-}\"; case \"$ed\" in ''|true|:) ed=nvim ;; esac; "
+                + "command -v \"${ed%% *}\" >/dev/null 2>&1 || ed=nvim; "
+                + "command -v \"${ed%% *}\" >/dev/null 2>&1 || exit 0; "
+                + "exec " + term + " -e $ed \"$HOME/.config/ringo-shell/config.jsonc\""])
+            }
+          }
+          onLoaded: item.forceActiveFocus()
+        }
+
+        Connections {
+          target: box
+          function onSettingsOpenChanged() {
+            if (box.settingsOpen && settingsLoader.item)
+              settingsLoader.item.forceActiveFocus()
+          }
+        }
+      }
+
       // record menu opens through IPC (Mod+F11)
       OverlaySlot {
+        id: recordSlot
         open: box.recordMenuOpen
         openHeight: 70
         blocked: notificationModule.active
@@ -844,10 +1011,10 @@ function doctorReport(): string {
         Loader {
           id: recordMenuLoader
           anchors.fill: parent
-          active: box.recordMenuOpen
+          active: box.recordMenuOpen || recordSlot.closing
 
           sourceComponent: RecordMenu {
-            shown: box.recordMenuOpen
+            shown: box.recordMenuOpen || recordSlot.closing
             onCloseRequested: box.recordMenuOpen = false
           }
           onLoaded: item.forceActiveFocus()
@@ -864,6 +1031,7 @@ function doctorReport(): string {
 
       // app launcher opens through IPC
       OverlaySlot {
+        id: appLauncherSlot
         open: box.appLauncher
         openHeight: 386
         widthInset: 24
@@ -876,7 +1044,7 @@ function doctorReport(): string {
         AppLauncher {
           id: appLauncherPanel
           anchors.fill: parent
-          shown: box.appLauncher
+          shown: box.appLauncher || appLauncherSlot.closing
           initialQuery: box.pendingLauncherQuery
           onCloseRequested: box.appLauncher = false
         }
@@ -884,8 +1052,9 @@ function doctorReport(): string {
 
       // searchable keybind list opens through IPC (Mod+/)
       OverlaySlot {
+        id: keybindSlot
         open: box.keybindViewer
-        openHeight: box.implicitHeight - 40
+        openHeight: box.baseHeight - 40
         widthInset: 24
         blocked: notificationModule.active
                  || box.activeOsd !== ""
@@ -897,10 +1066,10 @@ function doctorReport(): string {
         Loader {
           id: keybindViewerLoader
           anchors.fill: parent
-          active: box.keybindViewer
+          active: box.keybindViewer || keybindSlot.closing
 
           sourceComponent: KeybindViewer {
-            shown: box.keybindViewer
+            shown: box.keybindViewer || keybindSlot.closing
             onCloseRequested: box.keybindViewer = false
           }
           onLoaded: item.forceActiveFocus()
@@ -921,13 +1090,26 @@ function doctorReport(): string {
         anchors.top: parent.top
         anchors.topMargin: 12
         anchors.horizontalCenter: parent.horizontalCenter
-        width: box.implicitWidth - 24
+        width: box.baseWidth - 24
         focus: true
+        property bool contentShown: false
+        Timer {
+          id: controlContentTimer
+          interval: 60
+          onTriggered: controlCenterPanel.contentShown = true
+        }
         Keys.onEscapePressed: (event) => { box.controlCenter = false; event.accepted = true }
         Connections {
           target: box
           function onControlCenterChanged() {
-            if (box.controlCenter) controlCenterPanel.forceActiveFocus()
+            if (box.controlCenter) {
+              controlCenterPanel.forceActiveFocus()
+              controlCenterPanel.contentShown = false
+              controlContentTimer.restart()
+            } else {
+              controlContentTimer.stop()
+              controlCenterPanel.contentShown = false
+            }
           }
         }
         opacity: box.controlCenter && box.activeOsd === "" && !notificationModule.active ? 1 : 0
@@ -935,13 +1117,23 @@ function doctorReport(): string {
         height: ccColumn.implicitHeight
 
         Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+          NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
+        }
+
+        Rectangle {
+          anchors.fill: parent
+          radius: 22
+          color: Theme.bgD1
+          border.width: 1
+          border.color: Theme.pillBorder
         }
 
         ColumnLayout {
           id: ccColumn
           width: parent.width
           spacing: 6
+          opacity: controlCenterPanel.contentShown ? 1 : 0
+          Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
 
 
           MediaPlayer {
@@ -953,6 +1145,7 @@ function doctorReport(): string {
             id: ccButtons
             Layout.fillWidth: true
             controlCenterOpen: box.controlCenter
+            onSettingsRequested: (page) => { root.closeOverlays(); box.settingsPage = page; box.settingsOpen = true }
           }
 
 
@@ -983,15 +1176,7 @@ function doctorReport(): string {
                   color: volumeModule.muted ? "#fd2222" : Theme.fg
                   font.family: Theme.nerdFontFamily
                   font.pixelSize: 13
-                  Behavior on color { ColorAnimation { duration: 100 } }
-
-                  onTextChanged: volPulse.restart()
-                  scale: 1.0
-                  SequentialAnimation {
-                      id: volPulse
-                      NumberAnimation { target: volIcon; property: "scale"; to: 1.15; duration: 60 }
-                      NumberAnimation { target: volIcon; property: "scale"; to: 1.0; duration: 100 }
-                  }
+                  Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                 }
 
                 Rectangle {
@@ -1009,7 +1194,7 @@ function doctorReport(): string {
                     color: box.sliderColor
                     Behavior on width {
                       enabled: !volMouse.pressed
-                      NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
+                      NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
                     }
                   }
 
@@ -1037,12 +1222,6 @@ function doctorReport(): string {
                   font.weight: 600
                   Layout.minimumWidth: 35
                   horizontalAlignment: Text.AlignRight
-                  onTextChanged: valPulse.restart()
-                  SequentialAnimation {
-                    id: valPulse
-                    NumberAnimation { target: volVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                    NumberAnimation { target: volVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
-                  }
                 }
               }
 
@@ -1056,14 +1235,6 @@ function doctorReport(): string {
                   color: Theme.fg
                   font.family: Theme.nerdFontFamily
                   font.pixelSize: 13
-
-                  onTextChanged: blPulse.restart()
-                  scale: 1.0
-                  SequentialAnimation {
-                      id: blPulse
-                      NumberAnimation { target: blIcon; property: "scale"; to: 1.15; duration: 60 }
-                      NumberAnimation { target: blIcon; property: "scale"; to: 1.0; duration: 100 }
-                  }
                 }
 
                 Rectangle {
@@ -1081,7 +1252,7 @@ function doctorReport(): string {
                     color: box.sliderColor
                     Behavior on width {
                       enabled: !blMouse.pressed
-                      NumberAnimation { duration: 80; easing.type: Easing.OutCubic }
+                      NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
                     }
                   }
 
@@ -1112,12 +1283,6 @@ function doctorReport(): string {
                   font.weight: 600
                   Layout.minimumWidth: 35
                   horizontalAlignment: Text.AlignRight
-                  onTextChanged: btPulse.restart()
-                  SequentialAnimation {
-                      id: btPulse
-                      NumberAnimation { target: btVal; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-                      NumberAnimation { target: btVal; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
-                  }
                 }
               }
             }
@@ -1127,6 +1292,7 @@ function doctorReport(): string {
           TrayModule {
             parentWindow: panelWindow
             Layout.fillWidth: true
+            onSettingsRequested: (page) => { root.closeOverlays(); box.settingsPage = page; box.settingsOpen = true }
           }
 
           Rectangle {
@@ -1163,7 +1329,7 @@ function doctorReport(): string {
                 height: 16
                 radius: 8
                 color: clearAllHover.containsMouse ? Theme.focusBgL : Theme.bg1
-                Behavior on color { ColorAnimation { duration: 100 } }
+                Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                 anchors.right: parent.right
                 anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
@@ -1227,12 +1393,13 @@ function doctorReport(): string {
                   color: notifScrollBar.pressed ? "#888"
                        : scrollHover.hovered ? "#6f6f6f"
                        : "#3a3a3a"
-                  Behavior on color { ColorAnimation { duration: 100 } }
+                  Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                   HoverHandler { id: scrollHover }
                 }
               }
 
               delegate: Item {
+                readonly property var entry: modelData
                 width: ListView.view.width
                 height: contentColumn.implicitHeight + 7
 
@@ -1309,14 +1476,16 @@ function doctorReport(): string {
                       Layout.preferredHeight: 22
                       radius: 99
                       color: dismissHover.containsMouse ? Theme.focusBgL : "transparent"
-                      Behavior on color { ColorAnimation { duration: 100 } }
+                      Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
                       Text {
-                        text: ""
-                        color: dismissHover.containsMouse ? Theme.focusFg1 : Theme.fg7
+                        // nf-fa-times (U+F00D): a private-use glyph, so it needs the
+                        // nerd font family or it renders as nothing next to the icon
+                        text: "\uf00d"
+                        color: dismissHover.containsMouse ? Theme.focusFg1 : Theme.fg5
                         anchors.centerIn: parent
-                        font.pixelSize: 11
-                        Behavior on color { ColorAnimation { duration: 150 } }
+                        font { family: Theme.nerdFontFamily; pixelSize: 11 }
+                        Behavior on color { ColorAnimation { duration: Theme.motionBase } }
                       }
 
                       MouseArea {
@@ -1343,6 +1512,49 @@ function doctorReport(): string {
                     Layout.fillWidth: true
                     Layout.bottomMargin: 2
                     visible: text !== ""
+                    onLinkActivated: (link) => {
+                      Qt.openUrlExternally(link)
+                      notificationModule.dismiss(modelData._id)
+                    }
+                  }
+
+                  RowLayout {
+                    Layout.fillWidth: true
+                    Layout.topMargin: 2
+                    spacing: 4
+                    visible: notificationModule.actionList(modelData.notif).length > 0
+
+                    Repeater {
+                      model: notificationModule.actionList(modelData.notif)
+
+                      Rectangle {
+                        implicitHeight: 20
+                        implicitWidth: actionText.implicitWidth + 12
+                        radius: 6
+                        color: actionHover.containsMouse ? Theme.chipBgHover : Theme.chipBg
+                        border.width: 1
+                        border.color: Theme.chipBorder
+
+                        Text {
+                          id: actionText
+                          anchors.centerIn: parent
+                          text: modelData.text
+                          color: Theme.fg
+                          font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+                        }
+
+                        MouseArea {
+                          id: actionHover
+                          anchors.fill: parent
+                          hoverEnabled: true
+                          cursorShape: Qt.PointingHandCursor
+                          onClicked: {
+                            modelData.invoke()
+                            notificationModule.dismiss(entry._id)
+                          }
+                        }
+                      }
+                    }
                   }
 
                   Item {
@@ -1371,9 +1583,17 @@ function doctorReport(): string {
       // mini dashboard opens on right click
       Item {
         id: miniDashboardPanel
-        anchors.centerIn: parent
-        width: box.implicitWidth - 28
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.top: parent.top
+        anchors.topMargin: 8
+        width: box.baseWidth - 8
         focus: true
+        property bool contentShown: false
+        Timer {
+          id: miniContentTimer
+          interval: 60
+          onTriggered: miniDashboardPanel.contentShown = true
+        }
         Keys.onEscapePressed: (event) => { box.miniDashboard = false; event.accepted = true }
         Binding {
           target: SystemMonitor
@@ -1383,10 +1603,17 @@ function doctorReport(): string {
         Connections {
           target: box
           function onMiniDashboardChanged() {
-            if (box.miniDashboard) miniDashboardPanel.forceActiveFocus()
+            if (box.miniDashboard) {
+              miniDashboardPanel.forceActiveFocus()
+              miniDashboardPanel.contentShown = false
+              miniContentTimer.restart()
+            } else {
+              miniContentTimer.stop()
+              miniDashboardPanel.contentShown = false
+            }
           }
         }
-        height: box.miniDashboard ? box.implicitHeight - 24 : 0
+        height: box.miniDashboard ? box.baseHeight - 16 : 0
         opacity: box.miniDashboard
                  && !notificationModule.active
                  && box.activeOsd === ""
@@ -1394,7 +1621,15 @@ function doctorReport(): string {
         visible: opacity > 0
 
         Behavior on opacity {
-          NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+          NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
+        }
+
+        Rectangle {
+          anchors.fill: parent
+          radius: 22
+          color: Theme.bgD1
+          border.width: 1
+          border.color: Theme.pillBorder
         }
 
         MouseArea {
@@ -1408,7 +1643,13 @@ function doctorReport(): string {
 
         ColumnLayout {
           anchors.fill: parent
+          anchors.leftMargin: 10
+          anchors.rightMargin: 10
+          anchors.topMargin: 4
+          anchors.bottomMargin: 4
           spacing: 8
+          opacity: miniDashboardPanel.contentShown ? 1 : 0
+          Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
 
 
           RowLayout {
@@ -1417,8 +1658,8 @@ function doctorReport(): string {
 
             ClippingRectangle {
               id: avatarClip
-              Layout.preferredWidth: 38
-              Layout.preferredHeight: 38
+              Layout.preferredWidth: 34
+              Layout.preferredHeight: 34
               radius: 9
               property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
               color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
@@ -1433,7 +1674,7 @@ function doctorReport(): string {
                 asynchronous: false
                 smooth: true
                 mipmap: true
-                sourceSize: Qt.size(38, 38)
+                sourceSize: Qt.size(34, 34)
               }
             }
 
@@ -1493,13 +1734,16 @@ function doctorReport(): string {
 
           RowLayout {
             Layout.fillWidth: true
-            Layout.preferredHeight: 52
+            Layout.fillHeight: true
+            Layout.minimumHeight: 64
             spacing: 8
 
             Rectangle {
-              Layout.fillWidth: true
+              // IP + interface + the two rate rows need ~185px; the gauge card
+              // takes whatever is left over.
+              Layout.preferredWidth: 240
               Layout.fillHeight: true
-              radius: 10
+              radius: 4
               color: Theme.cardBg
               border.width: 1
               border.color: Theme.cardBorder
@@ -1531,7 +1775,7 @@ function doctorReport(): string {
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: 30
-            radius: 8
+            radius: 4
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1610,22 +1854,6 @@ function doctorReport(): string {
   }
 
   NotificationModule { id: notificationModule; visible: false }
-
-  Connections {
-    target: FocusTimer
-    function onRunningChanged() {
-      if (FocusTimer.autoDnd) {
-        if (FocusTimer.running && FocusTimer.mode === "work") {
-          FocusTimer.dndWasEnabledBeforeFocus = Notifier.dndEnabled
-          Notifier.dndEnabled = true
-        } else if (!FocusTimer.running) {
-          if (!FocusTimer.dndWasEnabledBeforeFocus) {
-            Notifier.dndEnabled = false
-          }
-        }
-      }
-    }
-  }
 
   IdleMonitor {
     timeout: 300

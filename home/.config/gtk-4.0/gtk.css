@@ -1,0 +1,6 @@
+@import url("../../.cache/wal/gtk4-colors");
+
+/* The palette and the libadwaita rules live in the wal template
+   (~/.config/wal/templates/gtk4-colors), which pywal renders into
+   ~/.cache/wal/ on every wallpaper change -- same scheme as gtk-3.0/gtk.css.
+   Add application specific tweaks below the import. */

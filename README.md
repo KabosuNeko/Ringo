@@ -29,7 +29,8 @@ One Quickshell process is the whole shell: bar, launcher, notification daemon, c
 - **Wallpaper** — `fill`, `fit`, `stretch`, `tile` or `spread`; decoded by Qt and drawn in-process by the layer-shell engine.
 - **Night light** — sun-following colour temperature, applied by `wlsunset` through `wlr-gamma-control`.
 - **Terminal** — [foot](https://codeberg.org/dnkl/foot). **Login** — [ly](https://github.com/fairyglade/ly).
-- **Palette** — [pywal16](https://github.com/eylles/pywal16) generates `colors.json`, foot colours and GTK colours from the wallpaper.
+- **Palette** — [pywal16](https://github.com/eylles/pywal16) generates `colors.json`, foot colours and the GTK 3, GTK 4/libadwaita and qt6ct colours from the wallpaper (`home/.config/wal/templates/`).
+- **Audio** — WirePlumber makes a newly connected headset or output the default sink instead of keeping the last remembered one (`home/.config/wireplumber/`).
 - **Themes** — Gruvbox GTK/icon themes, Adwaita cursors (see `pkg.txt`).
 - Everything else the shell drives (`cliphist`, `wl-clipboard`, `wl-screenrec`, `power-profiles-daemon`, …) is in `pkg.txt`; `ringo-shell call doctor check` reports what is missing.
 
@@ -80,7 +81,7 @@ cmake --build ringo-shell/build -j"$(nproc)"
 | `displayPicture` | `~/.pfp.png` | Avatar in the control center and lock screen |
 | `clockFormat` | `hh:mm` | Clock format on the bar |
 | `pillTopMargin` / `pillBottomMargin` | `9` / `26` | Vertical margins of the island |
-| `textFontFamily` / `nerdFontFamily` | `JetBrainsMono Nerd Font[ Propo]` | Text and icon fonts |
+| `textFontFamily` / `nerdFontFamily` | `Maple Mono NF` | Text and icon fonts |
 | `pillScale` / `dpiScale` | `1.0` / `1.4` | Island scale and global DPI multiplier |
 | `notificationDisplayTime` | `3000` | Toast duration, ms |
 | `maxNotificationsInStack` | `20` | Notification history depth |
@@ -93,6 +94,7 @@ cmake --build ringo-shell/build -j"$(nproc)"
 | `wallpapersDir` | `~/Pictures/Wallpapers` | Folder the switcher and the slideshow read |
 | `wsCloseOnWallpaperSet` / `wsAnimation` | `true` | Wallpaper switcher behaviour |
 | `nightLightLowTemperature` / `nightLightHighTemperature` | `4000` / `6500` | Night and day temperature, K (`6500` is neutral) |
+| `nightLightGamma` | `1.0` | wlsunset gamma / colour intensity (`1.0` is neutral) |
 | `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the location; `0` follows `weatherLocation` |
 | `slideshowIntervalMinutes` | `30` | How often the slideshow rotates the wallpaper |
 
@@ -106,6 +108,9 @@ Every panel and every backend action is reachable from a keybind or a script thr
 ringo-shell call doctor check                      # health report
 ringo-shell call nightLight status                 # or: on / off / toggle
 ringo-shell call nightLight force low              # or: off / high
+ringo-shell call nightLight low 3000               # night temperature, K
+ringo-shell call nightLight high 6500              # day temperature, K
+ringo-shell call nightLight gamma 0.9              # colour intensity
 ringo-shell call quietMode status                  # or: on / off / toggle
 ringo-shell call wallpaper status                  # or: next / reload
 ringo-shell call wallpaper setMode tile            # or: fill / fit / spread / stretch
@@ -115,10 +120,12 @@ ringo-shell call notify post "Summary" "Body" "icon-name" 1
 ringo-shell call cliphist toggle                   # or: wipe
 ringo-shell call brightness step 5                 # or: up / down
 ringo-shell call media playPause                   # or: next / prev / stop
-ringo-shell call lock lock                         # or: unlock
+ringo-shell call lock lock
 ```
 
 `controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `keybinds`, `bar`, `calendar` and `weather` each take `toggle`, `open` or `hide`.
+
+The lock screen is a session overlay, not an `ext-session-lock` surface: PAM is the only way to dismiss it, but a process in the same session can still stop the shell. Use a real session locker if you need a boundary the session itself cannot cross.
 
 ## Keybinds
 

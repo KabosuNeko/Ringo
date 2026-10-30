@@ -10,6 +10,7 @@
 #include <QDBusVariant>
 #include <QMap>
 #include <QMetaType>
+#include <QScopeGuard>
 #include <QVariant>
 #include <QUuid>
 #include <algorithm>
@@ -254,6 +255,8 @@ public:
 
 public slots:
     void Release() {
+        if (!requireIwdCaller())
+            return;
         if (!m_controller)
             return;
 
@@ -262,10 +265,14 @@ public slots:
     }
 
     QString RequestPassphrase(const QDBusObjectPath &network) {
+        if (!requireIwdCaller())
+            return {};
         return takePasswordOrReplyWithError(network.path());
     }
 
     QString RequestPrivateKeyPassphrase(const QDBusObjectPath &) {
+        if (!requireIwdCaller())
+            return {};
         sendErrorReply(
             QString::fromLatin1(kIwdAgentCanceledError),
             QStringLiteral("Private key passphrases are not supported in this panel.")
@@ -274,6 +281,8 @@ public slots:
     }
 
     IwdUserNameAndPassword RequestUserNameAndPassword(const QDBusObjectPath &) {
+        if (!requireIwdCaller())
+            return {};
         sendErrorReply(
             QString::fromLatin1(kIwdAgentCanceledError),
             QStringLiteral("Enterprise Wi-Fi networks that need a user name must be provisioned first.")
@@ -282,13 +291,36 @@ public slots:
     }
 
     QString RequestUserPassword(const QDBusObjectPath &network, const QString &) {
+        if (!requireIwdCaller())
+            return {};
         return takePasswordOrReplyWithError(network.path());
     }
 
     void Cancel(const QString &) {
+        if (!requireIwdCaller())
+            return;
     }
 
 private:
+    bool requireIwdCaller() {
+        if (!calledFromDBus())
+            return false;
+
+        QDBusConnectionInterface *bus = QDBusConnection::systemBus().interface();
+        if (bus) {
+            // Qt stores the D-Bus sender in QDBusMessage::service() for incoming calls.
+            const QString owner = bus->serviceOwner(QString::fromLatin1(kIwdService));
+            if (!owner.isEmpty() && message().service() == owner)
+                return true;
+        }
+
+        sendErrorReply(
+            QStringLiteral("org.freedesktop.DBus.Error.AccessDenied"),
+            QStringLiteral("Only the iwd service may call the Wi-Fi agent.")
+        );
+        return false;
+    }
+
     QString takePasswordOrReplyWithError(const QString &networkPath) {
         if (!m_controller) {
             sendErrorReply(
@@ -882,6 +914,19 @@ void WifiController::detectBackend() {
 }
 
 void WifiController::refreshStateInternal() {
+    if (m_stateRefreshInProgress) {
+        m_stateRefreshPending = true;
+        return;
+    }
+    m_stateRefreshInProgress = true;
+    auto stateRefreshGuard = qScopeGuard([this] {
+        m_stateRefreshInProgress = false;
+        if (m_stateRefreshPending) {
+            m_stateRefreshPending = false;
+            QTimer::singleShot(0, this, &WifiController::refreshStateInternal);
+        }
+    });
+
     if (m_backendName == QLatin1String("iwd")) {
         const QString previousDevicePath = m_wifiDevicePath;
         const QDBusMessage objectsReply = callMethod(
@@ -1088,6 +1133,27 @@ void WifiController::refreshStateInternal() {
 }
 
 void WifiController::refreshNetworksInternal(bool rescan, bool triggeredBySignal) {
+    if (m_networkRefreshInProgress) {
+        m_networkRefreshPending = true;
+        m_pendingNetworkRescan = m_pendingNetworkRescan || rescan;
+        m_pendingNetworkTriggered = triggeredBySignal;
+        return;
+    }
+    m_networkRefreshInProgress = true;
+    auto networkRefreshGuard = qScopeGuard([this] {
+        m_networkRefreshInProgress = false;
+        if (m_networkRefreshPending) {
+            const bool nextRescan = m_pendingNetworkRescan;
+            const bool nextTriggered = m_pendingNetworkTriggered;
+            m_networkRefreshPending = false;
+            m_pendingNetworkRescan = false;
+            m_pendingNetworkTriggered = true;
+            QTimer::singleShot(0, this, [this, nextRescan, nextTriggered] {
+                refreshNetworksInternal(nextRescan, nextTriggered);
+            });
+        }
+    });
+
     if (!m_supported || !m_available || !m_enabled || !isValidPath(m_wifiDevicePath)) {
         m_networks.clear();
         if (!triggeredBySignal)
@@ -1494,15 +1560,19 @@ void WifiController::ensureIwdAgentRegistered() {
         return;
     }
 
+    manager.setTimeout(3000);
     manager.call(
+        QDBus::BlockWithGui,
         QStringLiteral("UnregisterAgent"),
         QVariant::fromValue(QDBusObjectPath(QString::fromLatin1(kIwdAgentObjectPath)))
     );
 
-    QDBusReply<void> reply = manager.call(
+    const QDBusMessage registerReply = manager.call(
+        QDBus::BlockWithGui,
         QStringLiteral("RegisterAgent"),
         QVariant::fromValue(QDBusObjectPath(QString::fromLatin1(kIwdAgentObjectPath)))
     );
+    QDBusReply<void> reply(registerReply);
 
     if (!reply.isValid()) {
         setIwdAgentRegisteredState(false);
@@ -1526,7 +1596,9 @@ void WifiController::unregisterIwdAgent() {
     );
 
     if (manager.isValid()) {
+        manager.setTimeout(3000);
         manager.call(
+            QDBus::BlockWithGui,
             QStringLiteral("UnregisterAgent"),
             QVariant::fromValue(QDBusObjectPath(QString::fromLatin1(kIwdAgentObjectPath)))
         );
@@ -1598,7 +1670,10 @@ bool WifiController::setProperty(const QString &service, const QString &path, co
 QDBusMessage WifiController::callMethod(const QString &service, const QString &path, const QString &interfaceName, const QString &methodName, const QList<QVariant> &arguments) const {
     QDBusMessage message = QDBusMessage::createMethodCall(service, path, interfaceName, methodName);
     message.setArguments(arguments);
-    return QDBusConnection::systemBus().call(message);
+    // BlockWithGui keeps the bar/panels responsive while a slow backend
+    // answers, and the timeout bounds a hung daemon. The refresh guards above
+    // make the nested event loop safe to re-enter.
+    return QDBusConnection::systemBus().call(message, QDBus::BlockWithGui, 3000);
 }
 
 void WifiController::setBackendName(const QString &backendName) {
@@ -1744,13 +1819,6 @@ void WifiController::clearUnsupportedState(const QString &backendName, bool avai
     setCurrentSsid({});
     setUnsupportedReason(reason);
     updateStatusText();
-}
-
-void WifiController::clearSupportedState() {
-    setBackendName(QStringLiteral("networkmanager"));
-    setSupported(true);
-    setReadOnly(false);
-    setUnsupportedReason({});
 }
 
 QString WifiController::errorTextForReply(const QDBusMessage &reply, const QString &fallback) const {

@@ -127,7 +127,6 @@ private:
     void updateBusyState();
     void updateStatusText();
     void clearUnsupportedState(const QString &backendName, bool available, const QString &reason);
-    void clearSupportedState();
 
     QString errorTextForReply(const QDBusMessage &reply, const QString &fallback) const;
     bool activateSavedConnection(const QString &ssid, const QString &accessPointPath);
@@ -164,6 +163,12 @@ private:
     bool m_iwdAgentObjectExported = false;
     QString m_iwdAgentRegistrationError;
     QHash<QString, QString> m_iwdPendingPassphrases;
+    bool m_stateRefreshInProgress = false;
+    bool m_stateRefreshPending = false;
+    bool m_networkRefreshInProgress = false;
+    bool m_networkRefreshPending = false;
+    bool m_pendingNetworkRescan = false;
+    bool m_pendingNetworkTriggered = true;
     QTimer m_stateRefreshTimer;
     QTimer m_networkRefreshTimer;
     QTimer m_scanTimeoutTimer;

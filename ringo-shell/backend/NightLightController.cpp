@@ -41,6 +41,13 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
         if (m_enabled) startEngine();
     });
 
+    // terminate() is asynchronous; give wlsunset a moment to exit, then kill.
+    m_stopTimer.setSingleShot(true);
+    m_stopTimer.setInterval(kTerminateWaitMs);
+    connect(&m_stopTimer, &QTimer::timeout, this, [this] {
+        if (m_process.state() != QProcess::NotRunning) m_process.kill();
+    });
+
     connect(&m_process, &QProcess::readyReadStandardError, this, &NightLightController::readEngineOutput);
     connect(&m_process, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
         if (error == QProcess::FailedToStart) {
@@ -49,9 +56,20 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
         }
     });
     connect(&m_process, &QProcess::finished, this, [this](int code, QProcess::ExitStatus status) {
+        m_stopTimer.stop();
         setActive(false);
         setTemperature(0);
-        if (m_stopping || !m_enabled) return;
+        m_forceSignalPending = false;
+
+        const bool wasStopping = m_stopping;
+        m_stopping = false;
+
+        if (m_restartPending) {
+            m_restartPending = false;
+            if (m_enabled) startEngine();
+            return;
+        }
+        if (wasStopping || !m_enabled) return;
 
         if (m_uptime.isValid() && m_uptime.elapsed() > kHealthyRunMs) m_restarts = 0;
 
@@ -68,7 +86,7 @@ NightLightController::NightLightController(QObject *parent) : QObject(parent) {
 }
 
 NightLightController::~NightLightController() {
-    stopEngine();
+    stopEngineBlocking();
 }
 
 void NightLightController::setActive(bool active) {
@@ -103,6 +121,7 @@ void NightLightController::setEnabled(bool enabled) {
         m_restarts = 0;
         startEngine();
     } else {
+        m_restartPending = false;
         stopEngine();
     }
 }
@@ -197,7 +216,14 @@ void NightLightController::restartEngine() {
 }
 
 void NightLightController::startEngine() {
-    stopEngine();
+    if (m_process.state() != QProcess::NotRunning || m_stopping) {
+        // A previous stop is still in flight; start again from its finished
+        // handler instead of calling QProcess::start() on a running process.
+        m_restartPending = true;
+        stopEngine();
+        return;
+    }
+    m_restartPending = false;
 
     // Some builds install it in /usr/sbin, which a session PATH lacks.
     const QString binary = QStandardPaths::findExecutable(
@@ -216,6 +242,7 @@ void NightLightController::startEngine() {
 
     m_stopping = false;
     m_appliedForce = QStringLiteral("off"); // a fresh process starts unforced
+    m_forceSignalPending = false;
     m_gammaRetryUsed = false;
     // Without this a shell restart leaves the old client holding the outputs.
 #ifdef Q_OS_LINUX
@@ -228,25 +255,55 @@ void NightLightController::startEngine() {
 }
 
 void NightLightController::stopEngine() {
-    if (m_process.state() == QProcess::NotRunning) return;
+    if (m_process.state() == QProcess::NotRunning) {
+        setActive(false);
+        setTemperature(0);
+        return;
+    }
 
+    // Do not wait on the GUI thread: terminate, then kill from m_stopTimer if
+    // the process ignores SIGTERM. The finished handler does the cleanup.
     m_stopping = true;
+    m_forceSignalPending = false;
     m_process.terminate();
-    if (!m_process.waitForFinished(kTerminateWaitMs)) {
-        m_process.kill();
-        m_process.waitForFinished(kTerminateWaitMs);
+    m_stopTimer.start();
+}
+
+void NightLightController::stopEngineBlocking() {
+    // Destructor path: there is no event loop left to run m_stopTimer.
+    m_restartPending = false;
+    m_stopping = true;
+    m_stopTimer.stop();
+    if (m_process.state() != QProcess::NotRunning) {
+        m_process.terminate();
+        if (!m_process.waitForFinished(kTerminateWaitMs)) {
+            m_process.kill();
+            m_process.waitForFinished(kTerminateWaitMs);
+        }
     }
     m_stopping = false;
+    m_forceSignalPending = false;
     setActive(false);
     setTemperature(0);
 }
 
 void NightLightController::applyForce() {
-    if (m_process.state() != QProcess::Running) return;
+    // The first "setting temperature" line proves wlsunset installed its
+    // SIGUSR1 handler; sending the signal before that would kill it.
+    if (!m_active || m_process.state() != QProcess::Running) return;
 
     const int steps = (forceIndex(m_force) - forceIndex(m_appliedForce) + 3) % 3;
-    for (int i = 0; i < steps; ++i) {
-        ::kill(static_cast<pid_t>(m_process.processId()), SIGUSR1);
+    if (steps == 0) {
+        m_forceSignalPending = false;
+        return;
+    }
+    // wlsunset cycles one step per SIGUSR1 and prints the new state. Sending
+    // the next signal only after that line is read keeps standard signals
+    // from coalescing, which used to land on the wrong force state.
+    if (m_forceSignalPending) return;
+    m_forceSignalPending = true;
+    if (::kill(static_cast<pid_t>(m_process.processId()), SIGUSR1) != 0) {
+        m_forceSignalPending = false;
     }
 }
 
@@ -272,14 +329,20 @@ void NightLightController::readEngineOutput() {
 
         if (line.startsWith(QLatin1String("forcing high temperature"))) {
             setForceInternal(QStringLiteral("high"));
+            m_forceSignalPending = false;
+            applyForce();
             continue;
         }
         if (line.startsWith(QLatin1String("forcing low temperature"))) {
             setForceInternal(QStringLiteral("low"));
+            m_forceSignalPending = false;
+            applyForce();
             continue;
         }
         if (line.startsWith(QLatin1String("disabling forced temperature"))) {
             setForceInternal(QStringLiteral("off"));
+            m_forceSignalPending = false;
+            applyForce();
             continue;
         }
 

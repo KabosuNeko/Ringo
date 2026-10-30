@@ -18,7 +18,6 @@ class SystemMonitor final : public QObject {
     Q_PROPERTY(int batteryPercentage READ batteryPercentage NOTIFY batteryPercentageChanged)
     Q_PROPERTY(bool charging READ charging NOTIFY chargingChanged)
     Q_PROPERTY(QString batteryIcon READ batteryIcon NOTIFY batteryIconChanged)
-    Q_PROPERTY(QString batteryIconColor READ batteryIconColor NOTIFY batteryIconColorChanged)
     Q_PROPERTY(QString uptime READ uptime NOTIFY uptimeChanged)
 
     Q_PROPERTY(QString username READ username CONSTANT)
@@ -46,7 +45,6 @@ public:
     int batteryPercentage() const { return m_batteryPercentage; }
     bool charging() const { return m_charging; }
     QString batteryIcon() const { return m_batteryIcon; }
-    QString batteryIconColor() const { return m_batteryIconColor; }
     QString uptime() const { return m_uptime; }
     int cpuPercent() const { return m_cpuPercent; }
     int ramPercent() const { return m_ramPercent; }
@@ -63,7 +61,6 @@ signals:
     void batteryPercentageChanged();
     void chargingChanged();
     void batteryIconChanged();
-    void batteryIconColorChanged();
     void uptimeChanged();
     void cpuPercentChanged();
     void ramPercentChanged();
@@ -102,7 +99,6 @@ private:
     int m_batteryPercentage = 0;
     bool m_charging = false;
     QString m_batteryIcon = QStringLiteral("󰂃");
-    QString m_batteryIconColor = QStringLiteral("#4bd25c");
     QString m_uptime = QStringLiteral("...");
 
     int m_cpuPercent = 0;

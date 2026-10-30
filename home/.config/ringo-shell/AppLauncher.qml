@@ -1,4 +1,5 @@
 import Quickshell
+import Quickshell.Io
 import QtQuick
 import QtQuick.Layouts
 import Quickshell.Widgets
@@ -14,7 +15,13 @@ Item {
     property string initialQuery: ""
     property var appsCache: []
     property var categories: ["All", "Internet", "Dev", "Media", "System"]
+    property var resultTypes: ["All", "Apps", "Files", "Web"]
     property string activeCategory: "All"
+    property string resultType: "All"
+
+    readonly property bool searching: searchQuery.trim().length > 0
+    readonly property var filterChips: searching ? resultTypes : categories
+    readonly property string activeFilter: searching ? resultType : activeCategory
 
     signal closeRequested()
 
@@ -34,15 +41,55 @@ Item {
 
     property var appMatches: []
     property var webMatches: []
+    property var fileMatches: []
     property var filteredApps: []
+    property int fileSearchSeq: 0
+    readonly property var currentRow: filteredApps.length > 0
+        && selectedIndex >= 0 && selectedIndex < filteredApps.length
+        ? filteredApps[selectedIndex] : null
+    readonly property string emptyText: !searching ? "No applications found"
+        : resultType === "Files" ? "No files found"
+        : resultType === "Apps" ? "No applications found"
+        : "No web results"
+
+    Process {
+        id: fileSearch
+        property int seq: 0
+        stdout: StdioCollector {
+            id: fileSearchOut
+            waitForEnd: true
+        }
+        onExited: (code, status) => {
+            if (seq !== root.fileSearchSeq || code !== 0) return
+            const rows = []
+            const paths = fileSearchOut.text.split("\u0000")
+            for (let i = 0; i < paths.length; i++) {
+                const path = paths[i]
+                if (path.length === 0) continue
+                const slash = path.lastIndexOf("/")
+                rows.push({
+                    name: path.substring(slash + 1),
+                    comment: "File · " + path.substring(0, slash),
+                    icon: "text-x-generic",
+                    entry: null,
+                    file: path
+                })
+            }
+            root.fileMatches = rows
+            root.applyResults()
+        }
+    }
 
     Timer {
         id: searchDebounce
         interval: 60
         onTriggered: {
-            root.appMatches = FuzzySearch.filterAndSort(root.appsCache, root.searchQuery, root.activeCategory)
+            const category = root.searching ? "All" : root.activeCategory
+            root.appMatches = FuzzySearch.filterAndSort(root.appsCache, root.searchQuery, category)
             root.webMatches = root.resolveWebApps(root.searchQuery)
-            root.filteredApps = root.rankResults(root.appMatches, root.webMatches, root.searchQuery)
+            root.fileMatches = []
+            root.applyResults()
+            root.runFileSearch()
         }
     }
 
@@ -106,9 +153,9 @@ Item {
             return {
                 type: "search",
                 title: "Search Web: " + (q.length > 0 ? "\"" + q + "\"" : "..."),
-                subtitle: "Press Enter to search in browser",
+                subtitle: "Press Enter to search with Firefox",
                 icon: "\uf002",
-                target: "https://www.google.com/search?q=" + encodeURIComponent(q)
+                query: q
             }
         }
 
@@ -123,13 +170,14 @@ Item {
             }
         }
 
-        if (filteredApps.length === 0 && evaluateMath(text) === null) {
+        if (filteredApps.length === 0 && evaluateMath(text) === null
+            && (!root.searching || root.resultType === "All" || root.resultType === "Web")) {
             return {
                 type: "search",
                 title: "Search Web: \"" + t + "\"",
-                subtitle: "No local apps found - press Enter to search",
+                subtitle: "Press Enter to search with Firefox",
                 icon: "\uf002",
-                target: "https://www.google.com/search?q=" + encodeURIComponent(t)
+                query: t
             }
         }
 
@@ -155,6 +203,7 @@ Item {
             loadApps()
             searchQuery = initialQuery
             activeCategory = "All"
+            resultType = "All"
             searchInput.text = initialQuery
             initialQuery = ""
             searchDebounce.triggered()
@@ -202,7 +251,7 @@ Item {
 
     function resolveWebApps(query) {
         let q = query.trim().toLowerCase()
-        if (q.length < 2 || activeCategory !== "All") return []
+        if (q.length < 2) return []
         let rows = []
         for (let i = 0; i < webApps.length; i++) {
             let w = webApps[i]
@@ -227,6 +276,65 @@ Item {
             if (id.indexOf(k) >= 0 || appsCache[i].name.toLowerCase().indexOf(k) >= 0) return entry
         }
         return null
+    }
+
+    function rowKind(row): string {
+        if (row.file) return "Files"
+        if (row.web) return "Web"
+        return "Apps"
+    }
+
+    function applyResults(): void {
+        let rows = root.rankResults(
+            root.appMatches.concat(root.fileMatches),
+            root.webMatches,
+            root.searchQuery
+        )
+        if (root.searching && root.resultType !== "All")
+            rows = rows.filter(r => root.rowKind(r) === root.resultType)
+        root.filteredApps = rows
+    }
+
+    function selectFilter(name: string): void {
+        if (root.searching) {
+            root.resultType = name
+            root.applyResults()
+        } else {
+            root.activeCategory = name
+            searchDebounce.restart()
+        }
+    }
+
+    function cycleFilter(): void {
+        const list = root.filterChips
+        const current = list.indexOf(root.activeFilter)
+        root.selectFilter(list[(current + 1) % list.length])
+    }
+
+    function runFileSearch(): void {
+        const q = searchQuery.trim()
+        const skip = q.length < 2
+            || q.startsWith("?") || q.startsWith("=")
+            || /^(https?:|\/|~)/i.test(q)
+        root.fileSearchSeq++
+        fileSearch.seq = root.fileSearchSeq
+        fileSearch.running = false
+        root.fileMatches = []
+        if (skip) {
+            root.applyResults()
+            return
+        }
+
+        fileSearch.command = [
+            "fd", "--type", "f", "--hidden", "--color", "never",
+            "--fixed-strings", "--ignore-case", "--absolute-path", "--print0",
+            "--max-results", "24",
+            "--exclude", ".git", "--exclude", ".cache",
+            "--exclude", ".mozilla", "--exclude", "node_modules",
+            "--exclude", ".venv", "--exclude", "target", "--exclude", "build",
+            "--", q, Quickshell.env("HOME")
+        ]
+        fileSearch.running = true
     }
 
     // Exact name hits stay on top, then the web apps, then the fuzzy leftovers.
@@ -265,6 +373,11 @@ Item {
       }
     }
 
+    function searchWeb(query) {
+      // Firefox resolves --search with the user's configured default engine.
+      Quickshell.execDetached(["firefox", "--search", query])
+    }
+
     function launchSelected() {
       if (mathResult !== null) {
         Quickshell.execDetached(["sh", "-c", "printf '%s' '" + mathResult.result + "' | wl-copy"])
@@ -276,14 +389,17 @@ Item {
       }
 
       if (specialAction !== null && (filteredApps.length === 0 || searchQuery.startsWith("?") || searchQuery.startsWith("http"))) {
-        Quickshell.execDetached(["xdg-open", specialAction.target])
+        if (specialAction.type === "search") searchWeb(specialAction.query)
+        else Quickshell.execDetached(["xdg-open", specialAction.target])
         root.closeRequested()
         return
       }
 
       if (filteredApps.length === 0) return
       const row = filteredApps[selectedIndex]
-      if (row.web) {
+      if (row.file) {
+        Quickshell.execDetached(["xdg-open", row.file])
+      } else if (row.web) {
         if (row.web.native) launchEntry(row.web.native)
         else Quickshell.execDetached(["xdg-open", row.web.url])
       } else {
@@ -312,7 +428,7 @@ Item {
             color: Theme.bgD
             border.color: searchInput.activeFocus ? Theme.accent : Theme.cardBorder
             border.width: 1
-            Behavior on border.color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
             RowLayout {
                 anchors.fill: parent
@@ -324,7 +440,7 @@ Item {
                     text: "\uf002"
                     color: searchInput.activeFocus ? Theme.accent : Theme.fg5
                     font { family: Theme.nerdFontFamily; pixelSize: 13 }
-                    Behavior on color { ColorAnimation { duration: 120 } }
+                    Behavior on color { ColorAnimation { duration: Theme.motionBase } }
                 }
 
                 TextInput {
@@ -336,10 +452,14 @@ Item {
                     font { family: Theme.fontFamily; pixelSize: 11; weight: 500 }
                     clip: true
 
-                    onTextChanged: { root.searchQuery = text; searchDebounce.restart() }
+                    onTextChanged: {
+                        root.searchQuery = text
+                        if (text.trim().length === 0) root.resultType = "All"
+                        searchDebounce.restart()
+                    }
 
                     Text {
-                        text: "Type to search apps..."
+                        text: "Search apps, files, web..."
                         color: Theme.fg5
                         font: searchInput.font
                         visible: searchInput.text.length === 0
@@ -360,8 +480,7 @@ Item {
                             appList.positionViewAtIndex(root.selectedIndex, ListView.Contain)
                             event.accepted = true
                         } else if (event.key === Qt.Key_Tab) {
-                            let idx = root.categories.indexOf(root.activeCategory)
-                            root.activeCategory = root.categories[(idx + 1) % root.categories.length]
+                            root.cycleFilter()
                             event.accepted = true
                         } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                             root.launchSelected()
@@ -395,35 +514,38 @@ Item {
         RowLayout {
             Layout.fillWidth: true
             spacing: 5
-            visible: !root.hasSpecialCard
+            visible: root.searching
+                ? (root.mathResult === null
+                    && !(root.specialAction && root.specialAction.type === "url"))
+                : !root.hasSpecialCard
 
             Repeater {
-                model: root.categories
+                model: root.filterChips
 
                 delegate: Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 22
                     radius: 6
-                    color: root.activeCategory === modelData
+                    color: root.activeFilter === modelData
                            ? Theme.accentSoft
                            : (catHover.hovered ? Theme.chipBgHover : Theme.chipBg)
                     border.width: 1
-                    border.color: root.activeCategory === modelData ? Theme.accent : Theme.cardBorder
-                    Behavior on color { ColorAnimation { duration: 120 } }
-                    Behavior on border.color { ColorAnimation { duration: 120 } }
+                    border.color: root.activeFilter === modelData ? Theme.accent : Theme.cardBorder
+                    Behavior on color { ColorAnimation { duration: Theme.motionBase } }
+                    Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
                     Text {
                         anchors.centerIn: parent
                         text: modelData
-                        color: root.activeCategory === modelData ? Theme.accent : Theme.fg4
-                        font { family: Theme.fontFamily; pixelSize: 9; weight: root.activeCategory === modelData ? 700 : 500 }
+                        color: root.activeFilter === modelData ? Theme.accent : Theme.fg4
+                        font { family: Theme.fontFamily; pixelSize: 9; weight: root.activeFilter === modelData ? 700 : 500 }
                     }
 
                     HoverHandler { id: catHover }
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.activeCategory = modelData
+                        onClicked: root.selectFilter(modelData)
                     }
                 }
             }
@@ -438,7 +560,7 @@ Item {
             border.width: 1
             border.color: root.mathResult !== null ? Theme.accent : Theme.cardBorder
             clip: true
-            Behavior on Layout.preferredHeight { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+            Behavior on Layout.preferredHeight { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
 
             RowLayout {
                 anchors.fill: parent
@@ -492,7 +614,10 @@ Item {
                     Text {
                         id: actionBtnText
                         anchors.centerIn: parent
-                        text: root.mathResult !== null ? "↵ Copy" : (root.specialAction && root.specialAction.type === "url" ? "↵ Open" : "↵ Search")
+                        text: root.mathResult !== null ? "↵ Copy"
+                            : root.specialAction !== null
+                                ? (root.specialAction.type === "url" ? "↵ Open" : "↵ Search")
+                                : (root.currentRow && (root.currentRow.file || root.currentRow.web) ? "↵ Open" : "↵ Launch")
                         color: root.mathResult !== null ? Theme.bg : Theme.fg
                         font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
                     }
@@ -514,7 +639,7 @@ Item {
             model: root.filteredApps
             currentIndex: root.selectedIndex
             highlightFollowsCurrentItem: false
-            highlightMoveDuration: 80
+            highlightMoveDuration: Theme.motionFast
             spacing: 3
 
             delegate: Rectangle {
@@ -524,7 +649,7 @@ Item {
                 color: index === root.selectedIndex
                        ? Theme.chipBgHover
                        : (rowHover.hovered ? Theme.chipBg : "transparent")
-                Behavior on color { ColorAnimation { duration: 120 } }
+                Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
                 Rectangle {
                     anchors.left: parent.left
@@ -534,7 +659,7 @@ Item {
                     radius: 2
                     color: Theme.accent
                     opacity: index === root.selectedIndex ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    Behavior on opacity { NumberAnimation { duration: Theme.motionBase } }
                 }
 
                 RowLayout {
@@ -552,13 +677,11 @@ Item {
                         Layout.alignment: Qt.AlignVCenter
                         source: resolvedIcon
                         asynchronous: true
-                        scale: index === root.selectedIndex ? 1.08 : (rowHover.hovered ? 1.05 : 1)
-                        Behavior on scale { NumberAnimation { duration: 100; easing.type: Easing.OutCubic } }
                     }
 
                     Text {
                         visible: !appIconImg.resolvedIcon
-                        text: modelData.web ? "\uf0ac" : "󰣆"
+                        text: modelData.file ? "\uf15b" : (modelData.web ? "\uf0ac" : "󰣆")
                         color: Theme.accent
                         font { family: Theme.nerdFontFamily; pixelSize: 20 }
                         Layout.alignment: Qt.AlignVCenter
@@ -586,6 +709,15 @@ Item {
                             Layout.fillWidth: true
                         }
                     }
+
+                    Text {
+                        readonly property string kind: modelData.file ? "FILE"
+                            : modelData.web ? "WEB" : "APP"
+                        text: kind
+                        color: Theme.fg5
+                        font { family: Theme.fontFamily; pixelSize: 7; weight: 700; letterSpacing: 0.8 }
+                        Layout.alignment: Qt.AlignVCenter
+                    }
                 }
 
                 MouseArea {
@@ -606,7 +738,7 @@ Item {
             Text {
                 anchors.centerIn: parent
                 visible: appList.count === 0 && !root.hasSpecialCard
-                text: "No applications found"
+                text: root.emptyText
                 color: Theme.fg4
                 font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
             }
@@ -630,7 +762,9 @@ Item {
                 }
                 Text {
                     text: root.mathResult !== null ? "Copy"
-                        : (root.specialAction && root.filteredApps.length === 0 ? "Open" : "Launch")
+                        : root.specialAction !== null
+                            ? (root.specialAction.type === "url" ? "Open" : "Search")
+                            : (root.currentRow && (root.currentRow.file || root.currentRow.web) ? "Open" : "Launch")
                     color: Theme.fg5
                     font { family: Theme.fontFamily; pixelSize: 8; weight: 500 }
                 }

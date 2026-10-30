@@ -15,7 +15,7 @@ Rectangle {
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
 
-    radius: 10
+    radius: 4
     color: Theme.cardBg
     border.width: 1
     border.color: Theme.cardBorder
@@ -28,6 +28,10 @@ Rectangle {
 
         RowLayout {
             Layout.fillWidth: true
+            // the card is wider than this row's content, and a ColumnLayout does
+            // not stretch a nested layout across it: without this the CPU/RAM
+            // block hugs the left edge while the network card's spans its card
+            Layout.alignment: Qt.AlignHCenter
             spacing: 14
 
             RowLayout {
@@ -46,7 +50,7 @@ Rectangle {
                         height: parent.height * (root.cpuPercent / 100)
                         radius: 2
                         color: Theme.accent
-                        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                        Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                     }
                 }
 
@@ -88,7 +92,7 @@ Rectangle {
                         height: parent.height * (root.ramPercent / 100)
                         radius: 2
                         color: Theme.warning
-                        Behavior on height { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                        Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                     }
                 }
 

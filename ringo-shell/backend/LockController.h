@@ -20,9 +20,8 @@ public:
     bool locked() const;
     bool authenticating() const;
 
-    // Shows the lockscreen surface; only tryUnlock() or unlock() dismisses it.
+    // Shows the lockscreen surface; only a successful tryUnlock() dismisses it.
     Q_INVOKABLE void lock();
-    Q_INVOKABLE void unlock();
 
     // Asynchronous; the outcome arrives once via unlockResult(). Calls made
     // while a conversation is in flight are ignored.

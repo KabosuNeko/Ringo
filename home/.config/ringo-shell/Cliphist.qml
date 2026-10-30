@@ -259,9 +259,7 @@ Item {
                             sourceSize: Qt.size(500, 500)
 
                             opacity: currentEntryId === root.collapsingId ? 0 : (status === Image.Ready ? 1 : 0)
-                            scale: currentEntryId === root.collapsingId ? 0.8 : 1
-                            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                            Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.motionSlow; easing.type: Theme.easeOut } }
 
                             source: {
                                 let idx = root.selectedIndex
@@ -283,8 +281,8 @@ Item {
                                 target: previewImage
                                 property: "slideY"
                                 to: 0
-                                duration: 200
-                                easing.type: Easing.OutCubic
+                                duration: Theme.motionSlow
+                                easing.type: Theme.easeOut
                             }
                         }
 
@@ -294,7 +292,7 @@ Item {
                             radius: 15
                             color: Theme.deleting
                             opacity: currentEntryId === root.deletingId ? 0.70 : 0
-                            Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                         }
 
                         Text {
@@ -303,9 +301,7 @@ Item {
                             color: "white"
                             font { family: Theme.fontFamily; pixelSize: 14; weight: 600 }
                             opacity: currentEntryId === root.deletingId ? 1 : 0
-                            scale: currentEntryId === root.deletingId ? 1 : 0.80
-                            Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-                            Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
+                            Behavior on opacity { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                         }
 
                         Text {
@@ -329,10 +325,10 @@ Item {
             model: CliphistModel
             currentIndex: root.selectedIndex
             highlightFollowsCurrentItem: false
-            highlightMoveDuration: 80
+            highlightMoveDuration: Theme.motionFast
             visible: !imgFullPreview
 
-            removeDisplaced: Transition { NumberAnimation { properties: "y"; duration: 150; easing.type: Easing.OutCubic } }
+            removeDisplaced: Transition { NumberAnimation { properties: "y"; duration: Theme.motionBase; easing.type: Theme.easeOut } }
 
             delegate: Rectangle {
                 width: listView.width
@@ -341,11 +337,9 @@ Item {
                 color: model.clipId === root.deletingId ? Theme.deleting : (index === root.selectedIndex ? Theme.focusBg1 : "transparent")
                 clip: true
                 opacity: model.clipId === root.collapsingId ? 0 : 1
-                scale: model.clipId === root.collapsingId ? 0.75 : 1
 
-                Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
-                Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
+                Behavior on opacity { NumberAnimation { duration: Theme.motionSlow; easing.type: Theme.easeOut } }
 
                 Image {
                     anchors.fill: parent

@@ -114,25 +114,16 @@ Rectangle {
             entryAnim.start()
           }
         }
-        property int columns: 3
-        property real rowIdx: Math.floor(index / columns)
-        property real colIdx: index % columns
-        property real totalRows: Math.ceil(wallGrid.count / columns)
-        property real centerRow: (totalRows - 1) / 2
-        property real centerCol: (columns - 1) / 2
-        property real distFromCenter: Math.sqrt(Math.pow(rowIdx - centerRow, 2) + Math.pow(colIdx - centerCol, 2))
-
         opacity: 1
-        scale: 1.0
-        transformOrigin: Item.Center
 
-        SequentialAnimation {
+        NumberAnimation {
           id: entryAnim
-          PauseAnimation { duration: cell.distFromCenter * 50 }
-          ParallelAnimation {
-            NumberAnimation { target: cell; property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutExpo }
-            NumberAnimation { target: cell; property: "scale"; from: 0.4; to: 1.0; duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.5 }
-          }
+          target: cell
+          property: "opacity"
+          from: 0
+          to: 1
+          duration: Theme.motionFast
+          easing.type: Theme.easeOut
         }
 
         Rectangle {
@@ -140,8 +131,6 @@ Rectangle {
           anchors.margins: 5
           radius: 10
           color: Theme.bg4
-          scale: (mouseArea.containsMouse || cell.isCurrent) ? 1.03 : 1.0
-          Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutExpo } }
           border.width: cell.isCurrent ? 1 : 0
           border.color: Theme.borderBg
 
@@ -176,7 +165,7 @@ Rectangle {
               anchors.fill: parent
               color: mouseArea.containsMouse ? "white" : "transparent"
               opacity: mouseArea.containsMouse ? 0.06 : 0
-              Behavior on opacity { NumberAnimation { duration: 100 } }
+              Behavior on opacity { NumberAnimation { duration: Theme.motionFast } }
             }
 
             Rectangle {
@@ -185,7 +174,7 @@ Rectangle {
               anchors.bottom: parent.bottom
               height: 32
               opacity: (mouseArea.containsMouse || cell.isCurrent) ? 1 : 0
-              Behavior on opacity { NumberAnimation { duration: 250 } }
+              Behavior on opacity { NumberAnimation { duration: Theme.motionSlow } }
               gradient: Gradient {
                 GradientStop { position: 0.0; color: "#00000000" }
                 GradientStop { position: 1.0; color: "#cc000000" }

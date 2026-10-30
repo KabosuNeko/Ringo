@@ -14,6 +14,20 @@ Singleton {
         return Qt.rgba(c.r, c.g, c.b, alpha)
     }
 
+    // Motion tokens: one timing scale for every transition in the shell.
+    readonly property int motionInstant: 60
+    readonly property int motionResize: 70
+    readonly property int motionFast: 100
+    readonly property int motionBase: 140
+    readonly property int motionOverlay: 340
+    readonly property int motionSlow: 220
+    readonly property int motionProgress: 400
+    readonly property int motionBlink: 800
+
+    readonly property int easeOut: Easing.OutCubic
+    readonly property int easeInOut: Easing.InOutCubic
+    readonly property int easeLinear: Easing.Linear
+
     property string fallbackBg: "#161616"
     property string fallbackFg: "#dadada"
     property string fallbackAccent: "#979797"
@@ -63,6 +77,9 @@ Singleton {
     // semantic colors stay fixed
     property string warning: "#f9cb41"
     property string deleting: "#e32626"
+    property string batteryGood: "#4bd25c"
+    property string batteryWarn: root.warning
+    property string batteryCritical: root.deleting
 
     // accent follows pywal color1 (live)
     property string accent: root.walAccent

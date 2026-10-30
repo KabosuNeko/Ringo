@@ -21,7 +21,7 @@ Item {
     anchors.centerIn: parent
     opacity: active ? 1 : 0
     visible: opacity > 0
-    Behavior on opacity { NumberAnimation { duration: 150 } }
+    Behavior on opacity { NumberAnimation { duration: Theme.motionBase } }
 
     RowLayout {
         anchors.centerIn: parent
@@ -33,12 +33,6 @@ Item {
             color: root.iconColor !== "" ? root.iconColor : root.fg
             font { family: Theme.nerdFontFamily; pixelSize: 14 }
             opacity: 1.0
-            onTextChanged: iconPulse.restart()
-            SequentialAnimation {
-                id: iconPulse
-                NumberAnimation { target: valIcon; property: "scale"; to: 1.15; duration: 60; easing.type: Easing.OutQuad }
-                NumberAnimation { target: valIcon; property: "scale"; to: 1.0; duration: 100; easing.type: Easing.OutQuad }
-            }
         }
 
         Rectangle {
@@ -56,8 +50,8 @@ Item {
                 color: Theme.accent
                 Behavior on width {
                     NumberAnimation {
-                        duration: 80
-                        easing.type: Easing.OutCubic
+                        duration: Theme.motionFast
+                        easing.type: Theme.easeOut
                     }
                 }
             }
@@ -69,12 +63,6 @@ Item {
           color: root.muted ? root.mutedFg : root.fg
           font { family: Theme.fontFamily; pixelSize: 10; weight: 600 }
           opacity: 1.0
-          onTextChanged: valPulse.restart()
-          SequentialAnimation {
-              id: valPulse
-              NumberAnimation { target: valText; property: "scale"; to: 0.9; duration: 60; easing.type: Easing.OutQuad }
-              NumberAnimation { target: valText; property: "scale"; to: 1.0; duration: 120; easing.type: Easing.OutQuad }
-          }
       }
     }
 }

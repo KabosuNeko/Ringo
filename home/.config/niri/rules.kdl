@@ -60,8 +60,8 @@ layer-rule {
     geometry-corner-radius 20
     background-effect {
         xray false
-        blur true
-        noise 0.05
+        blur false
+        noise 0
         saturation 1
     }
 }

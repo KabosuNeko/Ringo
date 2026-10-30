@@ -10,7 +10,7 @@ RowLayout {
   // icon: battery on laptops, plug on desktops
   Text {
     text: box.batteryIcon
-    color: hasBattery ? box.batteryIconColor : "#4bd25c"
+    color: box.batteryIconColor
 
     font {
       family: Theme.nerdFontFamily

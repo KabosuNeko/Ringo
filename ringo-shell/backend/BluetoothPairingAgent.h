@@ -97,6 +97,7 @@ private:
     void ensureAgentRegistered();
     void unregisterAgent();
     void setRegisteredState(bool registered);
+    bool requireBluezCaller();
     void replaceRequest(PendingRequest request);
     void clearRequest();
     void finishWithVoidReply();

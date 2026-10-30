@@ -338,9 +338,8 @@ void SystemMonitor::handleUPowerPropertiesChanged(const QString &interface, cons
 
 void SystemMonitor::updateBatteryIcon() {
     QString icon;
-    QString color = QStringLiteral("#4bd25c");
-    if (!m_hasBattery) { icon = QStringLiteral("󰂃"); color = QStringLiteral("#4bd25c"); }
-    else if (m_charging) { icon = QStringLiteral("󰂄"); color = QStringLiteral("#4bd25c"); }
+    if (!m_hasBattery) { icon = QStringLiteral("󰂃"); }
+    else if (m_charging) { icon = QStringLiteral("󰂄"); }
     else {
         int p = m_batteryPercentage;
         if (p >= 90) icon = QStringLiteral("󰁹");
@@ -350,9 +349,6 @@ void SystemMonitor::updateBatteryIcon() {
         else if (p >= 20) icon = QStringLiteral("󰁽");
         else if (p >= 10) icon = QStringLiteral("󰁻");
         else icon = QStringLiteral("󰂃");
-        if (p < 20) color = QStringLiteral("#e94545");
-        else if (p < 40) color = QStringLiteral("#e9c46a");
     }
     if (m_batteryIcon != icon) { m_batteryIcon = icon; emit batteryIconChanged(); }
-    if (m_batteryIconColor != color) { m_batteryIconColor = color; emit batteryIconColorChanged(); }
 }

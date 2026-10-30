@@ -58,6 +58,7 @@ PanelWindow {
         font.family: Theme.fontFamily
         font.pixelSize: 16
         horizontalAlignment: TextInput.AlignHCenter
+        transform: Translate { id: shakeOffset }
         background: Rectangle {
           radius: 12
           color: Theme.bg2
@@ -96,6 +97,7 @@ PanelWindow {
           implicitHeight: 32
           radius: 8
           color: shutdownHover.containsMouse ? Theme.bg5 : Theme.bg2
+          Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           border.width: 1
           border.color: Theme.bg5
 
@@ -130,6 +132,7 @@ PanelWindow {
           implicitHeight: 32
           radius: 8
           color: rebootHover.containsMouse ? Theme.bg5 : Theme.bg2
+          Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           border.width: 1
           border.color: Theme.bg5
 
@@ -183,11 +186,10 @@ PanelWindow {
 
   SequentialAnimation {
     id: shakeAnim
-    property real startX: passField.x
-    NumberAnimation { target: passField; property: "x"; to: passField.x + 8; duration: 40 }
-    NumberAnimation { target: passField; property: "x"; to: passField.x - 8; duration: 40 }
-    NumberAnimation { target: passField; property: "x"; to: passField.x + 8; duration: 40 }
-    NumberAnimation { target: passField; property: "x"; to: passField.x; duration: 40 }
+    NumberAnimation { target: shakeOffset; property: "x"; to: 8; duration: Theme.motionInstant }
+    NumberAnimation { target: shakeOffset; property: "x"; to: -8; duration: Theme.motionInstant }
+    NumberAnimation { target: shakeOffset; property: "x"; to: 8; duration: Theme.motionInstant }
+    NumberAnimation { target: shakeOffset; property: "x"; to: 0; duration: Theme.motionInstant }
   }
 
   onVisibleChanged: {

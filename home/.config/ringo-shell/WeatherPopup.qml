@@ -72,7 +72,7 @@ PanelWindow {
           color: refreshHover.containsMouse ? Theme.accent : Theme.fg5
           font.family: Config.nerdFontFamily
           font.pixelSize: 13 * dpi
-          Behavior on color { ColorAnimation { duration: 100 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           MouseArea {
             id: refreshHover
             anchors.fill: parent
@@ -138,7 +138,7 @@ PanelWindow {
             Layout.preferredHeight: 62 * dpi
             radius: weatherWindow.tileRadius * dpi
             color: statHover.containsMouse ? Qt.lighter(weatherWindow.tileBg, 1.25) : weatherWindow.tileBg
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
             MouseArea {
               id: statHover

@@ -33,7 +33,9 @@ QVariant getBluezProperty(const QString &path, const QString &propertyName) {
     if (!interface.isValid())
         return {};
 
+    interface.setTimeout(3000);
     QDBusReply<QVariant> reply = interface.call(
+        QDBus::BlockWithGui,
         "Get",
         QString::fromLatin1(kBluezDeviceInterface),
         propertyName
@@ -212,11 +214,13 @@ void BluetoothPairingAgent::cancelRequest() {
 }
 
 void BluetoothPairingAgent::Release() {
+    if (!requireBluezCaller()) return;
     setRegisteredState(false);
     clearRequest();
 }
 
 QString BluetoothPairingAgent::RequestPinCode(const QDBusObjectPath &device) {
+    if (!requireBluezCaller()) return {};
     setDelayedReply(true);
 
     PendingRequest request;
@@ -232,6 +236,7 @@ QString BluetoothPairingAgent::RequestPinCode(const QDBusObjectPath &device) {
 }
 
 void BluetoothPairingAgent::DisplayPinCode(const QDBusObjectPath &device, const QString &pincode) {
+    if (!requireBluezCaller()) return;
     PendingRequest request;
     request.kind = PromptKind::DisplayPinCode;
     request.replyType = ReplyType::None;
@@ -242,6 +247,7 @@ void BluetoothPairingAgent::DisplayPinCode(const QDBusObjectPath &device, const 
 }
 
 uint BluetoothPairingAgent::RequestPasskey(const QDBusObjectPath &device) {
+    if (!requireBluezCaller()) return 0;
     setDelayedReply(true);
 
     PendingRequest request;
@@ -257,6 +263,7 @@ uint BluetoothPairingAgent::RequestPasskey(const QDBusObjectPath &device) {
 }
 
 void BluetoothPairingAgent::DisplayPasskey(const QDBusObjectPath &device, uint passkey, ushort entered) {
+    if (!requireBluezCaller()) return;
     const QString path = device.path();
     if (m_request.kind == PromptKind::DisplayPasskey && m_request.devicePath == path) {
         m_request.displayedCode = formatPasskey(passkey);
@@ -276,6 +283,7 @@ void BluetoothPairingAgent::DisplayPasskey(const QDBusObjectPath &device, uint p
 }
 
 void BluetoothPairingAgent::RequestConfirmation(const QDBusObjectPath &device, uint passkey) {
+    if (!requireBluezCaller()) return;
     setDelayedReply(true);
 
     PendingRequest request;
@@ -290,6 +298,7 @@ void BluetoothPairingAgent::RequestConfirmation(const QDBusObjectPath &device, u
 }
 
 void BluetoothPairingAgent::RequestAuthorization(const QDBusObjectPath &device) {
+    if (!requireBluezCaller()) return;
     setDelayedReply(true);
 
     PendingRequest request;
@@ -303,6 +312,7 @@ void BluetoothPairingAgent::RequestAuthorization(const QDBusObjectPath &device) 
 }
 
 void BluetoothPairingAgent::AuthorizeService(const QDBusObjectPath &device, const QString &uuid) {
+    if (!requireBluezCaller()) return;
     setDelayedReply(true);
 
     PendingRequest request;
@@ -317,6 +327,7 @@ void BluetoothPairingAgent::AuthorizeService(const QDBusObjectPath &device, cons
 }
 
 void BluetoothPairingAgent::Cancel() {
+    if (!requireBluezCaller()) return;
     clearRequest();
 }
 
@@ -335,6 +346,25 @@ void BluetoothPairingAgent::handleBluezNameOwnerChanged(
     }
 
     ensureAgentRegistered();
+}
+
+bool BluetoothPairingAgent::requireBluezCaller() {
+    if (!calledFromDBus())
+        return false;
+
+    QDBusConnectionInterface *bus = QDBusConnection::systemBus().interface();
+    if (bus) {
+        // Qt stores the D-Bus sender in QDBusMessage::service() for incoming calls.
+        const QString owner = bus->serviceOwner(QString::fromLatin1(kBluezService));
+        if (!owner.isEmpty() && message().service() == owner)
+            return true;
+    }
+
+    sendErrorReply(
+        QStringLiteral("org.freedesktop.DBus.Error.AccessDenied"),
+        QStringLiteral("Only the BlueZ service may call the pairing agent.")
+    );
+    return false;
 }
 
 void BluetoothPairingAgent::ensureAgentRegistered() {

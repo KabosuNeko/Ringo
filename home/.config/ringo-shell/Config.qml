@@ -5,8 +5,10 @@ import Quickshell.Io
 Singleton {
 
   FileView {
+    id: configFile
     path: Quickshell.env("HOME") + "/.config/ringo-shell/config.jsonc"
     watchChanges: true
+    atomicWrites: true
     onFileChanged: reload()
 
     JsonAdapter {
@@ -15,8 +17,8 @@ Singleton {
       property string clockFormat: "hh:mm"
       property int pillTopMargin: 9
       property int pillBottomMargin: 26
-      property string textFontFamily: "JetBrainsMono Nerd Font"
-      property string nerdFontFamily: "JetBrainsMono Nerd Font Propo"
+      property string textFontFamily: "Maple Mono NF"
+      property string nerdFontFamily: "Maple Mono NF"
       property int notificationDisplayTime: 3000
       property int maxNotificationsInStack: 20
       property int osdDuration: 800
@@ -32,6 +34,7 @@ Singleton {
       property bool wsAnimation: true
       property int nightLightLowTemperature: 4000
       property int nightLightHighTemperature: 6500
+      property real nightLightGamma: 1.0
       // 0 = follow the weather location
       property real nightLightLatitude: 0
       property real nightLightLongitude: 0
@@ -61,7 +64,33 @@ Singleton {
   readonly property alias wsAnimation: adapter.wsAnimation
   readonly property alias nightLightLowTemperature: adapter.nightLightLowTemperature
   readonly property alias nightLightHighTemperature: adapter.nightLightHighTemperature
+  readonly property alias nightLightGamma: adapter.nightLightGamma
   readonly property alias nightLightLatitude: adapter.nightLightLatitude
   readonly property alias nightLightLongitude: adapter.nightLightLongitude
   readonly property alias slideshowIntervalMinutes: adapter.slideshowIntervalMinutes
+
+  function setNightLight(low: int, high: int, gamma: real): void {
+    const lo = Math.max(2000, Math.min(6500, Math.round(low)))
+    const hi = Math.max(lo + 500, Math.min(10000, Math.round(high)))
+    const g = Math.max(0.5, Math.min(1.5, gamma))
+    adapter.nightLightLowTemperature = lo
+    adapter.nightLightHighTemperature = hi
+    adapter.nightLightGamma = g
+
+    // Replace just these keys so comments, key order and formatting survive.
+    const replaceNumber = (text, key, value) => {
+      const pattern = new RegExp('("' + key + '"\\s*:\\s*)[^,\\n}]+')
+      if (pattern.test(text)) return text.replace(pattern, '$1' + value)
+      return text.replace(/\}\s*$/, ',\n  "' + key + '": ' + value + '\n}')
+    }
+    let text = configFile.text()
+    if (text.length === 0) {
+      configFile.writeAdapter()
+      return
+    }
+    text = replaceNumber(text, "nightLightLowTemperature", lo)
+    text = replaceNumber(text, "nightLightHighTemperature", hi)
+    text = replaceNumber(text, "nightLightGamma", g.toFixed(1))
+    configFile.setText(text)
+  }
 }

@@ -65,7 +65,6 @@ signals:
     void backdropChanged();
 
 private:
-    static QString engineBinary();
     static QString blurredPath();
     static QString walConfigPath();
 
@@ -73,7 +72,6 @@ private:
     void setReady(bool ready);
     void setBusy(bool busy);
     void setError(const QString &error);
-    void setProcessId(qint64 pid);
 
     void runWal(const QString &path);
     void runBlur(const QString &path);

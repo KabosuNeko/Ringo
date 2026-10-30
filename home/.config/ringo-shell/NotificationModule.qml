@@ -17,6 +17,13 @@ Item {
   property int maxStored: Config.maxNotificationsInStack
   property bool avoidDuplicateNotifications: Config.avoidDuplicateNotifications
 
+  readonly property bool currentHasActions: actionList(current ? current.notif : null).length > 0
+
+  function actionList(notif): var {
+    if (!notif || !notif.actions) return []
+    return notif.actions.filter(a => a && a.text && a.text.length > 0)
+  }
+
   function syncReversed(): void {
     notificationsReversed = notifications.slice().reverse()
   }

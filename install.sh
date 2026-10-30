@@ -12,15 +12,15 @@ Ringo installer for Arch Linux (Niri + Wayland only).
 
 Without flags it asks before every step: installs the yay AUR helper, the
 packages listed in pkg.txt, deploys the dotfiles with GNU Stow, optionally
-clones the Wallpapers collection, applies GTK settings, enables the system
-services and builds/installs the ringo-shell C++ backend into
-~/.config/ringo-shell/IslandBackend/.
+clones the Wallpapers collection, downloads the Maple Mono NF font, applies
+GTK settings, enables the system services and builds/installs the ringo-shell
+C++ backend into ~/.config/ringo-shell/IslandBackend/.
 
 Flags:
   --help                Print this help and exit.
   --dry-run             Print every action that would be taken and change
                         nothing: no package installs, no stow, no file copies,
-                        no git clones, no sudo.
+                        no git clones, no downloads, no sudo.
   --yes                 Answer yes to every confirmation prompt.
   --non-interactive     Never read stdin. Optional prompts are answered no, so
                         only the steps that need no confirmation are performed
@@ -133,8 +133,15 @@ if [ "$ROLLBACK" -eq 1 ]; then
         # Restore beside the target and rename, like the install: a running
         # shell must never load a half-written plugin.
         run rm -rf "$ISLAND_BACKEND_DIR/.$name.rollback"
-        run cp -a "$entry" "$ISLAND_BACKEND_DIR/.$name.rollback" &&
-            run mv -f "$ISLAND_BACKEND_DIR/.$name.rollback" "$ISLAND_BACKEND_DIR/$name"
+        if ! run cp -a "$entry" "$ISLAND_BACKEND_DIR/.$name.rollback"; then
+            echo "XXX [ERROR] Failed to stage $name for rollback." >&2
+            exit 1
+        fi
+        if ! run mv -f "$ISLAND_BACKEND_DIR/.$name.rollback" "$ISLAND_BACKEND_DIR/$name"; then
+            run rm -f "$ISLAND_BACKEND_DIR/.$name.rollback"
+            echo "XXX [ERROR] Failed to restore $name." >&2
+            exit 1
+        fi
         report ":: Restored $name"
     done
     echo ":: Rollback complete."
@@ -153,15 +160,22 @@ fi
 
 if [ "$PROFILE" = full ]; then
     if ask "===> Install yay (AUR helper)?"; then
-        if ! run git clone https://aur.archlinux.org/yay-bin.git /tmp/yay; then
+        if [ "$DRY_RUN" -eq 1 ]; then
+            YAY_DIR="/tmp/yay"
+        else
+            YAY_DIR="$(mktemp -d)" || exit 1
+        fi
+        if ! run git clone https://aur.archlinux.org/yay-bin.git "$YAY_DIR"; then
+            [ "$DRY_RUN" -eq 1 ] || rm -rf "$YAY_DIR"
             echo "XXX [ERROR] Failed to clone yay-bin repository." >&2
             exit 1
         fi
-        if ! run sh -c 'cd /tmp/yay && makepkg -si --noconfirm'; then
+        if ! run sh -c 'cd "$1" && makepkg -si --noconfirm' sh "$YAY_DIR"; then
+            [ "$DRY_RUN" -eq 1 ] || rm -rf "$YAY_DIR"
             echo "XXX [ERROR] makepkg failed to build/install yay." >&2
             exit 1
         fi
-        run rm -rf /tmp/yay
+        run rm -rf "$YAY_DIR"
     else
         echo ":: Skipping yay installation."
     fi
@@ -227,6 +241,17 @@ if ask "===> Deploy dotfiles via GNU Stow (symlinks)?"; then
             [ -f "$f" ] && run chmod +x "$f"
         done
         [ -f "$HOME/.local/bin/ringo-shell" ] && run chmod +x "$HOME/.local/bin/ringo-shell"
+
+        # qt6ct expands ~ and $HOME in this path; warn only about a stale
+        # absolute path that would break under another user.
+        QT6CT_CONF="$HOME/.config/qt6ct/qt6ct.conf"
+        if [ -f "$QT6CT_CONF" ] &&
+           grep -q '^color_scheme_path=' "$QT6CT_CONF" &&
+           ! grep -Fqx 'color_scheme_path=~/.cache/wal/qt6ct-colors.conf' "$QT6CT_CONF" &&
+           ! grep -Fqx "color_scheme_path=\$HOME/.cache/wal/qt6ct-colors.conf" "$QT6CT_CONF"; then
+            echo "!!! qt6ct.conf has a non-portable color_scheme_path." >&2
+            echo "    Set color_scheme_path=~/.cache/wal/qt6ct-colors.conf in $QT6CT_CONF." >&2
+        fi
     else
         echo "XXX [ERROR] Stow deployment failed." >&2
         exit 1
@@ -274,10 +299,80 @@ if command -v gsettings > /dev/null 2>&1; then
         run gsettings set org.gnome.desktop.interface gtk-theme "Gruvbox-Orange-Dark"
         run gsettings set org.gnome.desktop.interface icon-theme "Gruvbox-Plus-Dark"
         run gsettings set org.gnome.desktop.interface cursor-theme "Adwaita"
-        run gsettings set org.gnome.desktop.interface font-name "JetBrainsMono Nerd Font 16"
-        run gsettings set org.gnome.desktop.interface monospace-font-name "JetBrainsMono Nerd Font 16"
+        run gsettings set org.gnome.desktop.interface font-name "Maple Mono NF 16"
+        run gsettings set org.gnome.desktop.interface monospace-font-name "Maple Mono NF 16"
         report ":: GTK settings applied."
     fi
+fi
+
+# The shell, foot and the GTK defaults all name the Maple Mono NF family, so an
+# install without it would silently fall back to whatever fontconfig happens to
+# have. It is not packaged for pacman: fetch the upstream release zip into
+# ~/.local/share/fonts, the same way the other desktop configs install it.
+# Not gated on --profile: every profile needs the font to render correctly.
+if ask "===> Install the Maple Mono NF font (~20 MB download)?"; then
+    MAPLE_FONT_DIR="$HOME/.local/share/fonts/maple-mono-nf"
+    MAPLE_ASSET="MapleMono-NF-unhinted.zip"
+    MAPLE_ZIP=""
+    MAPLE_API="https://api.github.com/repos/subframe7536/Maple-font/releases/latest"
+    MAPLE_JQ=".assets[] | select(.name == \"$MAPLE_ASSET\") | .browser_download_url"
+
+    maple_hint() {
+        echo "    Install the $MAPLE_ASSET release into $MAPLE_FONT_DIR and run fc-cache -f." >&2
+    }
+
+    if [ -f "$MAPLE_FONT_DIR/MapleMono-NF-Regular.ttf" ]; then
+        echo ":: Maple Mono NF already installed in $MAPLE_FONT_DIR."
+    elif command -v fc-list > /dev/null 2>&1 && fc-list :family 2> /dev/null | grep -q "Maple Mono NF"; then
+        echo ":: Maple Mono NF already installed (found by fc-list)."
+    else
+        # The asset URL only exists behind the release API, so the query cannot
+        # be a plain run() step: --dry-run prints it with the rest of the plan
+        # instead of executing it, which keeps a dry run off the network.
+        maple_url=""
+        if [ "$DRY_RUN" -eq 1 ]; then
+            echo "[dry-run] curl -fsSL \"$MAPLE_API\" | jq -r '$MAPLE_JQ'"
+            maple_url="<$MAPLE_ASSET url from the API>"
+        elif ! command -v curl > /dev/null 2>&1 ||
+             ! command -v jq > /dev/null 2>&1 ||
+             ! command -v unzip > /dev/null 2>&1; then
+            echo "XXX [ERROR] Maple Mono NF needs curl, jq and unzip to download." >&2
+            maple_hint
+        else
+            maple_url="$(curl -fsSL "$MAPLE_API" | jq -r "$MAPLE_JQ")" || maple_url=""
+            if [ -z "$maple_url" ] || [ "$maple_url" = "null" ]; then
+                maple_url=""
+                echo "XXX [ERROR] No $MAPLE_ASSET asset in the latest Maple-font release." >&2
+                maple_hint
+            fi
+        fi
+
+        if [ -n "$maple_url" ]; then
+            if [ "$DRY_RUN" -eq 1 ]; then
+                MAPLE_ZIP="/tmp/$MAPLE_ASSET"
+            else
+                MAPLE_ZIP="$(mktemp "${TMPDIR:-/tmp}/ringo-maple.XXXXXX.zip")" || exit 1
+            fi
+            # Download first, then create the font directory: a failed download
+            # must not leave an empty directory behind.
+            if run curl -fsSL "$maple_url" -o "$MAPLE_ZIP" &&
+                run mkdir -p "$MAPLE_FONT_DIR" &&
+                run unzip -o -q "$MAPLE_ZIP" -d "$MAPLE_FONT_DIR"; then
+                run rm -f "$MAPLE_ZIP"
+                if run fc-cache -f; then
+                    report ":: Maple Mono NF installed in $MAPLE_FONT_DIR."
+                else
+                    echo "!!! fc-cache failed; run 'fc-cache -f' once fontconfig is available."
+                fi
+            else
+                run rm -f "$MAPLE_ZIP"
+                echo "XXX [ERROR] Downloading or extracting $MAPLE_ASSET failed." >&2
+                maple_hint
+            fi
+        fi
+    fi
+else
+    echo ":: Skipping Maple Mono NF installation."
 fi
 
 if ask "===> Enable system services (NetworkManager, bluetooth, ly)?"; then
@@ -351,16 +446,26 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
                 case "$entry" in
                     "$BACKUP_DIR") continue ;;
                 esac
-                run cp -a "$entry" "$BACKUP_DIR/"
+                if ! run cp -a "$entry" "$BACKUP_DIR/"; then
+                    echo "XXX [ERROR] Failed to back up $entry." >&2
+                    exit 1
+                fi
             done
         fi
 
         # Copy beside the target and rename: a running shell must never load a
         # half-written plugin. run() keeps --dry-run from deploying anything.
         for f in libIslandBackend.so libIslandBackendPlugin.so qmldir IslandBackend.qmltypes; do
-            run cp -f "build/$f" "$HOME/.config/ringo-shell/IslandBackend/.$f.new" &&
-                run mv -f "$HOME/.config/ringo-shell/IslandBackend/.$f.new" \
-                      "$HOME/.config/ringo-shell/IslandBackend/$f"
+            if ! run cp -f "build/$f" "$HOME/.config/ringo-shell/IslandBackend/.$f.new"; then
+                echo "XXX [ERROR] Failed to stage $f." >&2
+                exit 1
+            fi
+            if ! run mv -f "$HOME/.config/ringo-shell/IslandBackend/.$f.new" \
+                          "$HOME/.config/ringo-shell/IslandBackend/$f"; then
+                run rm -f "$HOME/.config/ringo-shell/IslandBackend/.$f.new"
+                echo "XXX [ERROR] Failed to deploy $f." >&2
+                exit 1
+            fi
         done
         run chmod +x "$HOME/.local/bin/ringo-shell"
 

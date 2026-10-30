@@ -178,7 +178,7 @@ Item {
         color: Theme.chipBg
         border.width: 1
         border.color: searchInput.activeFocus ? Theme.accent : Theme.cardBorder
-        Behavior on border.color { ColorAnimation { duration: 120 } }
+        Behavior on border.color { ColorAnimation { duration: Theme.motionBase } }
 
         TextInput {
           id: searchInput
@@ -239,7 +239,7 @@ Item {
                    : (sectionHover.hovered ? Theme.chipBgHover : Theme.chipBg)
             border.width: 1
             border.color: root.activeSection === modelData ? Theme.accent : Theme.cardBorder
-            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
             Text {
               anchors.centerIn: parent
@@ -276,7 +276,7 @@ Item {
           height: 30
           radius: 7
           color: index === root.selectedIndex ? Theme.chipBgHover : "transparent"
-          Behavior on color { ColorAnimation { duration: 100 } }
+          Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
           RowLayout {
             anchors.fill: parent

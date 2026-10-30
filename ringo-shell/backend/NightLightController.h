@@ -80,6 +80,7 @@ private:
 
     void startEngine();
     void stopEngine();
+    void stopEngineBlocking();
     void restartEngine();
     void readEngineOutput();
     void applyForce();
@@ -97,9 +98,12 @@ private:
     QString m_error;
     int m_restarts = 0;
     bool m_stopping = false;
+    bool m_restartPending = false;
+    bool m_forceSignalPending = false;
     bool m_gammaRetryUsed = false; // one retry per start for a held output
     QElapsedTimer m_uptime;
     QString m_appliedForce = QStringLiteral("off"); // what wlsunset reported back
     QProcess m_process;
     QTimer m_restartTimer;
+    QTimer m_stopTimer;
 };
