@@ -35,7 +35,7 @@ Item {
       id: wifiBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       color: WifiController.enabled
               ? (wifiHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (wifiHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -110,7 +110,7 @@ Item {
       id: btBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       color: BluetoothController.enabled
               ? (btHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (btHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -185,7 +185,7 @@ Item {
       id: ppBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       readonly property string currentProfile: PowerProfileController.activeProfile
       readonly property bool isCustomProfile: currentProfile !== "balanced" && currentProfile !== ""
 
@@ -255,7 +255,7 @@ Item {
     Rectangle {
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       color: notificationModule.dndEnabled
               ? (dndHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (dndHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -320,7 +320,7 @@ Item {
       id: airplaneBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       color: root.airplaneMode
               ? (airplaneHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (airplaneHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -385,7 +385,7 @@ Item {
       id: nightLightBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 12
+      radius: 10
       color: NightLightController.enabled
               ? (nightLightHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (nightLightHover.hovered ? Theme.chipBgHover : Theme.cardBg)

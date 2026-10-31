@@ -23,5 +23,9 @@
   "nightLightGamma": 1.0,
   "nightLightLatitude": 0,
   "nightLightLongitude": 0,
-  "slideshowIntervalMinutes": 30
+  "slideshowIntervalMinutes": 30,
+  "idleDimSeconds": 300,
+  "idleLockSeconds": 330,
+  "idleScreenOffSeconds": 360,
+  "idleSuspendSeconds": 600
 }

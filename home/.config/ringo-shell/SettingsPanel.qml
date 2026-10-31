@@ -77,6 +77,7 @@ Rectangle {
   readonly property var trackedNodes: Pipewire.nodes.values
   readonly property var outputNodes: trackedNodes.filter(n => panel.isAudioNode(n) && n.isSink)
   readonly property var inputNodes: trackedNodes.filter(n => panel.isAudioNode(n) && !n.isSink)
+  readonly property var streamNodes: trackedNodes.filter(n => panel.isStreamNode(n))
   property string audioError: ""
 
   // Wired / VPN state from nmcli. Wi-Fi and Bluetooth have their own controllers;
@@ -221,6 +222,69 @@ Rectangle {
     panel.setLightSliderValue(key, panel.lightSliderValue(key) + direction * step)
   }
 
+  readonly property var notificationDisplayPresets: [2000, 3000, 5000, 8000, 10000]
+  readonly property var notificationHistoryPresets: [10, 20, 30, 50]
+  readonly property var notificationOsdPresets: [500, 800, 1200, 1600]
+  readonly property var idlePresets: ({
+    dim: [60, 120, 300, 600, 900, 1800],
+    lock: [120, 300, 330, 600, 900, 1800, 3600],
+    off: [180, 360, 600, 900, 1800, 3600],
+    suspend: [0, 300, 600, 900, 1800, 3600, 7200]
+  })
+
+  function nextPreset(values, current): var {
+    const index = values.indexOf(current)
+    if (index >= 0) return values[(index + 1) % values.length]
+    // Cascading idle limits can produce 630s, 690s, ... that are not presets.
+    // Move to the next larger slot instead of wrapping down to the first one.
+    for (let i = 0; i < values.length; i++)
+      if (values[i] > current) return values[i]
+    return values[0]
+  }
+
+  function formatIdle(seconds: int): string {
+    if (seconds <= 0) return "Never"
+    return seconds % 60 === 0 ? (seconds / 60) + "m"
+                              : (seconds / 60).toFixed(1) + "m"
+  }
+
+  function cycleNotificationDisplay(): void {
+    Config.setNotificationPolicy(
+      panel.nextPreset(panel.notificationDisplayPresets, Config.notificationDisplayTime),
+      Config.maxNotificationsInStack, Config.avoidDuplicateNotifications, Config.osdDuration)
+  }
+
+  function cycleNotificationHistory(): void {
+    Config.setNotificationPolicy(
+      Config.notificationDisplayTime,
+      panel.nextPreset(panel.notificationHistoryPresets, Config.maxNotificationsInStack),
+      Config.avoidDuplicateNotifications, Config.osdDuration)
+  }
+
+  function cycleNotificationOsd(): void {
+    Config.setNotificationPolicy(
+      Config.notificationDisplayTime, Config.maxNotificationsInStack,
+      Config.avoidDuplicateNotifications,
+      panel.nextPreset(panel.notificationOsdPresets, Config.osdDuration))
+  }
+
+  function toggleNotificationDuplicates(): void {
+    Config.setNotificationPolicy(Config.notificationDisplayTime,
+      Config.maxNotificationsInStack, !Config.avoidDuplicateNotifications, Config.osdDuration)
+  }
+
+  function cycleIdle(key: string): void {
+    const current = key === "dim" ? Config.idleDimSeconds
+                  : key === "lock" ? Config.idleLockSeconds
+                  : key === "off" ? Config.idleScreenOffSeconds
+                  : Config.idleSuspendSeconds
+    const list = key === "dim" ? panel.idlePresets.dim
+               : key === "lock" ? panel.idlePresets.lock
+               : key === "off" ? panel.idlePresets.off
+               : panel.idlePresets.suspend
+    Config.setIdleTimer(key, panel.nextPreset(list, current))
+  }
+
   function nudgeSelected(direction: int): void {
     if (panel.page === "nightlight") {
       if (panel.selectedIndex === 1) {
@@ -232,6 +296,14 @@ Rectangle {
         if (slider) panel.adjustLightSlider(slider.key, direction)
       }
       return
+    }
+    if (panel.page === "streams") {
+      panel.adjustStreamVolume(panel.selectedStreamNode(), direction)
+      return
+    }
+    if (panel.page === "main") {
+      const row = panel.rows[panel.selectedIndex]
+      if (row && row.cycle && !row.toggle) { row.cycle(); return }
     }
     panel.toggleSelected()
   }
@@ -271,12 +343,14 @@ Rectangle {
   readonly property var listRepeater: page === "wifi" ? wifiRepeater
                                     : page === "bluetooth" ? btRepeater
                                     : page === "apps" ? appsRepeater
+                                    : page === "streams" ? streamsRepeater
                                     : audioRepeater
 
   // the scrolling body that holds listRepeater's rows
   readonly property var listView: page === "wifi" ? wifiList
                                 : page === "bluetooth" ? btList
                                 : page === "apps" ? appsList
+                                : page === "streams" ? streamsList
                                 : audioList
 
   function listCount(): int {
@@ -362,6 +436,7 @@ Rectangle {
       if (!row || !isSelectable(panel.selectedIndex)) return
       if (row.activate) row.activate()
       else if (row.toggle) row.toggle()
+      else if (row.cycle) row.cycle()
       return
     }
     if (panel.selectedIndex === 0) { panel.pageRequested("main"); return }
@@ -415,6 +490,37 @@ Rectangle {
   function audioVolume(node): string {
     if (!node || !node.audio) return ""
     return Math.round(node.audio.volume * 100) + "%"
+  }
+
+  // Playback streams only: capture streams belong to the input-device page.
+  function isStreamNode(node): bool {
+    return node !== null && node !== undefined && node.audio && node.isStream
+           && panel.mediaClass(node).startsWith("Stream/Output/Audio")
+  }
+
+  function streamLabel(node): string {
+    if (!node) return ""
+    const props = node.properties || {}
+    const app = String(props["application.name"] || "")
+    const media = String(props["media.name"] || "")
+    if (app.length > 0 && media.length > 0 && media !== app)
+      return app + " · " + media
+    return app.length > 0 ? app
+         : (node.description && node.description.length > 0 ? node.description : node.name)
+  }
+
+  function selectedStreamNode(): var {
+    const index = panel.listIndexOfKey(panel.selectedKey)
+    return index >= 0 ? panel.streamNodes[index] : null
+  }
+
+  function toggleStreamMute(node): void {
+    if (node && node.audio) node.audio.muted = !node.audio.muted
+  }
+
+  function adjustStreamVolume(node, direction: int): void {
+    if (!node || !node.audio) return
+    node.audio.volume = Math.max(0, Math.min(1.5, node.audio.volume + direction * 0.05))
   }
 
   // Pipewire.defaultAudioSink / defaultAudioSource are read-only: the writable
@@ -559,6 +665,7 @@ Rectangle {
     if (panel.page === "nightlight") return "Night light"
     if (panel.page === "audioout") return "Output devices"
     if (panel.page === "audioin") return "Input devices"
+    if (panel.page === "streams") return "Application streams"
     if (panel.page === "apps") return "Default apps"
     return ""
   }
@@ -851,11 +958,26 @@ Rectangle {
       page: "audioin",
       value: () => panel.defaultInputLabel(),
       activate: () => panel.pageRequested("audioin") },
+    { icon: "\uf001", label: "App streams",
+      page: "streams",
+      value: () => panel.streamNodes.length + " active",
+      activate: () => panel.pageRequested("streams") },
 
     { section: "Display" },
     { icon: "\uf03e", label: "Wallpaper",
-      value: () => WallpaperController.mode,
+      value: () => {
+        const path = WallpaperController.path
+        return path.length > 0 ? path.split("/").pop() : "None"
+      },
       activate: () => panel.openWallpaperSwitcher() },
+    { icon: "\uf03e", label: "Fit mode",
+      value: () => WallpaperController.mode,
+      cycle: () => {
+        const modes = ["fill", "fit", "spread", "stretch", "tile"]
+        const i = modes.indexOf(WallpaperController.mode)
+        WallpaperController.mode = modes[(i + 1) % modes.length]
+        WallpaperController.reload()
+      } },
     { icon: "\uf008", label: "Slideshow",
       value: () => WallpaperController.slideshowEnabled
              ? WallpaperController.slideshowIntervalMinutes + "m" : "Off",
@@ -873,10 +995,39 @@ Rectangle {
       on: () => NightLightController.enabled,
       activate: () => panel.pageRequested("nightlight"),
       toggle: () => NightLightController.enabled = !NightLightController.enabled },
+
+    { section: "Notifications" },
     { icon: "\uf1f6", label: "Quiet mode",
       value: () => Notifier.dndEnabled ? "On" : "Off",
       on: () => Notifier.dndEnabled,
       toggle: () => Notifier.dndEnabled = !Notifier.dndEnabled },
+    { icon: "\uf0f3", label: "Toast duration",
+      value: () => Math.round(Config.notificationDisplayTime / 1000) + "s",
+      cycle: () => panel.cycleNotificationDisplay() },
+    { icon: "\uf1da", label: "History depth",
+      value: () => Config.maxNotificationsInStack + " items",
+      cycle: () => panel.cycleNotificationHistory() },
+    { icon: "\uf0c5", label: "Collapse repeats",
+      value: () => Config.avoidDuplicateNotifications ? "On" : "Off",
+      on: () => Config.avoidDuplicateNotifications,
+      toggle: () => panel.toggleNotificationDuplicates() },
+    { icon: "\uf017", label: "OSD duration",
+      value: () => Config.osdDuration + "ms",
+      cycle: () => panel.cycleNotificationOsd() },
+
+    { section: "Power" },
+    { icon: "\uf185", label: "Dim after",
+      value: () => panel.formatIdle(Config.idleDimSeconds),
+      cycle: () => panel.cycleIdle("dim") },
+    { icon: "\uf023", label: "Lock after",
+      value: () => panel.formatIdle(Config.idleLockSeconds),
+      cycle: () => panel.cycleIdle("lock") },
+    { icon: "\uf108", label: "Screen off after",
+      value: () => panel.formatIdle(Config.idleScreenOffSeconds),
+      cycle: () => panel.cycleIdle("off") },
+    { icon: "\uf186", label: "Suspend after",
+      value: () => panel.formatIdle(Config.idleSuspendSeconds),
+      cycle: () => panel.cycleIdle("suspend") },
 
     { section: "Shell" },
     { icon: "\uf11c", label: "Keybinds",
@@ -896,8 +1047,8 @@ Rectangle {
   ]
 
   // ---------------------------------------------------------------- main page
-  // Flickable, not a bare layout: with five sections and thirteen rows the list
-  // is taller than the panel, and a squeezed ColumnLayout would crop the rows.
+  // Flickable, not a bare layout: there are more sections than fit in the panel,
+  // and a squeezed ColumnLayout would crop the rows.
   Flickable {
     id: mainList
 
@@ -941,6 +1092,7 @@ Rectangle {
             entry.select()
             if (entry.row.activate) entry.row.activate()
             else if (entry.row.toggle) entry.row.toggle()
+            else if (entry.row.cycle) entry.row.cycle()
           }
 
           Text {
@@ -2031,6 +2183,168 @@ Rectangle {
           color: Theme.deleting
           font { family: Theme.fontFamily; pixelSize: 9 }
           wrapMode: Text.WordWrap
+        }
+      }
+
+      // --------------------------------------------------- application streams
+      ColumnLayout {
+        id: streamsPage
+
+        anchors.fill: parent
+        spacing: 2
+        visible: panel.page === "streams"
+
+        Text {
+          Layout.fillWidth: true
+          Layout.leftMargin: 10
+          text: "Click a row to mute; use -/+ or Left/Right for volume."
+          color: Theme.fg5
+          font { family: Theme.fontFamily; pixelSize: 8 }
+          elide: Text.ElideRight
+        }
+
+        Flickable {
+          id: streamsList
+
+          Layout.fillWidth: true
+          Layout.fillHeight: true
+          clip: true
+          boundsBehavior: Flickable.StopAtBounds
+          contentHeight: streamsColumn.implicitHeight
+          contentWidth: width
+
+          Column {
+            id: streamsColumn
+            width: streamsList.width
+            spacing: 2
+
+            Repeater {
+              id: streamsRepeater
+              model: panel.streamNodes
+
+              delegate: Rectangle {
+                id: streamRow
+
+                readonly property int rowIndex: panel.listHeaderRows + index
+                readonly property string rowKey: String(modelData.id)
+                readonly property bool isSelected: panel.selectedKey.length > 0
+                                                   && panel.selectedKey === rowKey
+
+                width: streamsColumn.width
+                height: 34
+                radius: 10
+                color: streamRow.isSelected || streamHover.hovered ? Theme.bg5 : "transparent"
+                border.width: streamRow.isSelected ? 1 : 0
+                border.color: Theme.accent
+
+                Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+
+                function activate(): void {
+                  panel.selectRow(streamRow.rowIndex)
+                  panel.toggleStreamMute(modelData)
+                }
+
+                HoverHandler { id: streamHover }
+
+                MouseArea {
+                  anchors.fill: parent
+                  hoverEnabled: true
+                  cursorShape: Qt.PointingHandCursor
+                  onClicked: streamRow.activate()
+                }
+
+                RowLayout {
+                  anchors.fill: parent
+                  anchors.leftMargin: 10
+                  anchors.rightMargin: 10
+                  spacing: 6
+
+                  Text {
+                    text: modelData.audio.muted ? "\uf026" : "\uf001"
+                    color: streamRow.isSelected ? Theme.accent : Theme.fg4
+                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                  }
+
+                  Text {
+                    Layout.fillWidth: true
+                    text: panel.streamLabel(modelData)
+                    color: Theme.fg
+                    font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                    elide: Text.ElideRight
+                  }
+
+                  Rectangle {
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                    radius: 6
+                    color: minusHover.hovered ? Theme.chipBgHover : Theme.chipBg
+
+                    Text {
+                      anchors.centerIn: parent
+                      text: "-"
+                      color: Theme.fg4
+                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                    }
+
+                    HoverHandler { id: minusHover }
+                    MouseArea {
+                      anchors.fill: parent
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        panel.selectRow(streamRow.rowIndex)
+                        panel.adjustStreamVolume(modelData, -1)
+                      }
+                    }
+                  }
+
+                  Rectangle {
+                    Layout.preferredWidth: 20
+                    Layout.preferredHeight: 20
+                    radius: 6
+                    color: plusHover.hovered ? Theme.chipBgHover : Theme.chipBg
+
+                    Text {
+                      anchors.centerIn: parent
+                      text: "+"
+                      color: Theme.fg4
+                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                    }
+
+                    HoverHandler { id: plusHover }
+                    MouseArea {
+                      anchors.fill: parent
+                      cursorShape: Qt.PointingHandCursor
+                      onClicked: {
+                        panel.selectRow(streamRow.rowIndex)
+                        panel.adjustStreamVolume(modelData, 1)
+                      }
+                    }
+                  }
+
+                  Text {
+                    Layout.preferredWidth: 34
+                    text: panel.audioVolume(modelData)
+                    color: streamRow.isSelected ? Theme.accent : Theme.fg4
+                    horizontalAlignment: Text.AlignRight
+                    font { family: Theme.fontFamily; pixelSize: 9 }
+                  }
+                }
+              }
+            }
+          }
+
+          Text {
+            visible: streamsRepeater.count === 0
+            x: 0
+            y: streamsList.contentY
+            width: streamsList.width
+            height: streamsList.height
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            text: "No application streams"
+            color: Theme.fg4
+            font { family: Theme.fontFamily; pixelSize: 10 }
+          }
         }
       }
 

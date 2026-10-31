@@ -97,8 +97,10 @@ cmake --build ringo-shell/build -j"$(nproc)"
 | `nightLightGamma` | `1.0` | wlsunset gamma / colour intensity (`1.0` is neutral) |
 | `nightLightLatitude` / `nightLightLongitude` | `0` / `0` | Pin the location; `0` follows `weatherLocation` |
 | `slideshowIntervalMinutes` | `30` | How often the slideshow rotates the wallpaper |
+| `idleDimSeconds` / `idleLockSeconds` | `300` / `330` | When the screen dims and the lock screen appears |
+| `idleScreenOffSeconds` / `idleSuspendSeconds` | `360` / `600` | When monitors power off; `0` disables auto-suspend |
 
-What the UI changes (night light on/off and force, wallpaper mode, slideshow on/off) is runtime state, kept in the XDG state directory rather than in this file.
+Runtime toggles (night light on/off and force, wallpaper mode, slideshow on/off) live in the XDG state directory. Settings rows that edit notification or idle policy write back to this file.
 
 ## Commands
 

@@ -636,7 +636,8 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             clip: true
-            model: root.filteredApps
+            // don't incubate delegates while the launcher is hidden
+            model: root.shown ? root.filteredApps : null
             currentIndex: root.selectedIndex
             highlightFollowsCurrentItem: false
             highlightMoveDuration: Theme.motionFast

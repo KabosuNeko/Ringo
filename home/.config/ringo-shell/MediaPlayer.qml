@@ -7,7 +7,7 @@ Rectangle {
     id: mediaCard
     Layout.fillWidth: true
     implicitHeight: MprisController.hasPlayer ? 116 : 0
-    radius: 14
+    radius: 10
     color: Theme.cardBg
     visible: MprisController.hasPlayer
     clip: true

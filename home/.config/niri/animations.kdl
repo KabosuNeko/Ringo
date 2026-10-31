@@ -1,57 +1,55 @@
-
 animations {
+    // Ringo: island morphs over 340ms with an ease-out; Niri windows are a
+    // touch quicker so focus changes still feel immediate.
     window-open {
-        duration-ms 60
+        duration-ms 240
         curve "ease-out-expo"
     }
 
     window-close {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 180
+        curve "ease-out-cubic"
     }
 
+    // Critically damped: smooth, no bounce.
     horizontal-view-movement {
-        duration-ms 60
-        curve "ease-out-expo"
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
     }
 
     window-movement {
-        duration-ms 60
-        curve "ease-out-expo"
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
     }
 
     window-resize {
-        duration-ms 60
-        curve "ease-out-expo"
+        spring damping-ratio=1.0 stiffness=700 epsilon=0.0001
     }
 
     config-notification-open-close {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 220
+        curve "ease-out-cubic"
     }
 
     exit-confirmation-open-close {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 220
+        curve "ease-out-cubic"
     }
 
     screenshot-ui-open {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 220
+        curve "ease-out-quad"
     }
 
     overview-open-close {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 280
+        curve "ease-out-cubic"
     }
 
     recent-windows-close {
-        duration-ms 60
-        curve "ease-out-expo"
+        duration-ms 180
+        curve "ease-out-cubic"
     }
 
     workspace-switch {
-        duration-ms 60
-        curve "ease-out-expo"
+        spring damping-ratio=1.0 stiffness=650 epsilon=0.0001
     }
 }

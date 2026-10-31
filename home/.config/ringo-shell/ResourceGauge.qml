@@ -15,7 +15,7 @@ Rectangle {
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
 
-    radius: 4
+    radius: 10
     color: Theme.cardBg
     border.width: 1
     border.color: Theme.cardBorder

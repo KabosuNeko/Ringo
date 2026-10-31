@@ -99,6 +99,14 @@ Item {
     }
   }
 
+  onMaxStoredChanged: {
+    if (notifications.length > maxStored) {
+      trimStack()
+      syncReversed()
+      notificationsChanged()
+    }
+  }
+
   // pending queue is capped like the stack so a burst cannot grow it unbounded
   function schedule(entry): void {
     if (dndEnabled) return

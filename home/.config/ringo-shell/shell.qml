@@ -519,10 +519,10 @@ function doctorReport(): string {
       readonly property real baseHeight: activeOsd !== "" ? 40
                   : notificationModule.active ? (notificationModule.currentHasActions ? 78 : 52)
                   : controlCenter
-                      ? (ccColumn.implicitHeight + 24)
+                      ? (ccColumn.implicitHeight + 20)
                   : (cliphistOpen && cliphistPreviewing) ? 380
                    : cliphistOpen ? 270
-                   : miniDashboard ? 176
+                   : miniDashboard ? 188
                    : appLauncher ? 410
                     : keybindViewer ? 400
                     : wallpaperSwitcherOpen ? 308
@@ -1087,10 +1087,7 @@ function doctorReport(): string {
       // control center opens on left click
       Item {
         id: controlCenterPanel
-        anchors.top: parent.top
-        anchors.topMargin: 12
-        anchors.horizontalCenter: parent.horizontalCenter
-        width: box.baseWidth - 24
+        anchors.fill: parent
         focus: true
         property bool contentShown: false
         Timer {
@@ -1114,23 +1111,17 @@ function doctorReport(): string {
         }
         opacity: box.controlCenter && box.activeOsd === "" && !notificationModule.active ? 1 : 0
         visible: opacity > 0
-        height: ccColumn.implicitHeight
 
         Behavior on opacity {
           NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
         }
 
-        Rectangle {
-          anchors.fill: parent
-          radius: 22
-          color: Theme.bgD1
-          border.width: 1
-          border.color: Theme.pillBorder
-        }
-
         ColumnLayout {
           id: ccColumn
-          width: parent.width
+          anchors.left: parent.left
+          anchors.right: parent.right
+          anchors.top: parent.top
+          anchors.margins: 10
           spacing: 6
           opacity: controlCenterPanel.contentShown ? 1 : 0
           Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
@@ -1152,7 +1143,7 @@ function doctorReport(): string {
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: sliderCol.implicitHeight + 16
-            radius: 12
+            radius: 10
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1297,7 +1288,7 @@ function doctorReport(): string {
 
           Rectangle {
             Layout.fillWidth: true
-            radius: 12
+            radius: 10
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1370,15 +1361,17 @@ function doctorReport(): string {
               anchors.bottomMargin: 2
               height: Math.min(contentHeight > 0 ? contentHeight : (notificationModule.notifications.length * 48), notifMaxHeight)
               spacing: 4
-              model: notificationModule.notificationsReversed
+              // The ListView is always alive; don't churn its model while the
+              // control center is closed, where no delegate is needed.
+              model: box.controlCenter ? notificationModule.notificationsReversed : null
               clip: true
               interactive: contentHeight > height
               flickDeceleration: 3000
               maximumFlickVelocity: 2500
               boundsBehavior: Flickable.StopAtBounds
 
-              cacheBuffer: 200
-              reuseItems: true
+              cacheBuffer: 0
+              reuseItems: false
 
               ScrollBar.vertical: ScrollBar {
                 id: notifScrollBar
@@ -1522,10 +1515,12 @@ function doctorReport(): string {
                     Layout.fillWidth: true
                     Layout.topMargin: 2
                     spacing: 4
-                    visible: notificationModule.actionList(modelData.notif).length > 0
+                    visible: modelData && modelData.notif
+                             && notificationModule.actionList(modelData.notif).length > 0
 
                     Repeater {
-                      model: notificationModule.actionList(modelData.notif)
+                      model: modelData && modelData.notif
+                             ? notificationModule.actionList(modelData.notif) : []
 
                       Rectangle {
                         implicitHeight: 20
@@ -1583,10 +1578,7 @@ function doctorReport(): string {
       // mini dashboard opens on right click
       Item {
         id: miniDashboardPanel
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: 8
-        width: box.baseWidth - 8
+        anchors.fill: parent
         focus: true
         property bool contentShown: false
         Timer {
@@ -1613,7 +1605,6 @@ function doctorReport(): string {
             }
           }
         }
-        height: box.miniDashboard ? box.baseHeight - 16 : 0
         opacity: box.miniDashboard
                  && !notificationModule.active
                  && box.activeOsd === ""
@@ -1622,14 +1613,6 @@ function doctorReport(): string {
 
         Behavior on opacity {
           NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
-        }
-
-        Rectangle {
-          anchors.fill: parent
-          radius: 22
-          color: Theme.bgD1
-          border.width: 1
-          border.color: Theme.pillBorder
         }
 
         MouseArea {
@@ -1645,8 +1628,8 @@ function doctorReport(): string {
           anchors.fill: parent
           anchors.leftMargin: 10
           anchors.rightMargin: 10
-          anchors.topMargin: 4
-          anchors.bottomMargin: 4
+          anchors.topMargin: 10
+          anchors.bottomMargin: 10
           spacing: 8
           opacity: miniDashboardPanel.contentShown ? 1 : 0
           Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
@@ -1743,7 +1726,7 @@ function doctorReport(): string {
               // takes whatever is left over.
               Layout.preferredWidth: 240
               Layout.fillHeight: true
-              radius: 4
+              radius: 10
               color: Theme.cardBg
               border.width: 1
               border.color: Theme.cardBorder
@@ -1774,8 +1757,8 @@ function doctorReport(): string {
 
           Rectangle {
             Layout.fillWidth: true
-            implicitHeight: 30
-            radius: 4
+            implicitHeight: 34
+            radius: 10
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1856,7 +1839,9 @@ function doctorReport(): string {
   NotificationModule { id: notificationModule; visible: false }
 
   IdleMonitor {
-    timeout: 300
+    // Config.setIdleTimer keeps these ordered; the clamps also protect a
+    // hand-edited config from dimming or sleeping in the wrong order.
+    timeout: Math.max(30, Math.min(Config.idleDimSeconds, Config.idleLockSeconds - 1))
     respectInhibitors: true
     onIsIdleChanged: {
       if (isIdle) BrightnessController.dim()
@@ -1865,7 +1850,7 @@ function doctorReport(): string {
   }
 
   IdleMonitor {
-    timeout: 330
+    timeout: Math.max(60, Config.idleLockSeconds)
     respectInhibitors: true
     onIsIdleChanged: {
       if (isIdle) LockController.lock()
@@ -1873,7 +1858,7 @@ function doctorReport(): string {
   }
 
   IdleMonitor {
-    timeout: 360
+    timeout: Math.max(Config.idleLockSeconds + 1, Config.idleScreenOffSeconds)
     respectInhibitors: true
     onIsIdleChanged: {
       if (isIdle) {
@@ -1886,7 +1871,8 @@ function doctorReport(): string {
   }
 
   IdleMonitor {
-    timeout: 600
+    timeout: Math.max(Config.idleScreenOffSeconds + 1, Config.idleSuspendSeconds)
+    enabled: Config.idleSuspendSeconds > 0
     respectInhibitors: false
     onIsIdleChanged: {
       if (isIdle) NiriController.suspend()
