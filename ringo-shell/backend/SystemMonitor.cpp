@@ -1,7 +1,10 @@
 #include "SystemMonitor.h"
 #include <QFile>
+#include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusInterface>
+#include <QDBusMessage>
+#include <QDBusObjectPath>
 #include <QDBusReply>
 #include <QNetworkInterface>
 #include <QVariantMap>
@@ -276,49 +279,52 @@ void SystemMonitor::pollUptime() {
 }
 
 void SystemMonitor::pollBattery() {
-    QDBusInterface iface(QStringLiteral("org.freedesktop.UPower"),
-                         QStringLiteral("/org/freedesktop/UPower/devices/DisplayDevice"),
-                         QStringLiteral("org.freedesktop.DBus.Properties"),
-                         QDBusConnection::systemBus());
-    if (!iface.isValid()) {
-        setHasBattery(false);
-        return;
-    }
-    auto getProp = [&](const QString &prop) -> QVariant {
-        QDBusReply<QVariant> r = iface.call(QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"), prop);
-        return r.isValid() ? r.value() : QVariant();
+    const QString upower = QStringLiteral("org.freedesktop.UPower");
+    auto readBattery = [&](const QString &path) -> bool {
+        QDBusInterface battery(upower, path,
+                               QStringLiteral("org.freedesktop.DBus.Properties"),
+                               QDBusConnection::systemBus());
+        QDBusReply<QVariant> presentReply = battery.call(
+            QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"),
+            QStringLiteral("IsPresent"));
+        if (presentReply.isValid() && !presentReply.value().toBool()) return false;
+        QDBusReply<QVariant> pctReply = battery.call(
+            QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"),
+            QStringLiteral("Percentage"));
+        if (!pctReply.isValid()) return false;
+        QDBusReply<QVariant> stateReply = battery.call(
+            QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"),
+            QStringLiteral("State"));
+        const uint state = stateReply.isValid() ? stateReply.value().toUInt() : 2;
+        setHasBattery(true);
+        setBatteryPercentage(int(std::round(pctReply.value().toDouble())));
+        setCharging(state == 1 || state == 4);
+        updateBatteryIcon();
+        return true;
     };
-    QVariant isPresent = getProp(QStringLiteral("IsPresent"));
-    bool present = isPresent.isValid() ? isPresent.toBool() : true;
-    // DisplayDevice absent: try BAT0
-    if (!present) {
-        QDBusInterface iface2(QStringLiteral("org.freedesktop.UPower"),
-                              QStringLiteral("/org/freedesktop/UPower/devices/battery_BAT0"),
-                              QStringLiteral("org.freedesktop.DBus.Properties"),
-                              QDBusConnection::systemBus());
-        if (iface2.isValid()) {
-            QDBusReply<QVariant> r2 = iface2.call(QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"), QStringLiteral("Percentage"));
-            if (r2.isValid()) {
-                present = true;
-                double pct2 = r2.value().toDouble();
-                QDBusReply<QVariant> rState = iface2.call(QStringLiteral("Get"), QStringLiteral("org.freedesktop.UPower.Device"), QStringLiteral("State"));
-                uint state2 = rState.isValid() ? rState.value().toUInt() : 2;
-                setHasBattery(true);
-                setBatteryPercentage(int(std::round(pct2)));
-                setCharging(state2 == 1 || state2 == 4);
-                updateBatteryIcon();
-                return;
-            }
-        }
+
+    const QString displayPath = QStringLiteral("/org/freedesktop/UPower/devices/DisplayDevice");
+    if (readBattery(displayPath)) return;
+
+    // DisplayDevice can be absent on some UPower setups. Enumerate the real
+    // battery objects instead of assuming BAT0 (this laptop is BAT1).
+    QDBusMessage request = QDBusMessage::createMethodCall(
+        upower, QStringLiteral("/org/freedesktop/UPower"),
+        QStringLiteral("org.freedesktop.UPower"), QStringLiteral("EnumerateDevices"));
+    const QDBusMessage reply = QDBusConnection::systemBus().call(request);
+    QList<QDBusObjectPath> paths;
+    if (reply.type() != QDBusMessage::ErrorMessage && !reply.arguments().isEmpty()) {
+        const QVariant arg = reply.arguments().constFirst();
+        if (arg.userType() == qMetaTypeId<QDBusArgument>())
+            paths = qdbus_cast<QList<QDBusObjectPath>>(qvariant_cast<QDBusArgument>(arg));
+        else
+            paths = arg.value<QList<QDBusObjectPath>>();
     }
-    if (!present) { setHasBattery(false); return; }
-    double pct = getProp(QStringLiteral("Percentage")).toDouble();
-    uint state = getProp(QStringLiteral("State")).toUInt(); // 1 charging, 2 discharging, 4 fully
-    bool charging = (state == 1 || state == 4);
-    setHasBattery(true);
-    setBatteryPercentage(int(std::round(pct)));
-    setCharging(charging);
-    updateBatteryIcon();
+    for (const QDBusObjectPath &path : paths) {
+        if (!path.path().contains(QStringLiteral("battery"))) continue;
+        if (readBattery(path.path())) return;
+    }
+    setHasBattery(false);
 }
 
 void SystemMonitor::handleUPowerPropertiesChanged(const QString &interface, const QVariantMap &changed, const QStringList &) {

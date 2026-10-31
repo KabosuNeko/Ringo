@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
+#include <QPointer>
 #include <QSet>
 #include <QThreadPool>
 #include <algorithm>
@@ -174,7 +175,8 @@ void CliphistModel::decodeThumbnail(const ClipEntry &entry)
 
     ++m_pendingThumbs;
 
-    m_thumbPool->start([rawLine, targetPath, id, this]() {
+    QPointer<CliphistModel> guard(this);
+    m_thumbPool->start([rawLine, targetPath, id, guard]() {
         bool wrote = false;
 
         // `cliphist decode` piped into Qt, shrunk and stored as a PNG; no
@@ -214,18 +216,20 @@ void CliphistModel::decodeThumbnail(const ClipEntry &entry)
         }
 
         // Notify on the main thread; the last job of a batch re-runs the prune.
-        QMetaObject::invokeMethod(this, [id, wrote, this]() {
+        if (!guard) return;
+        QMetaObject::invokeMethod(guard.data(), [guard, id, wrote]() {
+            if (!guard) return;
             if (wrote) {
-                for (int i = 0; i < m_filteredEntries.size(); ++i) {
-                    if (m_filteredEntries.at(i).id == id) {
-                        const QModelIndex idx = index(i, 0);
-                        emit dataChanged(idx, idx, {ImagePathRole});
+                for (int i = 0; i < guard->m_filteredEntries.size(); ++i) {
+                    if (guard->m_filteredEntries.at(i).id == id) {
+                        const QModelIndex idx = guard->index(i, 0);
+                        emit guard->dataChanged(idx, idx, {ImagePathRole});
                         break;
                     }
                 }
             }
-            if (m_pendingThumbs > 0 && --m_pendingThumbs == 0) {
-                pruneCache();
+            if (guard->m_pendingThumbs > 0 && --guard->m_pendingThumbs == 0) {
+                guard->pruneCache();
             }
         }, Qt::QueuedConnection);
     });

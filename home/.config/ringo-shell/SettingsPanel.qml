@@ -36,13 +36,20 @@ Rectangle {
   // which closes the overlay.
   MouseArea { anchors.fill: parent }
 
-  onVisibleChanged: if (visible) panel.refreshNetwork()
+  onVisibleChanged: {
+    if (visible) panel.refreshNetwork()
+    else BluetoothController.stopScan()
+  }
 
   Timer {
-    interval: 10000
-    repeat: true
-    running: panel.visible
-    onTriggered: panel.refreshNetwork()
+    id: networkTimeout
+    interval: 5000
+    onTriggered: {
+      if (networkDevices.running) networkDevices.running = false
+      if (networkConnections.running) networkConnections.running = false
+      panel.networkBusy = false
+      panel.networkError = "NetworkManager did not respond"
+    }
   }
 
   // password entry for a secured, unsaved wifi network
@@ -93,6 +100,7 @@ Rectangle {
     panel.networkBusy = true
     panel.networkError = ""
     networkDevices.running = true
+    networkTimeout.restart()
   }
 
   function parseNetworkDevices(text): void {
@@ -760,6 +768,8 @@ Rectangle {
     panel.passwordSsid = ""
     panel.pendingSsid = ""
     panel.pairingError = ""
+    if (panel.page === "main" || panel.page === "wifi") panel.refreshNetwork()
+    if (panel.page !== "bluetooth") BluetoothController.stopScan()
     if (panel.page === "wifi" && WifiController.enabled) WifiController.refreshNetworks(true)
     else if (panel.page === "bluetooth" && BluetoothController.enabled) BluetoothController.refreshDevices(true)
     else if (panel.page === "apps") panel.refreshApps()
@@ -833,6 +843,7 @@ Rectangle {
     stderr: StdioCollector { id: networkDevicesErr; waitForEnd: true }
 
     onExited: (code, status) => {
+      networkTimeout.stop()
       if (code !== 0) {
         panel.networkError = networkDevicesErr.text.trim() || ("nmcli exited with " + code)
         panel.networkBusy = false
@@ -840,6 +851,7 @@ Rectangle {
       }
       panel.parseNetworkDevices(networkDevicesOut.text)
       networkConnections.running = true
+      networkTimeout.restart()
     }
   }
 
@@ -851,6 +863,7 @@ Rectangle {
     stderr: StdioCollector { id: networkConnectionsErr; waitForEnd: true }
 
     onExited: (code, status) => {
+      networkTimeout.stop()
       if (code !== 0)
         panel.networkError = networkConnectionsErr.text.trim() || ("nmcli exited with " + code)
       else

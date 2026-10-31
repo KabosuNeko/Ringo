@@ -134,3 +134,21 @@ target_link_libraries(test_wallpaper_modes PRIVATE
     PkgConfig::WAYLAND_CLIENT m Threads::Threads)
 
 add_test(NAME wallpaper_modes COMMAND test_wallpaper_modes)
+
+# Pure model regression: duplicate BlueZ paths and row removal.
+add_executable(test_bluetooth_model
+    tests/test_bluetooth_model.cpp
+    backend/BluetoothDeviceModel.cpp
+)
+target_include_directories(test_bluetooth_model PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/backend)
+target_link_libraries(test_bluetooth_model PRIVATE Qt6::Core)
+add_test(NAME bluetooth_model COMMAND test_bluetooth_model)
+
+# The config loader needs a running Quickshell/Wayland session. Keep it
+# optional so the CI builder (which has no qs) still runs the pure C test.
+find_program(QS_EXECUTABLE qs)
+if(QS_EXECUTABLE)
+    add_test(NAME config_jsonc
+        COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/test-config-jsonc.sh ${QS_EXECUTABLE})
+endif()

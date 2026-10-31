@@ -15,7 +15,6 @@ struct PlayerInfo {
     QString playbackStatus; // Playing/Paused/Stopped
     qint64 lengthUs = 0; // microseconds
     qint64 positionUs = 0;
-    qint64 positionUpdatedUs = 0; // when position was last fetched
     bool canPlay = false;
     bool canPause = false;
     bool canGoNext = false;

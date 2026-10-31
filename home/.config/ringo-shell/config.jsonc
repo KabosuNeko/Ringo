@@ -24,8 +24,8 @@
   "nightLightLatitude": 0,
   "nightLightLongitude": 0,
   "slideshowIntervalMinutes": 30,
-  "idleDimSeconds": 300,
-  "idleLockSeconds": 330,
-  "idleScreenOffSeconds": 360,
-  "idleSuspendSeconds": 600
+  "idleDimSeconds": 600,
+  "idleLockSeconds": 900,
+  "idleScreenOffSeconds": 1800,
+  "idleSuspendSeconds": 3600
 }

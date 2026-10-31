@@ -35,13 +35,8 @@ Item {
   opacity: open && !blocked ? 1 : 0
   visible: opacity > 0
   enabled: open
-  scale: open ? 1 : 0.96
-  transformOrigin: Item.Top
 
   Behavior on opacity {
     NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut }
-  }
-  Behavior on scale {
-    NumberAnimation { duration: Theme.motionOverlay; easing.type: Theme.easeOut }
   }
 }

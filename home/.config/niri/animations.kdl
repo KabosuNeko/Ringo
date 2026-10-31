@@ -1,6 +1,6 @@
 animations {
-    // Ringo: island morphs over 340ms with an ease-out; Niri windows are a
-    // touch quicker so focus changes still feel immediate.
+    // Ringo: Niri windows stay level with the shell's 240ms island morph so
+    // focus changes and popovers feel like one motion system.
     window-open {
         duration-ms 240
         curve "ease-out-expo"
@@ -25,22 +25,22 @@ animations {
     }
 
     config-notification-open-close {
-        duration-ms 220
+        duration-ms 180
         curve "ease-out-cubic"
     }
 
     exit-confirmation-open-close {
-        duration-ms 220
+        duration-ms 180
         curve "ease-out-cubic"
     }
 
     screenshot-ui-open {
-        duration-ms 220
+        duration-ms 180
         curve "ease-out-quad"
     }
 
     overview-open-close {
-        duration-ms 280
+        duration-ms 260
         curve "ease-out-cubic"
     }
 

@@ -74,7 +74,7 @@ cmake --build ringo-shell/build -j"$(nproc)"
 
 ## Configuration
 
-`~/.config/ringo-shell/config.jsonc` is the shell's configuration. It is watched, so saving applies immediately; so is everything under `~/.config/niri/`.
+`~/.config/ringo-shell/config.jsonc` is the shell's configuration. It is watched, so saving applies immediately; so is everything under `~/.config/niri/`. JSONC line/block comments and trailing commas are supported, and Settings preserves them when writing.
 
 | Key | Default | What it does |
 | :--- | :--- | :--- |

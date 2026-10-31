@@ -25,18 +25,12 @@ class WifiController final : public QObject {
     QML_ELEMENT
     QML_SINGLETON
 
-    Q_PROPERTY(QString backendName READ backendName NOTIFY backendNameChanged)
-    Q_PROPERTY(bool supported READ supported NOTIFY supportedChanged)
-    Q_PROPERTY(bool readOnly READ readOnly NOTIFY readOnlyChanged)
-    Q_PROPERTY(bool available READ available NOTIFY availableChanged)
     Q_PROPERTY(bool enabled READ enabled NOTIFY enabledChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(bool scanning READ scanning NOTIFY scanningChanged)
     Q_PROPERTY(QString currentSsid READ currentSsid NOTIFY currentSsidChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
-    Q_PROPERTY(QString infoMessage READ infoMessage NOTIFY infoMessageChanged)
     Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
-    Q_PROPERTY(QString unsupportedReason READ unsupportedReason NOTIFY unsupportedReasonChanged)
     Q_PROPERTY(QAbstractItemModel *networks READ networks CONSTANT)
 
 public:
@@ -98,6 +92,7 @@ private:
     void detectBackend();
     void refreshStateInternal();
     void refreshNetworksInternal(bool rescan, bool triggeredBySignal);
+    void completeNetworkRefresh();
     void reloadSavedConnections();
     void reconnectDeviceSignals(const QString &devicePath);
     void disconnectDeviceSignals();
@@ -167,6 +162,8 @@ private:
     bool m_stateRefreshPending = false;
     bool m_networkRefreshInProgress = false;
     bool m_networkRefreshPending = false;
+    bool m_networkRefreshAsync = false;
+    quint64 m_networkGeneration = 0;
     bool m_pendingNetworkRescan = false;
     bool m_pendingNetworkTriggered = true;
     QTimer m_stateRefreshTimer;

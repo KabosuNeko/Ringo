@@ -43,6 +43,13 @@ BluetoothController::BluetoothController(QObject *parent)
     m_adapterRetryTimer->setInterval(1500);
     connect(m_adapterRetryTimer, &QTimer::timeout, this, &BluetoothController::retryFindAdapter);
 
+    // Bounded discovery: leaving the Bluetooth page or waiting too long must
+    // stop the radio scan instead of leaving it running indefinitely.
+    m_discoveryTimer = new QTimer(this);
+    m_discoveryTimer->setSingleShot(true);
+    m_discoveryTimer->setInterval(10000);
+    connect(m_discoveryTimer, &QTimer::timeout, this, &BluetoothController::stopScan);
+
     connectToBluez();
 }
 
@@ -74,6 +81,8 @@ void BluetoothController::setEnabledState(bool on) {
     m_adapterPowered = on;
     emit enabledChanged();
     if (!on) {
+        if (m_discoveryTimer) m_discoveryTimer->stop();
+        m_scanCancelled = true;
         setScanning(false);
         m_devices->clear();
         refreshCurrentDeviceName();
@@ -101,14 +110,19 @@ void BluetoothController::setErrorMessage(const QString &error) {
 void BluetoothController::connectToBluez() {
     auto bus = QDBusConnection::systemBus();
 
-    // live device add/remove
-    bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
-                "InterfacesAdded", this, SLOT(handleInterfacesAdded(QDBusMessage)));
-    bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
-                "InterfacesRemoved", this, SLOT(handleInterfacesRemoved(QDBusMessage)));
+    // NameOwnerChanged can bring us here more than once (cold boot, bluetoothd
+    // restart). Install the match rules once; duplicates would deliver every
+    // device event twice.
+    if (!m_signalsConnected) {
+        bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
+                    "InterfacesAdded", this, SLOT(handleInterfacesAdded(QDBusMessage)));
+        bus.connect(kBluezService, "/", "org.freedesktop.DBus.ObjectManager",
+                    "InterfacesRemoved", this, SLOT(handleInterfacesRemoved(QDBusMessage)));
 
-    bus.connect(kBluezService, QString(), "org.freedesktop.DBus.Properties",
-                "PropertiesChanged", this, SLOT(handlePropertiesChanged(QDBusMessage)));
+        bus.connect(kBluezService, QString(), "org.freedesktop.DBus.Properties",
+                    "PropertiesChanged", this, SLOT(handlePropertiesChanged(QDBusMessage)));
+        m_signalsConnected = true;
+    }
 
     if (findAdapter()) {
         m_adapterRetryTimer->stop();
@@ -159,6 +173,7 @@ void BluetoothController::disconnectFromBluez() {
                     "InterfacesRemoved", this, SLOT(handleInterfacesRemoved(QDBusMessage)));
     bus.disconnect(kBluezService, QString(), "org.freedesktop.DBus.Properties",
                     "PropertiesChanged", this, SLOT(handlePropertiesChanged(QDBusMessage)));
+    m_signalsConnected = false;
 }
 
 void BluetoothController::handleBluezNameOwnerChanged(const QString &name, const QString &oldOwner,
@@ -172,6 +187,9 @@ void BluetoothController::handleBluezNameOwnerChanged(const QString &name, const
     } else if (newOwner.isEmpty()) {
         // bluez went away
         m_adapterRetryTimer->stop();
+        if (m_discoveryTimer) m_discoveryTimer->stop();
+        m_scanCancelled = false;
+        disconnectFromBluez();
         m_adapterPath.clear();
         setEnabledState(false);
         setErrorMessage("bluetoothd is not running");
@@ -321,7 +339,14 @@ void BluetoothController::handlePropertiesChanged(const QDBusMessage &msg) {
     if (iface == kAdapterIface && path == m_adapterPath) {
         const QVariantMap changed = args.size() > 1 ? qdbus_cast<QVariantMap>(args.at(1)) : QVariantMap();
         if (changed.contains("Powered")) setEnabledState(changed.value("Powered").toBool());
-        if (changed.contains("Discovering")) setScanning(changed.value("Discovering").toBool());
+        if (changed.contains("Discovering")) {
+            const bool discovering = changed.value("Discovering").toBool();
+            setScanning(discovering);
+            if (!discovering) {
+                m_discoveryTimer->stop();
+                m_scanCancelled = false;
+            }
+        }
         if (changed.contains("Alias")) setAdapterName(changed.value("Alias").toString());
         return;
     }
@@ -376,6 +401,7 @@ void BluetoothController::refreshDevices(bool discover) {
 
     if (!discover) return;
 
+    m_scanCancelled = false;
     setBusy(true);
     QDBusMessage call = QDBusMessage::createMethodCall(kBluezService, m_adapterPath,
                                                          kAdapterIface, "StartDiscovery");
@@ -389,10 +415,22 @@ void BluetoothController::refreshDevices(bool discover) {
             // "already in progress" is not a real failure
             if (reply.error().name() != "org.bluez.Error.InProgress")
                 setErrorMessage(reply.error().message());
+        } else if (!m_adapterPowered || m_scanCancelled) {
+            if (!m_adapterPath.isEmpty())
+                asyncCallNoReply(m_adapterPath, kAdapterIface, "StopDiscovery");
         } else {
             setScanning(true);
+            m_discoveryTimer->start();
         }
     });
+}
+
+void BluetoothController::stopScan() {
+    if (m_discoveryTimer) m_discoveryTimer->stop();
+    m_scanCancelled = true;
+    setScanning(false);
+    if (!m_adapterPath.isEmpty() && m_adapterPowered)
+        asyncCallNoReply(m_adapterPath, kAdapterIface, "StopDiscovery");
 }
 
 void BluetoothController::pairDevice(const QString &address) {

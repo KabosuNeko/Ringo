@@ -336,6 +336,10 @@ function doctorReport(): string {
 
   Connections {
     target: Config
+    function onConfigErrorChanged() {
+      if (Config.configError.length > 0)
+        Notifier.post("Settings", Config.configError, "dialog-error", "Ringo", 2, 5000)
+    }
     function onWeatherLocationChanged() { WeatherController.weatherLocation = Config.weatherLocation; WeatherController.refresh() }
     function onWeatherUnitsChanged() { WeatherController.weatherUnits = Config.weatherUnits; WeatherController.refresh() }
     function onWeatherRefreshIntervalChanged() { WeatherController.refreshInterval = Config.weatherRefreshInterval }
@@ -543,10 +547,6 @@ function doctorReport(): string {
       border.color: Theme.pillBorder
 
       // crisp, not springy: the pill resizes on the same clock as everything else
-      Behavior on radius {
-          NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut }
-      }
-
       color: controlCenter
              ? Qt.rgba(Theme.bgD1.r, Theme.bgD1.g, Theme.bgD1.b, root.barSurfaceOpacity)
              : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, root.barSurfaceOpacity)

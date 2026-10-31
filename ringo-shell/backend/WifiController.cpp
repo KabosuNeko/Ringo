@@ -6,6 +6,8 @@
 #include <QDBusContext>
 #include <QDBusInterface>
 #include <QDBusMetaType>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #include <QDBusReply>
 #include <QDBusVariant>
 #include <QMap>
@@ -14,6 +16,7 @@
 #include <QVariant>
 #include <QUuid>
 #include <algorithm>
+#include <memory>
 #include <utility>
 
 using ConnectionSettingsMap = WifiController::ConnectionSettingsMap;
@@ -229,16 +232,6 @@ int signalPercentFromIwd(qint16 signalStrength) {
 
 bool isIwdSecureNetwork(const QString &networkType) {
     return networkType != QLatin1String("open");
-}
-
-QString titleCaseBackendName(const QString &backendName) {
-    if (backendName == QLatin1String("iwd"))
-        return QStringLiteral("iwd");
-    if (backendName == QLatin1String("connman"))
-        return QStringLiteral("ConnMan");
-    if (backendName == QLatin1String("networkmanager"))
-        return QStringLiteral("NetworkManager");
-    return QStringLiteral("Wi-Fi");
 }
 
 } // namespace
@@ -1141,17 +1134,8 @@ void WifiController::refreshNetworksInternal(bool rescan, bool triggeredBySignal
     }
     m_networkRefreshInProgress = true;
     auto networkRefreshGuard = qScopeGuard([this] {
-        m_networkRefreshInProgress = false;
-        if (m_networkRefreshPending) {
-            const bool nextRescan = m_pendingNetworkRescan;
-            const bool nextTriggered = m_pendingNetworkTriggered;
-            m_networkRefreshPending = false;
-            m_pendingNetworkRescan = false;
-            m_pendingNetworkTriggered = true;
-            QTimer::singleShot(0, this, [this, nextRescan, nextTriggered] {
-                refreshNetworksInternal(nextRescan, nextTriggered);
-            });
-        }
+        if (m_networkRefreshAsync) return;
+        completeNetworkRefresh();
     });
 
     if (!m_supported || !m_available || !m_enabled || !isValidPath(m_wifiDevicePath)) {
@@ -1326,55 +1310,114 @@ void WifiController::refreshNetworksInternal(bool rescan, bool triggeredBySignal
     }
 
     const ObjectPathList accessPoints = objectPathsFromVariant(reply.arguments().value(0));
-    QMap<QString, WifiNetworkModel::NetworkEntry> networksByKey;
-
-    for (const QDBusObjectPath &accessPoint : accessPoints) {
-        const QString accessPointPath = accessPoint.path();
-        const QVariantMap accessPointProperties = getAllProperties(
-            kNetworkManagerService,
-            accessPointPath,
-            kNetworkManagerAccessPointInterface
-        );
-        const QString ssid = decodeSsid(byteArrayFromVariant(accessPointProperties.value(QStringLiteral("Ssid"))));
-        const int signal = unwrapVariant(accessPointProperties.value(QStringLiteral("Strength"))).toInt();
-        const uint flags = unwrapVariant(accessPointProperties.value(QStringLiteral("Flags"))).toUInt();
-        const uint wpaFlags = unwrapVariant(accessPointProperties.value(QStringLiteral("WpaFlags"))).toUInt();
-        const uint rsnFlags = unwrapVariant(accessPointProperties.value(QStringLiteral("RsnFlags"))).toUInt();
-        const bool secure = (flags & kAccessPointPrivacyFlag) != 0 || wpaFlags != 0 || rsnFlags != 0;
-        const bool connected = !m_currentSsid.isEmpty() && ssid == m_currentSsid;
-        const QString key = ssid.isEmpty() ? QStringLiteral("__hidden__") : ssid;
-
-        WifiNetworkModel::NetworkEntry nextEntry;
-        nextEntry.objectPath = accessPointPath;
-        nextEntry.ssid = ssid;
-        nextEntry.displayName = labelForSsid(ssid);
-        nextEntry.type = secure ? QStringLiteral("secure") : QStringLiteral("open");
-        nextEntry.signal = signal;
-        nextEntry.secure = secure;
-        nextEntry.savedConnection = m_savedConnectionsBySsid.contains(ssid);
-        nextEntry.connected = connected;
-
-        const auto existing = networksByKey.constFind(key);
-        if (existing == networksByKey.cend()
-                || nextEntry.connected
-                || (!existing->connected && nextEntry.signal > existing->signal)) {
-            networksByKey.insert(key, nextEntry);
-        }
+    if (accessPoints.isEmpty()) {
+        m_networks.clear();
+        if (!triggeredBySignal)
+            setScanningState(false);
+        updateStatusText();
+        return;
     }
 
-    QVector<WifiNetworkModel::NetworkEntry> orderedNetworks = networksByKey.values().toVector();
-    std::sort(orderedNetworks.begin(), orderedNetworks.end(), [](const auto &left, const auto &right) {
-        if (left.connected != right.connected)
-            return left.connected;
-        if (left.signal != right.signal)
-            return left.signal > right.signal;
-        return QString::localeAwareCompare(left.displayName, right.displayName) < 0;
-    });
+    struct FetchBatch {
+        QHash<QString, QVariantMap> properties;
+        int remaining = 0;
+        bool triggered = true;
+        quint64 generation = 0;
+    };
+    auto batch = std::make_shared<FetchBatch>();
+    batch->remaining = accessPoints.size();
+    batch->triggered = triggeredBySignal;
+    batch->generation = ++m_networkGeneration;
+    m_networkRefreshAsync = true;
 
-    m_networks.setNetworks(orderedNetworks);
-    if (!triggeredBySignal)
-        setScanningState(false);
-    updateStatusText();
+    auto applyBatch = [this, accessPoints, batch]() {
+        QMap<QString, WifiNetworkModel::NetworkEntry> networksByKey;
+        for (const QDBusObjectPath &accessPoint : accessPoints) {
+            const QString accessPointPath = accessPoint.path();
+            const QVariantMap props = batch->properties.value(accessPointPath);
+            const QString ssid = decodeSsid(byteArrayFromVariant(props.value(QStringLiteral("Ssid"))));
+            const int signal = unwrapVariant(props.value(QStringLiteral("Strength"))).toInt();
+            const uint flags = unwrapVariant(props.value(QStringLiteral("Flags"))).toUInt();
+            const uint wpaFlags = unwrapVariant(props.value(QStringLiteral("WpaFlags"))).toUInt();
+            const uint rsnFlags = unwrapVariant(props.value(QStringLiteral("RsnFlags"))).toUInt();
+            const bool secure = (flags & kAccessPointPrivacyFlag) != 0 || wpaFlags != 0 || rsnFlags != 0;
+            const bool connected = !m_currentSsid.isEmpty() && ssid == m_currentSsid;
+            const QString key = ssid.isEmpty() ? QStringLiteral("__hidden__") : ssid;
+
+            WifiNetworkModel::NetworkEntry nextEntry;
+            nextEntry.objectPath = accessPointPath;
+            nextEntry.ssid = ssid;
+            nextEntry.displayName = labelForSsid(ssid);
+            nextEntry.type = secure ? QStringLiteral("secure") : QStringLiteral("open");
+            nextEntry.signal = signal;
+            nextEntry.secure = secure;
+            nextEntry.savedConnection = m_savedConnectionsBySsid.contains(ssid);
+            nextEntry.connected = connected;
+
+            const auto existing = networksByKey.constFind(key);
+            if (existing == networksByKey.cend()
+                    || nextEntry.connected
+                    || (!existing->connected && nextEntry.signal > existing->signal)) {
+                networksByKey.insert(key, nextEntry);
+            }
+        }
+
+        QVector<WifiNetworkModel::NetworkEntry> orderedNetworks = networksByKey.values().toVector();
+        std::sort(orderedNetworks.begin(), orderedNetworks.end(), [](const auto &left, const auto &right) {
+            if (left.connected != right.connected)
+                return left.connected;
+            if (left.signal != right.signal)
+                return left.signal > right.signal;
+            return QString::localeAwareCompare(left.displayName, right.displayName) < 0;
+        });
+
+        m_networks.setNetworks(orderedNetworks);
+        if (!batch->triggered)
+            setScanningState(false);
+        updateStatusText();
+        m_networkRefreshAsync = false;
+        completeNetworkRefresh();
+    };
+
+    // One async GetAll per AP. Do not resolve them serially with blocking
+    // QDBusInterface::call: a dense AP list used to freeze the shell.
+    for (const QDBusObjectPath &accessPoint : accessPoints) {
+        const QString path = accessPoint.path();
+        QDBusMessage request = QDBusMessage::createMethodCall(
+            kNetworkManagerService, path, kDbusPropertiesInterface, QStringLiteral("GetAll"));
+        request << QString::fromLatin1(kNetworkManagerAccessPointInterface);
+        const QDBusPendingCall pending = QDBusConnection::systemBus().asyncCall(request);
+        auto *watcher = new QDBusPendingCallWatcher(pending, this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this,
+                [this, watcher, path, batch, applyBatch](QDBusPendingCallWatcher *) mutable {
+            watcher->deleteLater();
+            QDBusPendingReply<QVariantMap> reply = *watcher;
+            if (!reply.isError()) batch->properties.insert(path, reply.value());
+            if (--batch->remaining > 0) return;
+            if (batch->generation != m_networkGeneration) {
+                m_networkRefreshAsync = false;
+                completeNetworkRefresh();
+                return;
+            }
+            applyBatch();
+        });
+    }
+    // completeNetworkRefresh() is called by the last watcher.
+    return;
+}
+
+void WifiController::completeNetworkRefresh() {
+    m_networkRefreshInProgress = false;
+    if (!m_networkRefreshPending) return;
+
+    const bool nextRescan = m_pendingNetworkRescan;
+    const bool nextTriggered = m_pendingNetworkTriggered;
+    m_networkRefreshPending = false;
+    m_pendingNetworkRescan = false;
+    m_pendingNetworkTriggered = true;
+    QTimer::singleShot(0, this, [this, nextRescan, nextTriggered] {
+        refreshNetworksInternal(nextRescan, nextTriggered);
+    });
 }
 
 void WifiController::reloadSavedConnections() {

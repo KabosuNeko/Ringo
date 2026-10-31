@@ -1,5 +1,6 @@
 #include "StateStore.h"
 
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -37,6 +38,15 @@ StateStore::StateStore(QObject *parent) : QObject(parent) {
     load();
 }
 
+StateStore::~StateStore() {
+    // The debounce timer is about to die with the object. Persist a pending
+    // toggle instead of losing it on logout/reboot.
+    if (m_saveTimer && m_saveTimer->isActive()) {
+        m_saveTimer->stop();
+        save();
+    }
+}
+
 void StateStore::load() {
     QFile file(m_path);
     if (!file.open(QIODevice::ReadOnly)) return;
@@ -72,5 +82,6 @@ void StateStore::save() {
     QSaveFile file(m_path);
     if (!file.open(QIODevice::WriteOnly)) return;
     file.write(QJsonDocument(QJsonObject::fromVariantMap(m_values)).toJson(QJsonDocument::Indented));
-    file.commit();
+    if (!file.commit())
+        qWarning() << "StateStore: could not commit" << m_path << file.errorString();
 }

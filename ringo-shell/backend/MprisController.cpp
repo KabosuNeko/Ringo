@@ -151,10 +151,8 @@ void MprisController::handlePropertiesChanged(const QString &interface, const QV
                 if (len > 0) it->lengthUs = len;
             }
         }
-        if (changed.contains(QStringLiteral("Position"))) {
+        if (changed.contains(QStringLiteral("Position")))
             it->positionUs = unwrapDVariant(changed.value(QStringLiteral("Position"))).toLongLong();
-            it->positionUpdatedUs = 0;
-        }
         if (changed.contains(QStringLiteral("CanPlay")))
             it->canPlay = unwrapDVariant(changed.value(QStringLiteral("CanPlay"))).toBool();
         if (changed.contains(QStringLiteral("CanPause")))
@@ -182,7 +180,6 @@ void MprisController::handleSeeked(qint64 position) {
     auto it = m_players.find(m_activePlayerDbusName);
     if (it == m_players.end()) return;
     it->positionUs = position;
-    it->positionUpdatedUs = 0;
     m_positionBaseUs = position;
     m_positionBaseSec = position / 1e6;
     m_elapsed.restart();
@@ -213,11 +210,8 @@ void MprisController::fetchPlayerState(const QString &name) {
         if (len > 0) it->lengthUs = len;
     }
     const QVariant vPos = unwrapDVariant(properties.value(QStringLiteral("Position")));
-    if (vPos.isValid()) {
-        qint64 pos = vPos.toLongLong();
-        it->positionUs = pos;
-        it->positionUpdatedUs = 0;
-    }
+    if (vPos.isValid())
+        it->positionUs = vPos.toLongLong();
     const QVariant vCanPlay = unwrapDVariant(properties.value(QStringLiteral("CanPlay")));
     if (vCanPlay.isValid()) it->canPlay = vCanPlay.toBool();
     const QVariant vCanPause = unwrapDVariant(properties.value(QStringLiteral("CanPause")));

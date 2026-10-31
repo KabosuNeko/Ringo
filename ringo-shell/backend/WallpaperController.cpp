@@ -9,6 +9,7 @@
 #include <QImageReader>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QPointer>
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QScreen>
@@ -17,7 +18,6 @@
 #include <QUrl>
 #include <algorithm>
 #include <cmath>
-#include <functional>
 #include <csignal>
 #include <memory>
 #include <sys/types.h>
@@ -28,26 +28,8 @@
 
 namespace {
 
-constexpr int kEngineWaitMs = 2000;
-constexpr int kStopAttempts = 4;
 constexpr int kEngineRestartDelayMs = 1000;
 constexpr qint64 kImmediateExitMs = 2000;
-
-// Qt treats destroying a running QThread as fatal; if the engine refuses to
-// return, hand the object to the event loop instead of deleting it here.
-bool stopThread(QThread *thread, const std::function<void()> &requestStop) {
-    for (int attempt = 0; attempt < kStopAttempts; ++attempt) {
-        requestStop();
-        if (thread->wait(kEngineWaitMs)) {
-            thread->deleteLater();
-            return true;
-        }
-    }
-
-    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
-    thread->setParent(nullptr);
-    return false;
-}
 
 QString stderrTail(const QByteArray &output) {
     const QByteArray trimmed = output.right(400).trimmed();
@@ -466,19 +448,23 @@ void WallpaperController::runBlur(const QString &path) {
     const QString out = blurredPath();
 
     // Off the GUI thread: blurring a 1080p wallpaper is milliseconds the shell
-    // must not spend on the event loop.
-    QThreadPool::globalInstance()->start([this, path, out]() {
+    // must not spend on the event loop. The controller can be destroyed by a
+    // QML reload while the job runs, so never touch it through a raw pointer.
+    QPointer<WallpaperController> guard(this);
+    QThreadPool::globalInstance()->start([guard, path, out]() {
         QString error;
         const bool ok = writeBlurredWallpaper(path, out, &error);
+        if (!guard) return;
         QMetaObject::invokeMethod(
-            this,
-            [this, path, ok, error]() {
+            guard.data(),
+            [guard, path, ok, error]() {
+                if (!guard) return;
                 if (!ok) {
-                    setError(QStringLiteral("blurring %1 failed: %2").arg(path, error));
+                    guard->setError(QStringLiteral("blurring %1 failed: %2").arg(path, error));
                 } else {
-                    emit backdropChanged();
+                    emit guard->backdropChanged();
                 }
-                startEngine(path);
+                guard->startEngine(path);
             },
             Qt::QueuedConnection);
     });
@@ -508,9 +494,8 @@ void WallpaperController::startEngine(const QString &path) {
 
 void WallpaperController::onEngineFinished(QThread *thread) {
     if (thread != m_engineThread) {
-        // Replaced engine: stopEngine() detached it before waking it, so this
-        // exit is expected and must not touch its replacement.
-        if (thread) thread->deleteLater();
+        // Replaced engine: stopEngine() detached it and scheduled deletion on
+        // its finished signal, so this exit must not touch its replacement.
         return;
     }
 
@@ -554,10 +539,11 @@ void WallpaperController::stopEngine() {
     m_engineThread = nullptr;
     setReady(false);
 
-    if (!stopThread(thread, [thread] { thread->stop(); })) {
-        setError(QStringLiteral(
-            "the wallpaper engine did not stop; its thread is left to finish on its own"));
-    }
+    // Never wait for a Wayland event loop on the GUI thread. The engine wakes
+    // through its self-pipe; the finished signal owns deletion from here.
+    thread->setParent(nullptr);
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->stop();
 }
 
 void WallpaperController::reapLegacyEngines() {

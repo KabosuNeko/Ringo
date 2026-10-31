@@ -19,7 +19,7 @@ Singleton {
     readonly property int motionResize: 70
     readonly property int motionFast: 100
     readonly property int motionBase: 140
-    readonly property int motionOverlay: 340
+    readonly property int motionOverlay: 240
     readonly property int motionSlow: 220
     readonly property int motionProgress: 400
     readonly property int motionBlink: 800

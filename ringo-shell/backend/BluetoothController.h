@@ -39,6 +39,7 @@ public:
     Q_INVOKABLE void setEnabled(bool on);
     // discover=true also (re)starts a discovery scan; false just re-reads known devices
     Q_INVOKABLE void refreshDevices(bool discover);
+    Q_INVOKABLE void stopScan();
     Q_INVOKABLE void pairDevice(const QString &address);
     Q_INVOKABLE void connectDevice(const QString &address);
     Q_INVOKABLE void disconnectDevice(const QString &address);
@@ -86,10 +87,13 @@ private:
     bool m_adapterPowered = false;
     bool m_scanning = false;
     bool m_busy = false;
+    bool m_signalsConnected = false;
+    bool m_scanCancelled = false;
     QString m_errorMessage;
     QString m_currentDeviceName;
     QString m_adapterName;
     BluetoothDeviceModel *m_devices = nullptr;
     QTimer *m_adapterRetryTimer = nullptr;
+    QTimer *m_discoveryTimer = nullptr;
     int m_adapterRetriesLeft = 0;
 };

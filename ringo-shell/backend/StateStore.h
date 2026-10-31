@@ -20,6 +20,7 @@ public:
 
 private:
     explicit StateStore(QObject *parent = nullptr);
+    ~StateStore() override;
 
     void load();
     void scheduleSave();

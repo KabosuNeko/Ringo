@@ -209,6 +209,12 @@ Item {
             searchDebounce.triggered()
             selectedIndex = 0
             searchInput.forceActiveFocus()
+        } else {
+            // A file search can outlive the launcher; stop it so a broad fd
+            // scan does not keep consuming CPU/IO after the UI is gone.
+            searchDebounce.stop()
+            fileSearch.running = false
+            root.fileSearchSeq++
         }
     }
 
