@@ -655,6 +655,11 @@ function doctorReport(): string {
           OpacityAnimator { duration: Theme.motionFast }
         }
 
+        Workspaces {
+          output: panelWindow.screen ? panelWindow.screen.name : ""
+          Layout.alignment: Qt.AlignVCenter
+        }
+
         Clock {
           id: centerClock
           fontSize: Theme.fontSm * Config.pillScale
