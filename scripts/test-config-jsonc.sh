@@ -18,6 +18,7 @@ cat >"$TMP/.config/ringo-shell/config.jsonc" <<'EOF'
 {
   // line comment
   /* block comment */
+  // "notificationDisplayTime": 1, (a commented-out key must never be rewritten)
   "displayPicture": "~/.pfp.png",
   "clockFormat": "hh:mm",
   "notificationDisplayTime": 7000,
@@ -76,5 +77,6 @@ grep -q '"notificationDisplayTime": 5000' "$TMP/.config/ringo-shell/config.jsonc
 grep -q '"idleLockSeconds": 700' "$TMP/.config/ringo-shell/config.jsonc"
 grep -q '// line comment' "$TMP/.config/ringo-shell/config.jsonc"
 grep -q '/\* block comment \*/' "$TMP/.config/ringo-shell/config.jsonc"
+grep -q '// "notificationDisplayTime": 1, (a commented-out' "$TMP/.config/ringo-shell/config.jsonc"
 
 printf 'config jsonc: ok\n'

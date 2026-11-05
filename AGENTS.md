@@ -92,7 +92,7 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 **QML**
 
 - 2-space indent, PascalCase components, one component per file.
-- Colours, fonts and sizes come from `Theme.*` and `Config.*`; no new hardcoded values (the recording dot is the one deliberate exception).
+- Colours, fonts and sizes come from `Theme.*` and `Config.*` (`Theme.font*`, `Theme.radius*`, `Theme.motion*`); no new hardcoded values (the recording dot is the one deliberate exception).
 - Animations: `Behavior on <prop> { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }`. Never leave an infinite animation running in an invisible item — it repaints the scene forever.
 - Overlays (launcher, clipboard, power menu, keybinds, …) are hosted in an `OverlaySlot` inside `shell.qml`, gated by `blocked:` on higher-priority surfaces, and closed from `closeOverlays()`.
 - A panel takes `shown` + `onCloseRequested`, so the host stays in charge of state.
@@ -107,7 +107,7 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 
 | File | Why it matters |
 | :--- | :--- |
-| `home/.config/ringo-shell/shell.qml` | Root of the shell: controller wiring, every overlay, all 18 IPC targets, `doctorReport()` |
+| `home/.config/ringo-shell/shell.qml` | Root of the shell: controller wiring, every overlay, all 20 IPC targets, `doctorReport()` |
 | `home/.config/ringo-shell/Config.qml` + `config.jsonc` | User knobs (bar, notifications, weather, terminal, wallpaper, night light, slideshow) |
 | `home/.config/ringo-shell/Theme.qml` | Palette derived from pywal (`~/.cache/wal/colors.json`) |
 | `home/.config/niri/autostart.kdl` | What starts with the session (`ringo-shell`, `fcitx5`, clipboard watchers) |
@@ -129,10 +129,10 @@ QML files need no build step, but **a newly added QML file must be stowed** (`st
 
 ## Testing & QA
 
-Two automated checks run in CI, both without a compositor: a CTest over the wallpaper scaling modes (`ringo-shell/tests/`, wired in `ringo-shell/CMakeLists.txt`) and an end-to-end test of the installer in a throwaway `$HOME` (`scripts/test-install.sh`, which stubs `yay`/`sudo`/`systemctl`/`gsettings`/`xdg-mime` and asserts the stow pre-flight, the 55 deployed symlinks and the rollback path). Verification has three layers:
+CTest (`ringo-shell/tests/`, wired in `ringo-shell/CMakeLists.txt`) runs the wallpaper scaling modes and the Bluetooth device model without a compositor, plus `config_jsonc` (`scripts/test-config-jsonc.sh`: JSONC load and serialized writes), which needs `qs` and is skipped where it is absent, CI included. CI also runs an end-to-end test of the installer in a throwaway `$HOME` (`scripts/test-install.sh`, which stubs `yay`/`sudo`/`systemctl`/`gsettings`/`xdg-mime` and asserts the stow pre-flight, one symlink per file in `home/` and the rollback path). Verification has three layers:
 
-1. **CI** (`.github/workflows/build.yml`): builds the backend on Ubuntu, runs `ctest` and `scripts/test-install.sh`, `sh -n install.sh`, `shellcheck --severity=warning` over POSIX-shebang scripts, and `scripts/gen-keybinds-doc.sh --check`. It catches compile breaks, shell syntax, stale generated docs, and installer regressions.
-2. **Runtime self-check**: `ringo-shell call doctor check` prints the wallpaper engine's state, the night light's, , the palette/state files, and every external tool, with a `verdict:` line. It has caught real bugs (a night light that held no output, a dead weather refresh) — run it after any backend change.
+1. **CI** (`.github/workflows/build.yml`): builds the backend on Ubuntu, runs `ctest` and `scripts/test-install.sh`, `sh -n install.sh`, `shellcheck --severity=warning` over POSIX-shebang scripts, a syntax-only `qmllint` over the shell, and `scripts/gen-keybinds-doc.sh --check`. It catches compile breaks, QML and shell syntax, stale generated docs, and installer regressions.
+2. **Runtime self-check**: `ringo-shell call doctor check` prints the wallpaper engine's state, the night light's, the palette/state files, and every external tool, with a `verdict:` line. It has caught real bugs (a night light that held no output, a dead weather refresh) — run it after any backend change.
 3. **Manual smoke**: build → deploy → restart → check the log for `ERROR` → look at the surface (a screenshot; `niri msg action screenshot-screen`) → exercise the IPC command you touched. Never claim a UI or engine change works without having seen the surface or the reported state.
 
 To test the wallpaper engine without the shell, compile it with the generated protocols into a small `main()` that fills an RGBA buffer, calls `ringo_wallpaper_run()` and stops it from a second thread:

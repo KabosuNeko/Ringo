@@ -125,7 +125,7 @@ ringo-shell call media playPause                   # or: next / prev / stop
 ringo-shell call lock lock
 ```
 
-`controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `keybinds`, `bar`, `calendar` and `weather` each take `toggle`, `open` or `hide`.
+`controlCenter`, `miniDashboard`, `appLauncher`, `wallpaperSwitcher`, `powerMenu`, `recordMenu`, `keybinds`, `settings`, `calendar` and `weather` each take `toggle`, `open` or `hide` (`settings page <name>` opens a sub-page); `airplaneMode` takes `on`, `off`, `toggle` or `status`.
 
 The lock screen is a session overlay, not an `ext-session-lock` surface: PAM is the only way to dismiss it, but a process in the same session can still stop the shell. Use a real session locker if you need a boundary the session itself cannot cross.
 
