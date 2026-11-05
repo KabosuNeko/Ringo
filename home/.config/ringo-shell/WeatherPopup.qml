@@ -29,7 +29,7 @@ PanelWindow {
   readonly property color labelText: Theme.fg5
   readonly property color valueText: Theme.fg
   readonly property color secondaryText: Theme.fg3
-  readonly property color headerText: Theme.fg2
+  readonly property color headerText: Theme.fg
   readonly property int iconSizeMedium: 13
   readonly property int iconSizeForecast: 16
   readonly property int fontSizeTiny: 8
@@ -75,6 +75,8 @@ PanelWindow {
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           MouseArea {
             id: refreshHover
+            Accessible.role: Accessible.Button
+            Accessible.name: "Refresh weather"
             anchors.fill: parent
             anchors.margins: -6 * dpi
             hoverEnabled: true
@@ -104,7 +106,7 @@ PanelWindow {
             text: WeatherController.loading ? "..."
                 : WeatherController.errorMessage.length > 0 ? "—"
                 : Math.round(WeatherController.temp) + "°" + (Config.weatherUnits === "metric" ? "C" : "F")
-            color: Theme.fgL
+            color: Theme.fg
             font.family: Theme.fontFamily
             font.pixelSize: 25 * dpi
             font.weight: 500
@@ -129,9 +131,9 @@ PanelWindow {
 
         Repeater {
           model: [
-            { icon: "\ue34e", color: "#f18d41", value: Math.round(WeatherController.feelsLike) + "°", label: "Feels" },
-            { icon: "\ue373", color: "#5f99fa", value: WeatherController.humidity + "%", label: "Humidity" },
-            { icon: "\ue34b", color: "#54e04b", value: Math.round(WeatherController.windSpeed) + " km/h", label: "Wind" }
+            { icon: "\ue34e", color: Theme.warning, value: Math.round(WeatherController.feelsLike) + "°", label: "Feels" },
+            { icon: "\ue373", color: Theme.accent, value: WeatherController.humidity + "%", label: "Humidity" },
+            { icon: "\ue34b", color: Theme.success, value: Math.round(WeatherController.windSpeed) + " km/h", label: "Wind" }
           ]
           delegate: Rectangle {
             Layout.fillWidth: true
@@ -180,7 +182,7 @@ PanelWindow {
         }
       }
 
-      Rectangle { Layout.fillWidth: true; height: 1 * dpi; color: weatherWindow.dividerColor }
+      Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1 * dpi; color: weatherWindow.dividerColor }
 
       RowLayout {
         Layout.fillWidth: true
@@ -192,7 +194,7 @@ PanelWindow {
 
           Text {
             text: "\ue34c"
-            color: "#ffcd58"
+            color: Theme.warning
             font.family: Config.nerdFontFamily
             font.pixelSize: weatherWindow.iconSizeMedium * dpi
             Layout.leftMargin: 10 * dpi
@@ -211,7 +213,7 @@ PanelWindow {
         RowLayout {
           Text {
             text: "\ue34d"
-            color: "#ff904d"
+            color: Theme.warning
             font.family: Config.nerdFontFamily
             font.pixelSize: weatherWindow.iconSizeMedium * dpi
           }
@@ -226,7 +228,7 @@ PanelWindow {
         }
       }
 
-      Rectangle { Layout.fillWidth: true; height: 1 * dpi; color: weatherWindow.dividerColor }
+      Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1 * dpi; color: weatherWindow.dividerColor }
 
       RowLayout {
         Layout.fillWidth: true

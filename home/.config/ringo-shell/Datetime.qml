@@ -22,7 +22,7 @@ Item {
     id: dateLabel
     text: Qt.formatDateTime(clock.date, "hh:mm a ddd, dd MMM yyyy")
     color: dateFg
-    font { family: Theme.fontFamily; weight: 500; pixelSize: 10; letterSpacing: -0.2 }
+    font { family: Theme.fontFamily; weight: 500; pixelSize: Theme.fontXs; letterSpacing: -0.2 }
 
     MouseArea {
       anchors.fill: parent

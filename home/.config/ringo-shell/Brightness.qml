@@ -27,13 +27,13 @@ RowLayout {
     Text {
         text: root.icon
         color: Theme.fg
-        font { family: Theme.nerdFontFamily; pixelSize: 10 }
+        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXs }
     }
 
     Text {
         text: Math.round(root.percent * 100) + "%"
         color: Theme.fg
-        font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
     }
 
     WheelHandler {

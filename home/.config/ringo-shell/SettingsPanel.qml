@@ -24,8 +24,8 @@ Rectangle {
   signal openConfigFile
 
   anchors.fill: parent
-  color: Theme.bgD1
-  radius: 22
+  color: Theme.bg
+  radius: Theme.radiusPanel
   visible: opacity > 0
   opacity: shown ? 1 : 0
   focus: true
@@ -36,20 +36,11 @@ Rectangle {
   // which closes the overlay.
   MouseArea { anchors.fill: parent }
 
-  onVisibleChanged: {
-    if (visible) panel.refreshNetwork()
-    else BluetoothController.stopScan()
-  }
+  WiredVpnModel { id: wired }
 
-  Timer {
-    id: networkTimeout
-    interval: 5000
-    onTriggered: {
-      if (networkDevices.running) networkDevices.running = false
-      if (networkConnections.running) networkConnections.running = false
-      panel.networkBusy = false
-      panel.networkError = "NetworkManager did not respond"
-    }
+  onVisibleChanged: {
+    if (visible) wired.refreshNetwork()
+    else BluetoothController.stopScan()
   }
 
   // password entry for a secured, unsaved wifi network
@@ -86,116 +77,6 @@ Rectangle {
   readonly property var inputNodes: trackedNodes.filter(n => panel.isAudioNode(n) && !n.isSink)
   readonly property var streamNodes: trackedNodes.filter(n => panel.isStreamNode(n))
   property string audioError: ""
-
-  // Wired / VPN state from nmcli. Wi-Fi and Bluetooth have their own controllers;
-  // this only fills the two rows the shell otherwise cannot see.
-  property var ethernetDevices: []
-  property var vpnConnections: []
-  property int vpnIndex: 0
-  property bool networkBusy: false
-  property string networkError: ""
-
-  function refreshNetwork(): void {
-    if (panel.networkBusy) return
-    panel.networkBusy = true
-    panel.networkError = ""
-    networkDevices.running = true
-    networkTimeout.restart()
-  }
-
-  function parseNetworkDevices(text): void {
-    const rows = []
-    const lines = text.split("\n")
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0) continue
-      const parts = line.split(":")
-      if (parts.length < 3 || parts[1] !== "ethernet") continue
-      rows.push({
-        device: parts[0],
-        state: parts[2],
-        connection: parts.length > 3 ? parts[3] : ""
-      })
-    }
-    panel.ethernetDevices = rows
-  }
-
-  function parseNetworkConnections(text): void {
-    const rows = []
-    const lines = text.split("\n")
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0) continue
-      const parts = line.split(":")
-      if (parts.length < 2) continue
-      if (parts[1] !== "vpn" && parts[1] !== "wireguard") continue
-      rows.push({
-        name: parts[0],
-        type: parts[1],
-        active: parts.length > 2 && parts[2] !== ""
-      })
-    }
-    panel.vpnConnections = rows
-    if (panel.vpnIndex >= rows.length) panel.vpnIndex = 0
-  }
-
-  function ethernetActive(): bool {
-    for (let i = 0; i < panel.ethernetDevices.length; i++)
-      if (panel.ethernetDevices[i].state === "connected") return true
-    return false
-  }
-
-  function ethernetLabel(): string {
-    if (panel.ethernetDevices.length === 0)
-      return panel.networkError.length > 0 ? "Unavailable" : "Not present"
-    for (let i = 0; i < panel.ethernetDevices.length; i++) {
-      const dev = panel.ethernetDevices[i]
-      if (dev.state === "connected")
-        return dev.connection.length > 0 ? dev.connection : "Connected"
-    }
-    const first = panel.ethernetDevices[0]
-    return first.state === "unavailable" ? "Unavailable" : "Disconnected"
-  }
-
-  function toggleEthernet(): void {
-    const dev = panel.ethernetDevices[0]
-    if (!dev) return
-    panel.runNetworkAction([
-      "nmcli", "device",
-      panel.ethernetActive() ? "disconnect" : "connect",
-      dev.device
-    ])
-  }
-
-  function activeVpn(): var {
-    for (let i = 0; i < panel.vpnConnections.length; i++)
-      if (panel.vpnConnections[i].active) return panel.vpnConnections[i]
-    return null
-  }
-
-  function vpnLabel(): string {
-    if (panel.networkError.length > 0) return "Error"
-    const active = panel.activeVpn()
-    if (active) return active.name
-    if (panel.vpnConnections.length === 0) return "None"
-    const vpn = panel.vpnConnections[panel.vpnIndex]
-    return vpn ? vpn.name + " · off" : "Off"
-  }
-
-  function toggleVpn(): void {
-    const active = panel.activeVpn()
-    if (active) {
-      panel.runNetworkAction(["nmcli", "connection", "down", active.name])
-      return
-    }
-    const vpn = panel.vpnConnections[panel.vpnIndex]
-    if (vpn) panel.runNetworkAction(["nmcli", "connection", "up", vpn.name])
-  }
-
-  function cycleVpn(): void {
-    if (panel.vpnConnections.length < 2 || panel.activeVpn() !== null) return
-    panel.vpnIndex = (panel.vpnIndex + 1) % panel.vpnConnections.length
-  }
 
   readonly property var lightSliders: [
     { key: "low", label: "Night colour", from: 2500, to: 5000, step: 100, unit: "K" },
@@ -314,12 +195,6 @@ Rectangle {
       if (row && row.cycle && !row.toggle) { row.cycle(); return }
     }
     panel.toggleSelected()
-  }
-
-  function runNetworkAction(argv): void {
-    panel.networkError = ""
-    networkAction.command = argv
-    networkAction.running = true
   }
 
   // Default apps: filled from `gio mime` when the page is opened.
@@ -689,7 +564,7 @@ Rectangle {
     panel.passwordSsid = ssid
     panel.showPassword = false
     panel.passwordVisible = true
-    passwordFocusTimer.restart()
+    Qt.callLater(panel.focusPassword)
   }
 
   // The overlay stays up for the whole attempt: it is dismissed on success (the
@@ -768,7 +643,7 @@ Rectangle {
     panel.passwordSsid = ""
     panel.pendingSsid = ""
     panel.pairingError = ""
-    if (panel.page === "main" || panel.page === "wifi") panel.refreshNetwork()
+    if (panel.page === "main" || panel.page === "wifi") wired.refreshNetwork()
     if (panel.page !== "bluetooth") BluetoothController.stopScan()
     if (panel.page === "wifi" && WifiController.enabled) WifiController.refreshNetworks(true)
     else if (panel.page === "bluetooth" && BluetoothController.enabled) BluetoothController.refreshDevices(true)
@@ -777,7 +652,7 @@ Rectangle {
   }
 
   Component.onCompleted: {
-    panel.refreshNetwork()
+    wired.refreshNetwork()
     if (panel.page === "wifi" && WifiController.enabled) WifiController.refreshNetworks(true)
     else if (panel.page === "bluetooth" && BluetoothController.enabled) BluetoothController.refreshDevices(true)
     else if (panel.page === "apps") panel.refreshApps()
@@ -811,77 +686,24 @@ Rectangle {
       if (!panel.passwordVisible || WifiController.busy) return
       if (WifiController.currentSsid === panel.pendingSsid) return
       if (WifiController.errorMessage.length > 0) passwordField.selectAll()
-      passwordFocusTimer.restart()
+      Qt.callLater(panel.focusPassword)
     }
   }
 
-  Timer {
-    id: passwordFocusTimer
-    interval: 100
-    onTriggered: if (panel.passwordVisible) passwordField.forceActiveFocus()
+  // Called through Qt.callLater: the field is not focusable until the overlay
+  // that just turned visible (and the input's enabled binding) has settled.
+  function focusPassword(): void {
+    if (panel.passwordVisible) passwordField.forceActiveFocus()
   }
 
-  Timer {
-    id: btFocusTimer
-    interval: 60
-    onTriggered: {
-      if (BluetoothPairingAgent.requestActive && BluetoothPairingAgent.requestRequiresInput)
-        btSecretField.forceActiveFocus()
-    }
+  function focusBtSecret(): void {
+    if (BluetoothPairingAgent.requestActive && BluetoothPairingAgent.requestRequiresInput)
+      btSecretField.forceActiveFocus()
   }
 
   // Keeps every node the audio pages can list live (descriptions, volumes).
   PwObjectTracker {
     objects: panel.trackedNodes
-  }
-
-  Process {
-    id: networkDevices
-    command: ["nmcli", "-t", "-f", "DEVICE,TYPE,STATE,CONNECTION", "device", "status"]
-    environment: ({ LC_ALL: "C" })
-    stdout: StdioCollector { id: networkDevicesOut; waitForEnd: true }
-    stderr: StdioCollector { id: networkDevicesErr; waitForEnd: true }
-
-    onExited: (code, status) => {
-      networkTimeout.stop()
-      if (code !== 0) {
-        panel.networkError = networkDevicesErr.text.trim() || ("nmcli exited with " + code)
-        panel.networkBusy = false
-        return
-      }
-      panel.parseNetworkDevices(networkDevicesOut.text)
-      networkConnections.running = true
-      networkTimeout.restart()
-    }
-  }
-
-  Process {
-    id: networkConnections
-    command: ["nmcli", "-t", "-f", "NAME,TYPE,DEVICE", "connection", "show"]
-    environment: ({ LC_ALL: "C" })
-    stdout: StdioCollector { id: networkConnectionsOut; waitForEnd: true }
-    stderr: StdioCollector { id: networkConnectionsErr; waitForEnd: true }
-
-    onExited: (code, status) => {
-      networkTimeout.stop()
-      if (code !== 0)
-        panel.networkError = networkConnectionsErr.text.trim() || ("nmcli exited with " + code)
-      else
-        panel.parseNetworkConnections(networkConnectionsOut.text)
-      panel.networkBusy = false
-    }
-  }
-
-  Process {
-    id: networkAction
-    environment: ({ LC_ALL: "C" })
-    stderr: StdioCollector { id: networkActionErr; waitForEnd: true }
-
-    onExited: (code, status) => {
-      if (code !== 0)
-        panel.networkError = networkActionErr.text.trim() || ("nmcli exited with " + code)
-      panel.refreshNetwork()
-    }
   }
 
   // `gio mime <type>` — one query at a time, LC_ALL=C so the output parses the
@@ -953,14 +775,14 @@ Rectangle {
       activate: () => panel.pageRequested("bluetooth"),
       toggle: () => BluetoothController.setEnabled(!BluetoothController.enabled) },
     { icon: "\uf0e8", label: "Ethernet",
-      value: () => panel.ethernetLabel(),
-      on: () => panel.ethernetActive(),
-      toggle: () => panel.toggleEthernet() },
+      value: () => wired.ethernetLabel(),
+      on: () => wired.ethernetActive(),
+      toggle: () => wired.toggleEthernet() },
     { icon: "\uf023", label: "VPN",
-      value: () => panel.vpnLabel(),
-      on: () => panel.activeVpn() !== null,
-      toggle: () => panel.toggleVpn(),
-      cycle: () => panel.cycleVpn() },
+      value: () => wired.vpnLabel(),
+      on: () => wired.activeVpn() !== null,
+      toggle: () => wired.toggleVpn(),
+      cycle: () => wired.cycleVpn() },
 
     { section: "Audio" },
     { icon: "\uf028", label: "Output device",
@@ -1115,7 +937,7 @@ Rectangle {
             anchors.bottomMargin: 1
             text: entry.isSection ? entry.row.section.toUpperCase() : ""
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
             font.letterSpacing: 1.5
           }
 
@@ -1124,7 +946,7 @@ Rectangle {
 
             visible: !entry.isSection
             anchors.fill: parent
-            radius: 10
+            radius: Theme.radiusLg
             color: entry.isSelected || rowHover.hovered ? Theme.bg5 : "transparent"
             border.width: entry.isSelected ? 1 : 0
             border.color: Theme.accent
@@ -1148,14 +970,14 @@ Rectangle {
               Text {
                 text: entry.isSection || entry.row.icon === undefined ? "" : entry.row.icon
                 color: entry.isSelected ? Theme.accent : Theme.fg4
-                font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
               }
 
               Text {
                 Layout.fillWidth: true
                 text: entry.isSection || entry.row.label === undefined ? "" : entry.row.label
                 color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 10; weight: entry.isSelected ? 600 : 500 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: entry.isSelected ? 600 : 500 }
                 elide: Text.ElideRight
               }
 
@@ -1172,7 +994,7 @@ Rectangle {
                   anchors.fill: parent
                   text: entry.rowValue
                   color: Theme.fg4
-                  font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
                   horizontalAlignment: Text.AlignRight
                   verticalAlignment: Text.AlignVCenter
                   elide: Text.ElideRight
@@ -1198,7 +1020,7 @@ Rectangle {
 
                 Rectangle {
                   anchors.fill: parent
-                  radius: 8
+                  radius: Theme.radiusMd
                   color: entry.switchOn ? Theme.accent : Theme.chipBg
 
                   Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -1208,7 +1030,7 @@ Rectangle {
                     height: 12
                     y: 2
                     x: entry.switchOn ? 14 : 2
-                    radius: 6
+                    radius: Theme.radiusSm
                     color: entry.switchOn ? Theme.bg : Theme.fg4
 
                     Behavior on x {
@@ -1234,7 +1056,7 @@ Rectangle {
                 text: "›"
                 color: Theme.fg4
                 horizontalAlignment: Text.AlignRight
-                font { family: Theme.fontFamily; pixelSize: 14 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontLg }
               }
             }
           }
@@ -1256,7 +1078,7 @@ Rectangle {
 
       Layout.fillWidth: true
       Layout.preferredHeight: 32
-      radius: 10
+      radius: Theme.radiusLg
       color: panel.selectedIndex === 0 || backHover.hovered ? Theme.bg5 : "transparent"
       border.width: panel.selectedIndex === 0 ? 1 : 0
       border.color: Theme.accent
@@ -1283,21 +1105,21 @@ Rectangle {
         Text {
           text: "‹"
           color: panel.selectedIndex === 0 ? Theme.accent : Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 14 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontLg }
         }
 
         Text {
           Layout.fillWidth: true
           text: "Back"
           color: Theme.fg
-          font { family: Theme.fontFamily; pixelSize: 10; weight: panel.selectedIndex === 0 ? 600 : 500 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: panel.selectedIndex === 0 ? 600 : 500 }
         }
 
         Text {
           visible: panel.pageTitle().length > 0
           text: panel.pageTitle()
           color: Theme.fg5
-          font { family: Theme.fontFamily; pixelSize: 8 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         }
       }
     }
@@ -1317,7 +1139,7 @@ Rectangle {
           id: nlEnable
           Layout.fillWidth: true
           Layout.preferredHeight: 36
-          radius: 10
+          radius: Theme.radiusLg
           color: panel.selectedIndex === 1 || nlEnableHover.hovered ? Theme.bg5 : "transparent"
           border.width: panel.selectedIndex === 1 ? 1 : 0
           border.color: Theme.accent
@@ -1343,20 +1165,20 @@ Rectangle {
             Text {
               text: "\uf186"
               color: panel.selectedIndex === 1 ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 12 }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
             }
 
             Text {
               Layout.fillWidth: true
               text: "Night light"
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
             }
 
             Rectangle {
               Layout.preferredWidth: 28
               Layout.preferredHeight: 16
-              radius: 8
+              radius: Theme.radiusMd
               color: NightLightController.enabled ? Theme.accent : Theme.chipBg
               Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -1365,7 +1187,7 @@ Rectangle {
                 height: 12
                 y: 2
                 x: NightLightController.enabled ? 14 : 2
-                radius: 6
+                radius: Theme.radiusSm
                 color: NightLightController.enabled ? Theme.bg : Theme.fg4
                 Behavior on x { NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut } }
                 Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -1391,7 +1213,7 @@ Rectangle {
 
             Rectangle {
               anchors.fill: parent
-              radius: 10
+              radius: Theme.radiusLg
               color: panel.selectedIndex === 2 + index ? Theme.bg5 : "transparent"
               Behavior on color { ColorAnimation { duration: Theme.motionFast } }
             }
@@ -1410,7 +1232,7 @@ Rectangle {
                 Text {
                   text: spec.label
                   color: Theme.fg
-                  font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                 }
 
                 Text {
@@ -1420,7 +1242,7 @@ Rectangle {
                         : sliderRow.dragValue.toFixed(2)
                   color: Theme.fg4
                   horizontalAlignment: Text.AlignRight
-                  font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                 }
               }
 
@@ -1428,7 +1250,7 @@ Rectangle {
                 id: sliderTrack
                 Layout.fillWidth: true
                 Layout.preferredHeight: 6
-                radius: 3
+                radius: Theme.radiusXs
                 color: Theme.bgD
                 border.width: 1
                 border.color: Theme.cardBorder
@@ -1436,14 +1258,14 @@ Rectangle {
                 Rectangle {
                   width: sliderTrack.width * (sliderRow.dragValue - spec.from) / (spec.to - spec.from)
                   height: parent.height
-                  radius: 3
+                  radius: Theme.radiusXs
                   color: Theme.accent
                 }
 
                 Rectangle {
                   width: 12
                   height: 12
-                  radius: 6
+                  radius: Theme.radiusSm
                   x: Math.max(0, Math.min(sliderTrack.width - width,
                        sliderTrack.width * (sliderRow.dragValue - spec.from) / (spec.to - spec.from) - width / 2))
                   anchors.verticalCenter: parent.verticalCenter
@@ -1497,7 +1319,7 @@ Rectangle {
 
           Layout.fillWidth: true
           Layout.preferredHeight: 32
-          radius: 10
+          radius: Theme.radiusLg
           color: panel.selectedIndex === 1 || wifiHeaderHover.hovered ? Theme.bg5 : "transparent"
           border.width: panel.selectedIndex === 1 ? 1 : 0
           border.color: Theme.accent
@@ -1524,14 +1346,14 @@ Rectangle {
             Text {
               text: "\uf1eb"
               color: panel.selectedIndex === 1 ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 12 }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
             }
 
             Text {
               Layout.fillWidth: true
               text: "Wi-fi"
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10; weight: panel.selectedIndex === 1 ? 600 : 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: panel.selectedIndex === 1 ? 600 : 500 }
             }
 
             Text {
@@ -1540,7 +1362,7 @@ Rectangle {
                        : (WifiController.statusText.length > 0 ? WifiController.statusText : "Disconnected"))
                     : "Off"
               color: Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
               elide: Text.ElideRight
               Layout.maximumWidth: 140
             }
@@ -1551,7 +1373,7 @@ Rectangle {
 
               Rectangle {
                 anchors.fill: parent
-                radius: 8
+                radius: Theme.radiusMd
                 color: WifiController.enabled ? Theme.accent : Theme.chipBg
 
                 Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -1561,7 +1383,7 @@ Rectangle {
                   height: 12
                   y: 2
                   x: WifiController.enabled ? 14 : 2
-                  radius: 6
+                  radius: Theme.radiusSm
                   color: WifiController.enabled ? Theme.bg : Theme.fg4
 
                   Behavior on x { NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut } }
@@ -1588,7 +1410,7 @@ Rectangle {
           Layout.preferredHeight: 16
           text: "Turn on Wi-fi to see networks"
           color: Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           elide: Text.ElideRight
         }
 
@@ -1600,7 +1422,7 @@ Rectangle {
 
           Layout.fillWidth: true
           Layout.preferredHeight: 32
-          radius: 10
+          radius: Theme.radiusLg
           opacity: wifiScanRow.rowEnabled ? 1 : 0.45
           color: wifiScanRow.rowEnabled
                  && (panel.selectedIndex === 2 || wifiScanHover.hovered) ? Theme.bg5 : "transparent"
@@ -1630,21 +1452,21 @@ Rectangle {
             Text {
               text: "\uf021"
               color: panel.selectedIndex === 2 ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 12 }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
             }
 
             Text {
               Layout.fillWidth: true
               text: "Scan"
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10; weight: panel.selectedIndex === 2 ? 600 : 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: panel.selectedIndex === 2 ? 600 : 500 }
             }
 
             Text {
               visible: WifiController.scanning
               text: "Scanning…"
               color: Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
             }
           }
         }
@@ -1682,7 +1504,7 @@ Rectangle {
 
                 width: wifiColumn.width
                 height: 32
-                radius: 10
+                radius: Theme.radiusLg
                 opacity: wifiNetRow.rowEnabled ? 1 : 0.45
                 color: wifiNetRow.rowEnabled && (wifiNetRow.isSelected || wifiNetHover.hovered)
                        ? Theme.bg5 : "transparent"
@@ -1717,14 +1539,14 @@ Rectangle {
                   Text {
                     text: secure ? "\uf023" : "\uf09c"
                     color: connected || wifiNetRow.isSelected ? Theme.accent : Theme.fg4
-                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
                   }
 
                   Text {
                     Layout.fillWidth: true
                     text: displayName || ssid
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: connected ? 600 : 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: connected ? 600 : 500 }
                     elide: Text.ElideRight
                   }
 
@@ -1733,7 +1555,7 @@ Rectangle {
                           : savedConnection ? "Saved"
                           : (signal >= 0 ? signal + "%" : "")
                     color: connected ? Theme.accent : Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                   }
                 }
               }
@@ -1752,7 +1574,7 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             text: WifiController.scanning ? "Scanning…" : "No networks found"
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 10 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           }
         }
 
@@ -1762,7 +1584,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: WifiController.errorMessage
           color: Theme.deleting
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
         }
       }
@@ -1779,7 +1601,7 @@ Rectangle {
 
           Layout.fillWidth: true
           Layout.preferredHeight: 32
-          radius: 10
+          radius: Theme.radiusLg
           color: panel.selectedIndex === 1 || btHeaderHover.hovered ? Theme.bg5 : "transparent"
           border.width: panel.selectedIndex === 1 ? 1 : 0
           border.color: Theme.accent
@@ -1806,14 +1628,14 @@ Rectangle {
             Text {
               text: "\uf294"
               color: panel.selectedIndex === 1 ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 12 }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
             }
 
             Text {
               Layout.fillWidth: true
               text: "Bluetooth"
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10; weight: panel.selectedIndex === 1 ? 600 : 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: panel.selectedIndex === 1 ? 600 : 500 }
             }
 
             Text {
@@ -1822,7 +1644,7 @@ Rectangle {
                        : (BluetoothController.statusText.length > 0 ? BluetoothController.statusText : "Disconnected"))
                     : "Off"
               color: Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
               elide: Text.ElideRight
               Layout.maximumWidth: 140
             }
@@ -1833,7 +1655,7 @@ Rectangle {
 
               Rectangle {
                 anchors.fill: parent
-                radius: 8
+                radius: Theme.radiusMd
                 color: BluetoothController.enabled ? Theme.accent : Theme.chipBg
 
                 Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -1843,7 +1665,7 @@ Rectangle {
                   height: 12
                   y: 2
                   x: BluetoothController.enabled ? 14 : 2
-                  radius: 6
+                  radius: Theme.radiusSm
                   color: BluetoothController.enabled ? Theme.bg : Theme.fg4
 
                   Behavior on x { NumberAnimation { duration: Theme.motionFast; easing.type: Theme.easeOut } }
@@ -1869,7 +1691,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: "Visible as “" + BluetoothController.adapterName + "”"
           color: Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           elide: Text.ElideRight
         }
 
@@ -1879,7 +1701,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: "Turn on Bluetooth to see devices"
           color: Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           elide: Text.ElideRight
         }
 
@@ -1891,7 +1713,7 @@ Rectangle {
 
           Layout.fillWidth: true
           Layout.preferredHeight: 32
-          radius: 10
+          radius: Theme.radiusLg
           opacity: btScanRow.rowEnabled ? 1 : 0.45
           color: btScanRow.rowEnabled
                  && (panel.selectedIndex === 2 || btScanHover.hovered) ? Theme.bg5 : "transparent"
@@ -1921,21 +1743,21 @@ Rectangle {
             Text {
               text: "\uf021"
               color: panel.selectedIndex === 2 ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 12 }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
             }
 
             Text {
               Layout.fillWidth: true
               text: "Scan"
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 10; weight: panel.selectedIndex === 2 ? 600 : 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: panel.selectedIndex === 2 ? 600 : 500 }
             }
 
             Text {
               visible: BluetoothController.scanning
               text: "Scanning…"
               color: Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
             }
           }
         }
@@ -1946,7 +1768,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: "Right-click a paired device to forget it"
           color: Theme.fg5
-          font { family: Theme.fontFamily; pixelSize: 8 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           elide: Text.ElideRight
         }
 
@@ -1983,7 +1805,7 @@ Rectangle {
 
                 width: btColumn.width
                 height: 32
-                radius: 10
+                radius: Theme.radiusLg
                 opacity: btDevRow.rowEnabled ? 1 : 0.45
                 color: btDevRow.rowEnabled && (btDevRow.isSelected || btDevHover.hovered)
                        ? Theme.bg5 : "transparent"
@@ -2026,14 +1848,14 @@ Rectangle {
                   Text {
                     text: connected ? "\uf5b0" : paired ? "\uf0c1" : "\uf294"
                     color: connected || btDevRow.isSelected ? Theme.accent : Theme.fg4
-                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
                   }
 
                   Text {
                     Layout.fillWidth: true
                     text: name
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: connected ? 600 : 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: connected ? 600 : 500 }
                     elide: Text.ElideRight
                   }
 
@@ -2042,7 +1864,7 @@ Rectangle {
                           : paired ? ("Paired" + (battery >= 0 ? " • " + battery + "%" : ""))
                           : "Not paired"
                     color: connected ? Theme.accent : Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                   }
                 }
               }
@@ -2061,7 +1883,7 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             text: BluetoothController.scanning ? "Scanning…" : "No devices found"
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 10 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           }
         }
 
@@ -2071,7 +1893,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: BluetoothController.errorMessage
           color: Theme.deleting
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
         }
       }
@@ -2122,7 +1944,7 @@ Rectangle {
 
                 width: audioColumn.width
                 height: 32
-                radius: 10
+                radius: Theme.radiusLg
                 color: audioRow.isSelected || audioHover.hovered ? Theme.bg5 : "transparent"
                 border.width: audioRow.isSelected ? 1 : 0
                 border.color: Theme.accent
@@ -2151,21 +1973,21 @@ Rectangle {
                   Text {
                     text: modelData.isSink ? "\uf028" : "\uf130"
                     color: audioRow.isDefault || audioRow.isSelected ? Theme.accent : Theme.fg4
-                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
                   }
 
                   Text {
                     Layout.fillWidth: true
                     text: panel.audioLabel(modelData)
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: audioRow.isDefault ? 600 : 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: audioRow.isDefault ? 600 : 500 }
                     elide: Text.ElideRight
                   }
 
                   Text {
                     text: audioRow.isDefault ? "Default" : panel.audioVolume(modelData)
                     color: audioRow.isDefault ? Theme.accent : Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                   }
                 }
               }
@@ -2184,7 +2006,7 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             text: panel.page === "audioin" ? "No input devices found" : "No output devices found"
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 10 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           }
         }
 
@@ -2194,7 +2016,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: panel.audioError
           color: Theme.deleting
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
         }
       }
@@ -2212,7 +2034,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: "Click a row to mute; use -/+ or Left/Right for volume."
           color: Theme.fg5
-          font { family: Theme.fontFamily; pixelSize: 8 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           elide: Text.ElideRight
         }
 
@@ -2245,7 +2067,7 @@ Rectangle {
 
                 width: streamsColumn.width
                 height: 34
-                radius: 10
+                radius: Theme.radiusLg
                 color: streamRow.isSelected || streamHover.hovered ? Theme.bg5 : "transparent"
                 border.width: streamRow.isSelected ? 1 : 0
                 border.color: Theme.accent
@@ -2275,28 +2097,28 @@ Rectangle {
                   Text {
                     text: modelData.audio.muted ? "\uf026" : "\uf001"
                     color: streamRow.isSelected ? Theme.accent : Theme.fg4
-                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
                   }
 
                   Text {
                     Layout.fillWidth: true
                     text: panel.streamLabel(modelData)
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                     elide: Text.ElideRight
                   }
 
                   Rectangle {
                     Layout.preferredWidth: 20
                     Layout.preferredHeight: 20
-                    radius: 6
+                    radius: Theme.radiusSm
                     color: minusHover.hovered ? Theme.chipBgHover : Theme.chipBg
 
                     Text {
                       anchors.centerIn: parent
                       text: "-"
                       color: Theme.fg4
-                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                      font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
                     }
 
                     HoverHandler { id: minusHover }
@@ -2313,14 +2135,14 @@ Rectangle {
                   Rectangle {
                     Layout.preferredWidth: 20
                     Layout.preferredHeight: 20
-                    radius: 6
+                    radius: Theme.radiusSm
                     color: plusHover.hovered ? Theme.chipBgHover : Theme.chipBg
 
                     Text {
                       anchors.centerIn: parent
                       text: "+"
                       color: Theme.fg4
-                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                      font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
                     }
 
                     HoverHandler { id: plusHover }
@@ -2339,7 +2161,7 @@ Rectangle {
                     text: panel.audioVolume(modelData)
                     color: streamRow.isSelected ? Theme.accent : Theme.fg4
                     horizontalAlignment: Text.AlignRight
-                    font { family: Theme.fontFamily; pixelSize: 9 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                   }
                 }
               }
@@ -2356,7 +2178,7 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             text: "No application streams"
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 10 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           }
         }
       }
@@ -2402,7 +2224,7 @@ Rectangle {
 
                 width: appsColumn.width
                 height: 32
-                radius: 10
+                radius: Theme.radiusLg
                 opacity: appRow.rowEnabled ? 1 : 0.45
                 color: appRow.rowEnabled && (appRow.isSelected || appHover.hovered)
                        ? Theme.bg5 : "transparent"
@@ -2435,14 +2257,14 @@ Rectangle {
                   Text {
                     text: modelData.icon
                     color: appRow.isSelected ? Theme.accent : Theme.fg4
-                    font { family: Theme.nerdFontFamily; pixelSize: 12 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
                   }
 
                   Text {
                     Layout.fillWidth: true
                     text: modelData.label
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                     elide: Text.ElideRight
                   }
 
@@ -2450,7 +2272,7 @@ Rectangle {
                     Layout.maximumWidth: 190
                     text: panel.appValue(modelData)
                     color: Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                     elide: Text.ElideMiddle
                   }
                 }
@@ -2465,7 +2287,7 @@ Rectangle {
           Layout.leftMargin: 10
           text: panel.appsError
           color: Theme.deleting
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
         }
       }
@@ -2479,13 +2301,13 @@ Rectangle {
     visible: panel.passwordVisible
     anchors.fill: parent
     color: Theme.bg1
-    radius: 22
+    radius: Theme.radiusPanel
     z: 10
 
     onVisibleChanged: {
       if (visible) {
         passwordField.text = ""
-        passwordFocusTimer.restart()
+        Qt.callLater(panel.focusPassword)
       }
     }
 
@@ -2499,8 +2321,8 @@ Rectangle {
       Text {
         Layout.fillWidth: true
         text: "Password for " + panel.passwordSsid
-        color: Theme.fg2
-        font { family: Theme.fontFamily; pixelSize: 13; weight: 600 }
+        color: Theme.fg
+        font { family: Theme.fontFamily; pixelSize: Theme.fontLg; weight: 600 }
         wrapMode: Text.Wrap
       }
 
@@ -2511,7 +2333,7 @@ Rectangle {
         Layout.fillWidth: true
         text: "Connecting…"
         color: Theme.fg4
-        font { family: Theme.fontFamily; pixelSize: 10 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
       }
 
       Text {
@@ -2519,14 +2341,14 @@ Rectangle {
         Layout.fillWidth: true
         text: WifiController.errorMessage
         color: Theme.deleting
-        font { family: Theme.fontFamily; pixelSize: 10 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         wrapMode: Text.Wrap
       }
 
       Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 36
-        radius: 8
+        radius: Theme.radiusMd
         color: Theme.bg4
         border.color: passwordField.activeFocus ? Theme.accent : Theme.borderBg1
         border.width: passwordField.activeFocus ? 2 : 1
@@ -2540,7 +2362,7 @@ Rectangle {
           leftPadding: 12
           rightPadding: 38
           color: Theme.fg
-          font { family: Theme.fontFamily; pixelSize: 12 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontMd }
           echoMode: panel.showPassword ? TextInput.Normal : TextInput.Password
           verticalAlignment: TextInput.AlignVCenter
           selectByMouse: true
@@ -2570,18 +2392,20 @@ Rectangle {
           anchors.verticalCenter: parent.verticalCenter
           width: 26
           height: 26
-          radius: 6
+          radius: Theme.radiusSm
           color: eyeMA.containsMouse ? Theme.bg5 : "transparent"
 
           Text {
             anchors.centerIn: parent
             text: eyeBtn.showPassword ? "󰈈" : "󰈉"
             color: eyeBtn.showPassword ? Theme.accent : Theme.fg3
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
 
           MouseArea {
             id: eyeMA
+            Accessible.role: Accessible.Button
+            Accessible.name: panel.showPassword ? "Hide password" : "Show password"
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
@@ -2596,15 +2420,15 @@ Rectangle {
         Rectangle {
           Layout.preferredWidth: 80
           Layout.preferredHeight: 30
-          radius: 9
+          radius: Theme.radiusMd
           opacity: joinMA.enabled ? 1 : 0.5
           color: joinMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
 
           Text {
             anchors.centerIn: parent
             text: "Join"
-            color: Theme.fgL
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm }
           }
 
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -2622,14 +2446,14 @@ Rectangle {
         Rectangle {
           Layout.preferredWidth: 80
           Layout.preferredHeight: 30
-          radius: 9
+          radius: Theme.radiusMd
           color: cancelMA.containsMouse ? Theme.focusBg1 : Theme.bg5
 
           Text {
             anchors.centerIn: parent
             text: "Cancel"
-            color: Theme.fg1
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm }
           }
 
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -2655,7 +2479,7 @@ Rectangle {
     visible: panel.page === "bluetooth" && BluetoothPairingAgent.requestActive
     anchors.fill: parent
     color: Theme.bg1
-    radius: 22
+    radius: Theme.radiusPanel
     z: 10
     focus: true
 
@@ -2667,7 +2491,7 @@ Rectangle {
       if (!visible) return
       btSecretField.text = ""
       panel.pairingError = ""
-      if (BluetoothPairingAgent.requestRequiresInput) btFocusTimer.restart()
+      if (BluetoothPairingAgent.requestRequiresInput) Qt.callLater(panel.focusBtSecret)
       else btPairOverlay.forceActiveFocus()
     }
 
@@ -2683,8 +2507,8 @@ Rectangle {
         text: BluetoothPairingAgent.promptTitle.length > 0
               ? BluetoothPairingAgent.promptTitle
               : ("Pair with " + BluetoothPairingAgent.deviceName)
-        color: Theme.fg2
-        font { family: Theme.fontFamily; pixelSize: 13; weight: 600 }
+        color: Theme.fg
+        font { family: Theme.fontFamily; pixelSize: Theme.fontLg; weight: 600 }
         wrapMode: Text.Wrap
       }
 
@@ -2693,7 +2517,7 @@ Rectangle {
         Layout.fillWidth: true
         text: BluetoothPairingAgent.promptMessage
         color: Theme.fg4
-        font { family: Theme.fontFamily; pixelSize: 10 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         wrapMode: Text.Wrap
       }
 
@@ -2702,7 +2526,7 @@ Rectangle {
         visible: BluetoothPairingAgent.requestRequiresInput
         Layout.fillWidth: true
         Layout.preferredHeight: 36
-        radius: 8
+        radius: Theme.radiusMd
         color: Theme.bg4
         border.color: btSecretField.activeFocus ? Theme.accent : Theme.borderBg1
         border.width: btSecretField.activeFocus ? 2 : 1
@@ -2715,7 +2539,7 @@ Rectangle {
           leftPadding: 12
           rightPadding: 12
           color: Theme.fg
-          font { family: Theme.fontFamily; pixelSize: 12 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontMd }
           echoMode: TextInput.Normal
           verticalAlignment: TextInput.AlignVCenter
           selectByMouse: true
@@ -2747,7 +2571,7 @@ Rectangle {
         Layout.fillWidth: true
         text: panel.pairingError
         color: Theme.deleting
-        font { family: Theme.fontFamily; pixelSize: 10 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         wrapMode: Text.Wrap
       }
 
@@ -2758,8 +2582,8 @@ Rectangle {
         Layout.fillWidth: true
         horizontalAlignment: Text.AlignHCenter
         text: BluetoothPairingAgent.displayedCode
-        color: Theme.fgL
-        font { family: Theme.fontFamily; pixelSize: 22; weight: 700 }
+        color: Theme.fg
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXxl; weight: 700 }
         font.letterSpacing: 3
       }
 
@@ -2771,14 +2595,14 @@ Rectangle {
                   || BluetoothPairingAgent.requestRequiresConfirmation
           Layout.preferredWidth: 80
           Layout.preferredHeight: 30
-          radius: 9
+          radius: Theme.radiusMd
           color: pairMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
 
           Text {
             anchors.centerIn: parent
             text: BluetoothPairingAgent.requestRequiresInput ? "Pair" : "Confirm"
-            color: Theme.fgL
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm }
           }
 
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -2798,14 +2622,14 @@ Rectangle {
                    && !BluetoothPairingAgent.requestRequiresConfirmation
           Layout.preferredWidth: 80
           Layout.preferredHeight: 30
-          radius: 9
+          radius: Theme.radiusMd
           color: pairOkMA.containsMouse ? Qt.darker(Theme.accent, 1.15) : Theme.accent
 
           Text {
             anchors.centerIn: parent
             text: "OK"
-            color: Theme.fgL
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm }
           }
 
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
@@ -2824,14 +2648,14 @@ Rectangle {
                   || BluetoothPairingAgent.requestRequiresConfirmation
           Layout.preferredWidth: 80
           Layout.preferredHeight: 30
-          radius: 9
+          radius: Theme.radiusMd
           color: pairCancelMA.containsMouse ? Theme.focusBg1 : Theme.bg5
 
           Text {
             anchors.centerIn: parent
             text: BluetoothPairingAgent.requestRequiresConfirmation ? "Reject" : "Cancel"
-            color: Theme.fg1
-            font { family: Theme.fontFamily; pixelSize: 11 }
+            color: Theme.fg
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm }
           }
 
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }

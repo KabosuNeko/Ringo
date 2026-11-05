@@ -3,7 +3,7 @@ import Quickshell
 MenuStrip {
   items: [
     { icon: "󰕾", label: "System", action: () => record("only-sound") },
-    { icon: "󰍬", label: "Mic+System", action: () => record("micro") },
+    { icon: "󰍬", label: "Mic", action: () => record("micro") },
     { icon: "󰝟", label: "No Sound", action: () => record("no-sound") }
   ]
 

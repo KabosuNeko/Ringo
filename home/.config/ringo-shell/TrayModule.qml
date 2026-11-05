@@ -16,7 +16,7 @@ Rectangle {
   // instantiated inside the control center column.
   visible: true
   height: 36
-  radius: 10
+  radius: Theme.radiusLg
   color: Theme.cardBg
   border.width: 1
   border.color: Theme.cardBorder
@@ -37,15 +37,15 @@ Rectangle {
       Text {
         text: "󱊖"
         color: root.hoveredTitle !== "" ? Theme.accent : Theme.fg4
-        font { family: Theme.nerdFontFamily; pixelSize: 12 }
+        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
         Behavior on color { ColorAnimation { duration: Theme.motionBase } }
       }
 
       Text {
         text: root.hoveredTitle !== "" ? root.hoveredTitle
             : (root.itemCount > 0 ? ("Apps (" + root.itemCount + ")") : "Apps")
-        color: root.hoveredTitle !== "" ? Theme.fgL : Theme.fg4
-        font { family: Theme.fontFamily; pixelSize: 9; weight: root.hoveredTitle !== "" ? 600 : 500 }
+        color: root.hoveredTitle !== "" ? Theme.fg : Theme.fg4
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: root.hoveredTitle !== "" ? 600 : 500 }
         elide: Text.ElideRight
         Layout.fillWidth: true
         Behavior on color { ColorAnimation { duration: Theme.motionBase } }
@@ -64,7 +64,7 @@ Rectangle {
           required property var modelData
           Layout.preferredWidth: 26
           Layout.preferredHeight: 26
-          radius: 7
+          radius: Theme.radiusSm
           color: tileHover.containsMouse ? Theme.bg5 : "transparent"
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -82,7 +82,7 @@ Rectangle {
             visible: trayIconImage.status === Image.Error || !modelData.icon
             text: "󰍜"
             color: Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
 
           MouseArea {
@@ -116,7 +116,7 @@ Rectangle {
       id: settingsBtn
       Layout.preferredWidth: 26
       Layout.preferredHeight: 26
-      radius: 7
+      radius: Theme.radiusSm
       color: settingsHover.hovered ? Theme.chipBgHover : "transparent"
       Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -124,13 +124,15 @@ Rectangle {
         anchors.centerIn: parent
         text: "\uf013"
         color: settingsHover.hovered ? Theme.accent : Theme.fg4
-        font { family: Theme.nerdFontFamily; pixelSize: 13 }
+        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
         Behavior on color { ColorAnimation { duration: Theme.motionFast } }
       }
 
       HoverHandler { id: settingsHover }
 
       MouseArea {
+        Accessible.role: Accessible.Button
+        Accessible.name: "Open settings"
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: root.settingsRequested("main")

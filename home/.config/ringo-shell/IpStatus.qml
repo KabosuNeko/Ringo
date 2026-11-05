@@ -15,21 +15,21 @@ Item {
 
             Text {
                 text: SystemMonitor.vpn ? "󰦝" : "󰩟"
-                color: SystemMonitor.vpn ? "#64d667" : Theme.accent
-                font { family: Theme.nerdFontFamily; pixelSize: 11 }
+                color: SystemMonitor.vpn ? Theme.success : Theme.accent
+                font { family: Theme.nerdFontFamily; pixelSize: Theme.fontSm }
             }
 
             Text {
                 text: SystemMonitor.ip
                 color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 10; weight: 600 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
             }
         }
 
         Text {
             text: SystemMonitor.iface + (SystemMonitor.vpn ? " · VPN" : "")
             color: Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             Layout.leftMargin: 16
         }
     }

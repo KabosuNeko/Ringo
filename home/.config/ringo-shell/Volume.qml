@@ -8,7 +8,7 @@ RowLayout {
   onVolChanged: root.volumeChanged()
   onMutedChanged: root.volumeChanged()
   property string fg: Theme.fg
-  property string mutedFg: "#fb2a2a"
+  property string mutedFg: Theme.deleting
   property var sink: Pipewire.defaultAudioSink
   readonly property bool ready: sink && sink.ready
   readonly property bool muted: ready && sink.audio.muted
@@ -36,7 +36,7 @@ RowLayout {
     }
 
     font.family: Theme.nerdFontFamily
-    font.pixelSize: 10 * Config.pillScale
+    font.pixelSize: Theme.fontXs * Config.pillScale
   }
 
   Text {
@@ -48,7 +48,7 @@ RowLayout {
     color: fg
 
     font {
-      pixelSize: 10 * Config.pillScale
+      pixelSize: Theme.fontXs * Config.pillScale
       family: Theme.fontFamily
       weight: 500
     }

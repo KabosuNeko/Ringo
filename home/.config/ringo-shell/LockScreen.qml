@@ -28,7 +28,7 @@ PanelWindow {
       Text {
         Layout.alignment: Qt.AlignHCenter
         text: Qt.formatDateTime(clock.date, "hh:mm")
-        color: Theme.fgL
+        color: Theme.fg
         font.family: Theme.fontFamily
         font.pixelSize: 72
         font.weight: Font.Light
@@ -40,7 +40,7 @@ PanelWindow {
         text: Qt.formatDateTime(clock.date, "dddd, d MMMM yyyy")
         color: Theme.fg5
         font.family: Theme.fontFamily
-        font.pixelSize: 16
+        font.pixelSize: Theme.fontXl
       }
 
       TextField {
@@ -56,11 +56,11 @@ PanelWindow {
         color: Theme.fg
         placeholderTextColor: Theme.fg5
         font.family: Theme.fontFamily
-        font.pixelSize: 16
+        font.pixelSize: Theme.fontXl
         horizontalAlignment: TextInput.AlignHCenter
         transform: Translate { id: shakeOffset }
         background: Rectangle {
-          radius: 12
+          radius: Theme.radiusLg
           color: Theme.bg2
           border.width: passField.activeFocus ? 1 : 0
           border.color: Theme.accent
@@ -82,7 +82,7 @@ PanelWindow {
         text: "Incorrect password"
         color: Theme.deleting
         font.family: Theme.fontFamily
-        font.pixelSize: 13
+        font.pixelSize: Theme.fontLg
       }
 
 
@@ -95,7 +95,7 @@ PanelWindow {
         Rectangle {
           implicitWidth: 110
           implicitHeight: 32
-          radius: 8
+          radius: Theme.radiusMd
           color: shutdownHover.containsMouse ? Theme.bg5 : Theme.bg2
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           border.width: 1
@@ -108,13 +108,13 @@ PanelWindow {
               text: "󰐥" // same as PowerMenu shutdown
               color: Theme.fg
               font.family: Theme.nerdFontFamily
-              font.pixelSize: 12
+              font.pixelSize: Theme.fontMd
             }
             Text {
               text: "Shutdown"
               color: Theme.fg
               font.family: Theme.fontFamily
-              font.pixelSize: 12
+              font.pixelSize: Theme.fontMd
             }
           }
 
@@ -130,7 +130,7 @@ PanelWindow {
         Rectangle {
           implicitWidth: 110
           implicitHeight: 32
-          radius: 8
+          radius: Theme.radiusMd
           color: rebootHover.containsMouse ? Theme.bg5 : Theme.bg2
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
           border.width: 1
@@ -143,13 +143,13 @@ PanelWindow {
               text: "󰜉" // same as PowerMenu reboot
               color: Theme.fg
               font.family: Theme.nerdFontFamily
-              font.pixelSize: 12
+              font.pixelSize: Theme.fontMd
             }
             Text {
               text: "Restart"
               color: Theme.fg
               font.family: Theme.fontFamily
-              font.pixelSize: 12
+              font.pixelSize: Theme.fontMd
             }
           }
 

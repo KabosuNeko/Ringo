@@ -9,7 +9,7 @@ Item {
   implicitHeight: row.implicitHeight
 
   property string weatherFg: Theme.fg4
-  property int fontSize: 10 * Config.pillScale
+  property int fontSize: Theme.fontXs * Config.pillScale
   property bool clickable: true
   property bool showUnit: true
 

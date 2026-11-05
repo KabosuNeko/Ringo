@@ -49,14 +49,13 @@ Singleton {
     watchChanges: true
     atomicWrites: true
     blockLoading: true
-    // A reload keeps `loaded` true and therefore does not emit onLoaded again.
-    // Reload explicitly, then apply from a short timer so text() is fresh.
-    onFileChanged: {
-      configFile.reload()
-      reloadApply.restart()
-    }
-    onLoaded: Qt.callLater(root.finishLoad)
-    onSaved: reloadApply.restart()
+    // onLoaded fires once and can precede the text; textChanged covers the
+    // initial read and every reload. Our own setText() also emits it, so skip
+    // that one and let onSaved finish the write.
+    onFileChanged: configFile.reload()
+    onTextChanged: if (!root.configWriting) root.finishLoad()
+    onLoaded: root.finishLoad()
+    onSaved: root.finishLoad()
     onSaveFailed: error => {
       root.configWriting = false
       root.pendingValues = root.mergeValues(root.writingValues, root.pendingValues)
@@ -64,30 +63,6 @@ Singleton {
       root.configError = "Could not save config: " + error
       console.warn(root.configError)
     }
-  }
-
-  // FileView can report onLoaded before its text is populated (especially
-  // with blockLoading), and it does not emit onLoaded again for every reload.
-  // Finish the initial parse from the loaded text once it is actually there.
-  Timer {
-    interval: 50
-    repeat: true
-    running: true
-    property int attempts: 0
-    onTriggered: {
-      if (configFile.text().length > 0) {
-        root.finishLoad()
-        stop()
-      } else if (++attempts > 40) {
-        stop()
-      }
-    }
-  }
-
-  Timer {
-    id: reloadApply
-    interval: 80
-    onTriggered: root.finishLoad()
   }
 
   // Writes are serialized: a second row edit made while the first save is in
@@ -334,9 +309,12 @@ Singleton {
     for (const key in changes) {
       const serialized = typeof changes[key] === "string"
                        ? JSON.stringify(changes[key]) : String(changes[key])
-      const pattern = new RegExp('("' + key + '"\\s*:\\s*)[^,\\n}]+')
+      // Only a key that starts a line (never one inside a comment); a string
+      // value may hold commas. Every duplicate is rewritten: JSON.parse keeps the last.
+      const pattern = new RegExp('^(\\s*"' + key + '"\\s*:\\s*)("(?:[^"\\\\\\n]|\\\\.)*"|[^,\\n}]+)', "gm")
       if (pattern.test(next)) {
-        next = next.replace(pattern, "$1" + serialized)
+        pattern.lastIndex = 0
+        next = next.replace(pattern, (match, head) => head + serialized)
         continue
       }
       const close = next.lastIndexOf("}")

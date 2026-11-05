@@ -27,7 +27,7 @@ Item {
     Text {
       text: String.fromCodePoint(0xf0f3)
       color: Theme.fg
-      font { family: Theme.nerdFontFamily; pixelSize: 15 }
+      font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXl }
       visible: notifIcon.status !== Image.Ready
     }
 
@@ -57,7 +57,7 @@ Item {
         text: root.notif ? root.notif.summary : ""
         textFormat: Text.PlainText
         color: Theme.fg
-        font { family: Theme.fontFamily; pixelSize: 10; weight: 700 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 700 }
         elide: Text.ElideRight
         Layout.maximumWidth: 220
       }
@@ -69,8 +69,8 @@ Item {
         ) : ""
         textFormat: Text.StyledText
         linkColor: Theme.accent
-        color: "#9b9b9b"
-        font { family: Theme.fontFamily; pixelSize: 9 }
+        color: Theme.fg4
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         elide: Text.ElideRight
         Layout.maximumWidth: 220
         visible: text !== ""
@@ -92,7 +92,7 @@ Item {
           Rectangle {
             implicitHeight: 20
             implicitWidth: actionText.implicitWidth + 12
-            radius: 6
+            radius: Theme.radiusSm
             color: actionHover.containsMouse ? Theme.chipBgHover : Theme.chipBg
             border.width: 1
             border.color: Theme.chipBorder
@@ -102,7 +102,7 @@ Item {
               anchors.centerIn: parent
               text: modelData.text
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
             }
 
             MouseArea {
@@ -124,7 +124,7 @@ Item {
       Layout.preferredWidth: 22
       Layout.preferredHeight: 22
       Layout.alignment: Qt.AlignVCenter
-      radius: 99
+      radius: height / 2
       color: toastHover.containsMouse ? Theme.focusBgL : "transparent"
       Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -133,12 +133,14 @@ Item {
         text: "\uf00d"
         color: toastHover.containsMouse ? Theme.focusFg1 : Theme.fg5
         anchors.centerIn: parent
-        font { family: Theme.nerdFontFamily; pixelSize: 11 }
+        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontSm }
         Behavior on color { ColorAnimation { duration: Theme.motionBase } }
       }
 
       MouseArea {
         id: toastHover
+        Accessible.role: Accessible.Button
+        Accessible.name: "Dismiss notification"
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor

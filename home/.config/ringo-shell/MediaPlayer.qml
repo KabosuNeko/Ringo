@@ -7,7 +7,7 @@ Rectangle {
     id: mediaCard
     Layout.fillWidth: true
     implicitHeight: MprisController.hasPlayer ? 116 : 0
-    radius: 10
+    radius: Theme.radiusLg
     color: Theme.cardBg
     visible: MprisController.hasPlayer
     clip: true
@@ -43,14 +43,14 @@ Rectangle {
                     anchors.centerIn: parent
                     width: parent.width + 4
                     height: parent.height + 4
-                    radius: 14
+                    radius: Theme.radiusXl
                     color: Theme.accentSoft
                     opacity: 0.6
                 }
 
                 ClippingRectangle {
                     anchors.fill: parent
-                    radius: 12
+                    radius: Theme.radiusLg
                     color: Theme.bgD
                     border.width: 1
                     border.color: Theme.cardBorder
@@ -73,7 +73,7 @@ Rectangle {
                         visible: MprisController.artUrl === "" || artImg.status === Image.Error || artImg.status === Image.Null
                         text: "\uf001"
                         font.family: Theme.nerdFontFamily
-                        font.pixelSize: 20
+                        font.pixelSize: Theme.fontXxl
                         color: Theme.accent
                     }
                 }
@@ -90,13 +90,13 @@ Rectangle {
                     Text {
                         text: MprisController.track !== "" ? MprisController.track : "Nothing playing"
                         color: Theme.fg
-                        font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fontMd; weight: 700 }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
 
                     Rectangle {
-                        radius: 4
+                        radius: Theme.radiusXs
                         color: Theme.chipBg
                         implicitHeight: 16
                         implicitWidth: tagText.implicitWidth + 8
@@ -107,7 +107,7 @@ Rectangle {
                             anchors.centerIn: parent
                             text: "PLAYING"
                             color: Theme.accent
-                            font { family: Theme.fontFamily; pixelSize: 8; weight: 700 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 700 }
                         }
                     }
                 }
@@ -115,7 +115,7 @@ Rectangle {
                 Text {
                     text: MprisController.artist !== "" ? MprisController.artist : "Unknown Artist"
                     color: Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                     elide: Text.ElideRight
                     Layout.fillWidth: true
                 }
@@ -128,11 +128,13 @@ Rectangle {
                 Text {
                     text: "⏮"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fontXl
                     color: prevHover.hovered ? Theme.fg : Theme.fg5
                     Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                     HoverHandler { id: prevHover }
                     MouseArea {
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Previous track"
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: MprisController.prev()
@@ -142,7 +144,7 @@ Rectangle {
                 Rectangle {
                     Layout.preferredWidth: 34
                     Layout.preferredHeight: 34
-                    radius: 17
+                    radius: Theme.radiusXl
                     color: playMouse.pressed ? Qt.darker(Theme.accent, 1.25)
                          : playHover.hovered ? Qt.lighter(Theme.accent, 1.12)
                          : Theme.accent
@@ -152,13 +154,15 @@ Rectangle {
                         anchors.centerIn: parent
                         text: MprisController.playing ? "󰏤" : "󰐊"
                         font.family: Theme.nerdFontFamily
-                        font.pixelSize: 15
+                        font.pixelSize: Theme.fontXl
                         color: Theme.bg
                     }
 
                     HoverHandler { id: playHover }
                     MouseArea {
                         id: playMouse
+                        Accessible.role: Accessible.Button
+                        Accessible.name: MprisController.playing ? "Pause" : "Play"
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: MprisController.playPause()
@@ -168,11 +172,13 @@ Rectangle {
                 Text {
                     text: "⏭"
                     font.family: Theme.nerdFontFamily
-                    font.pixelSize: 15
+                    font.pixelSize: Theme.fontXl
                     color: nextHover.hovered ? Theme.fg : Theme.fg5
                     Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                     HoverHandler { id: nextHover }
                     MouseArea {
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Next track"
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: MprisController.next()
@@ -188,7 +194,7 @@ Rectangle {
             Rectangle {
                 Layout.fillWidth: true
                 Layout.preferredHeight: barMouse.containsMouse ? 6 : 4
-                radius: 3
+                radius: Theme.radiusXs
                 color: Theme.bgD
                 border.width: 1
                 border.color: Theme.cardBorder
@@ -198,7 +204,7 @@ Rectangle {
                 Rectangle {
                     width: parent.width * mediaCard.mprisProgress
                     height: parent.height
-                    radius: 3
+                    radius: Theme.radiusXs
                     color: Theme.accent
                     Behavior on width { NumberAnimation { duration: Theme.motionProgress; easing.type: Theme.easeLinear } }
                 }
@@ -223,7 +229,7 @@ Rectangle {
                 Text {
                     text: mediaCard.mprisTimePlayed
                     color: Theme.fg5
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                 }
 
                 Item { Layout.fillWidth: true }
@@ -231,7 +237,7 @@ Rectangle {
                 Text {
                     text: mediaCard.mprisTimeTotal
                     color: Theme.fg5
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                 }
             }
         }

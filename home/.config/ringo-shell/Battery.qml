@@ -3,7 +3,7 @@ import QtQuick
 import QtQuick.Layouts
 RowLayout {
   property string fg: Theme.fg
-  property int fontSize: 10 * Config.pillScale
+  property int fontSize: Theme.fontXs * Config.pillScale
   property bool hasBattery: box.hasBattery
   spacing: 4 * Config.paddingScale
 

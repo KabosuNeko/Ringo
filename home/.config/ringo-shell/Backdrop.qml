@@ -25,23 +25,6 @@ PanelWindow {
         }
     }
 
-    FileView {
-        path: Quickshell.env("HOME") + "/.cache/wal/wallpaper_blurred.jpg"
-        watchChanges: true
-        onFileChanged: {
-            delayReloadTimer.restart()
-        }
-    }
-
-    Timer {
-        id: delayReloadTimer
-        interval: 150
-        repeat: false
-        onTriggered: {
-            backdropWindow.reloadImage()
-        }
-    }
-
     Image {
         id: backdropImg
         anchors.fill: parent

@@ -31,12 +31,12 @@ Item {
             id: valIcon
             text: root.icon
             color: root.iconColor !== "" ? root.iconColor : root.fg
-            font { family: Theme.nerdFontFamily; pixelSize: 14 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
             opacity: 1.0
         }
 
         Rectangle {
-            width: root.barWidth; height: root.barHeight
+            Layout.preferredWidth: root.barWidth; Layout.preferredHeight: root.barHeight
             radius: root.barRadius
             color: Theme.cardBg
             border.width: 1
@@ -61,7 +61,7 @@ Item {
           id: valText
           text: root.valueText
           color: root.muted ? root.mutedFg : root.fg
-          font { family: Theme.fontFamily; pixelSize: 10; weight: 600 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
           opacity: 1.0
       }
     }

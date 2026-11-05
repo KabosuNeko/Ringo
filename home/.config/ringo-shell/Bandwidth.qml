@@ -14,7 +14,7 @@ Item {
         // them. The font is monospace, so the widest sample bounds every value.
         TextMetrics {
             id: rateMetrics
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
             text: "999.9 MB/s"
         }
 
@@ -23,12 +23,12 @@ Item {
             Text {
                 text: "↓"
                 color: Theme.accent
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 700 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 700 }
             }
             Text {
                 text: SystemMonitor.rxRate
                 color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                 Layout.preferredWidth: rateMetrics.width
                 horizontalAlignment: Text.AlignRight
             }
@@ -39,12 +39,12 @@ Item {
             Text {
                 text: "↑"
                 color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 700 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 700 }
             }
             Text {
                 text: SystemMonitor.txRate
                 color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 500 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                 Layout.preferredWidth: rateMetrics.width
                 horizontalAlignment: Text.AlignRight
             }

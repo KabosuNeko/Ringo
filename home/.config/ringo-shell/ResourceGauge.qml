@@ -8,14 +8,14 @@ Rectangle {
     // Percentages tick every second; a fixed slot stops the pill resizing.
     TextMetrics {
         id: pctMetrics
-        font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
         text: "100%"
     }
 
     readonly property int cpuPercent: SystemMonitor.cpuPercent
     readonly property int ramPercent: SystemMonitor.ramPercent
 
-    radius: 10
+    radius: Theme.radiusLg
     color: Theme.cardBg
     border.width: 1
     border.color: Theme.cardBorder
@@ -41,14 +41,14 @@ Rectangle {
                 Rectangle {
                     Layout.preferredWidth: 4
                     Layout.preferredHeight: 16
-                    radius: 2
+                    radius: Theme.radiusXs
                     color: Theme.chipBg
 
                     Rectangle {
                         anchors.bottom: parent.bottom
                         width: parent.width
                         height: parent.height * (root.cpuPercent / 100)
-                        radius: 2
+                        radius: Theme.radiusXs
                         color: Theme.accent
                         Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                     }
@@ -60,7 +60,7 @@ Rectangle {
                     color: Theme.fg
                     font {
                         family: Theme.fontFamily
-                        pixelSize: 8
+                        pixelSize: Theme.fontXs
                         weight: 600
                         letterSpacing: 0.5
                     }
@@ -70,7 +70,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                     text: root.cpuPercent + "%"
                     color: Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                     Layout.preferredWidth: pctMetrics.width
                     horizontalAlignment: Text.AlignRight
                 }
@@ -83,14 +83,14 @@ Rectangle {
                 Rectangle {
                     Layout.preferredWidth: 4
                     Layout.preferredHeight: 16
-                    radius: 2
+                    radius: Theme.radiusXs
                     color: Theme.chipBg
 
                     Rectangle {
                         anchors.bottom: parent.bottom
                         width: parent.width
                         height: parent.height * (root.ramPercent / 100)
-                        radius: 2
+                        radius: Theme.radiusXs
                         color: Theme.warning
                         Behavior on height { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                     }
@@ -102,7 +102,7 @@ Rectangle {
                     color: Theme.fg
                     font {
                         family: Theme.fontFamily
-                        pixelSize: 8
+                        pixelSize: Theme.fontXs
                         weight: 600
                         letterSpacing: 0.5
                     }
@@ -112,7 +112,7 @@ Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                     text: root.ramPercent + "%"
                     color: Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                     Layout.preferredWidth: pctMetrics.width
                     horizontalAlignment: Text.AlignRight
                 }

@@ -35,7 +35,7 @@ Item {
       id: wifiBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       color: WifiController.enabled
               ? (wifiHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (wifiHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -52,7 +52,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: WifiController.enabled ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -60,7 +60,7 @@ Item {
             anchors.centerIn: parent
             text: "\uf1eb"
             color: WifiController.enabled ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -71,7 +71,7 @@ Item {
           Text {
             text: "Wi-fi"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -82,7 +82,7 @@ Item {
                 : WifiController.currentSsid.length > 0 ? WifiController.currentSsid
                 : (WifiController.statusText.length > 0 ? WifiController.statusText : "Disconnected")
             color: WifiController.enabled ? Theme.fg : Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -110,7 +110,7 @@ Item {
       id: btBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       color: BluetoothController.enabled
               ? (btHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (btHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -127,7 +127,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: BluetoothController.enabled ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -135,7 +135,7 @@ Item {
             anchors.centerIn: parent
             text: "\uf294"
             color: BluetoothController.enabled ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -146,7 +146,7 @@ Item {
           Text {
             text: "Bluetooth"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -157,7 +157,7 @@ Item {
                 : BluetoothController.currentDeviceName.length > 0 ? BluetoothController.currentDeviceName
                 : (BluetoothController.statusText.length > 0 ? BluetoothController.statusText : "Disconnected")
             color: BluetoothController.enabled ? Theme.fg : Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -185,7 +185,7 @@ Item {
       id: ppBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       readonly property string currentProfile: PowerProfileController.activeProfile
       readonly property bool isCustomProfile: currentProfile !== "balanced" && currentProfile !== ""
 
@@ -205,7 +205,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: ppBtn.isCustomProfile ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -215,7 +215,7 @@ Item {
                 : ppBtn.currentProfile === "power-saver" ? String.fromCodePoint(0xf032a)
                 : String.fromCodePoint(0xf029a)
             color: ppBtn.isCustomProfile ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -226,7 +226,7 @@ Item {
           Text {
             text: "Performance"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -236,7 +236,7 @@ Item {
             text: ppBtn.currentProfile === "" ? "Balanced"
                 : ppBtn.currentProfile.charAt(0).toUpperCase() + ppBtn.currentProfile.slice(1)
             color: ppBtn.isCustomProfile ? Theme.fg : Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -255,7 +255,7 @@ Item {
     Rectangle {
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       color: notificationModule.dndEnabled
               ? (dndHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (dndHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -272,7 +272,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: notificationModule.dndEnabled ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -280,7 +280,7 @@ Item {
             anchors.centerIn: parent
             text: String.fromCodePoint(0xf1f6)
             color: notificationModule.dndEnabled ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -291,7 +291,7 @@ Item {
           Text {
             text: "Quiet mode"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -300,7 +300,7 @@ Item {
           Text {
             text: notificationModule.dndEnabled ? "Active" : "Off"
             color: notificationModule.dndEnabled ? Theme.fg : Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -320,7 +320,7 @@ Item {
       id: airplaneBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       color: root.airplaneMode
               ? (airplaneHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (airplaneHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -337,7 +337,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: root.airplaneMode ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -345,7 +345,7 @@ Item {
             anchors.centerIn: parent
             text: "\uf072"
             color: root.airplaneMode ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -356,7 +356,7 @@ Item {
           Text {
             text: "Airplane mode"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -365,7 +365,7 @@ Item {
           Text {
             text: root.airplaneMode ? "Wi-Fi + Bluetooth off" : "Wireless radios on"
             color: root.airplaneMode ? Theme.fg : Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }
@@ -385,7 +385,7 @@ Item {
       id: nightLightBtn
       Layout.fillWidth: true
       Layout.preferredHeight: 44
-      radius: 10
+      radius: Theme.radiusLg
       color: NightLightController.enabled
               ? (nightLightHover.hovered ? Qt.lighter(Theme.accentSoft, 1.15) : Theme.accentSoft)
               : (nightLightHover.hovered ? Theme.chipBgHover : Theme.cardBg)
@@ -402,7 +402,7 @@ Item {
         Rectangle {
           Layout.preferredWidth: 28
           Layout.preferredHeight: 28
-          radius: 8
+          radius: Theme.radiusMd
           color: NightLightController.enabled ? Theme.accent : Theme.chipBg
           Behavior on color { ColorAnimation { duration: Theme.motionBase } }
 
@@ -410,7 +410,7 @@ Item {
             anchors.centerIn: parent
             text: NightLightController.enabled ? "\uf186" : "\uf185"
             color: NightLightController.enabled ? Theme.bg : Theme.fg4
-            font { family: Theme.nerdFontFamily; pixelSize: 13 }
+            font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
           }
         }
 
@@ -421,7 +421,7 @@ Item {
           Text {
             text: "Night light"
             color: Theme.fg
-            font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
             font.letterSpacing: 0.5
             elide: Text.ElideRight
             Layout.fillWidth: true
@@ -432,7 +432,7 @@ Item {
                 : NightLightController.active ? NightLightController.temperature + "K"
                 : NightLightController.error.length > 0 ? "Unavailable" : "Starting"
             color: Theme.fg5
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
             elide: Text.ElideRight
             Layout.fillWidth: true
           }

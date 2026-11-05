@@ -137,7 +137,7 @@ Item {
 
   Rectangle {
     anchors.fill: parent
-    radius: 16
+    radius: Theme.radiusXl
     color: Theme.cardBg
     border.width: 1
     border.color: Theme.cardBorder
@@ -154,27 +154,27 @@ Item {
         Text {
           text: "\uf11c"
           color: Theme.accent
-          font { family: Theme.nerdFontFamily; pixelSize: 12 }
+          font { family: Theme.nerdFontFamily; pixelSize: Theme.fontMd }
         }
 
         Text {
           Layout.fillWidth: true
           text: "Keybinds"
           color: Theme.fg
-          font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
         }
 
         Text {
           text: root.filtered.length + " / " + root.bindings.length
           color: Theme.fg5
-          font { family: Theme.fontFamily; pixelSize: 9 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
         }
       }
 
       Rectangle {
         Layout.fillWidth: true
         Layout.preferredHeight: 30
-        radius: 8
+        radius: Theme.radiusMd
         color: Theme.chipBg
         border.width: 1
         border.color: searchInput.activeFocus ? Theme.accent : Theme.cardBorder
@@ -189,7 +189,7 @@ Item {
           color: Theme.fg
           selectionColor: Theme.accent
           selectedTextColor: Theme.bg
-          font { family: Theme.fontFamily; pixelSize: 10 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           clip: true
           focus: root.shown
 
@@ -233,7 +233,7 @@ Item {
           delegate: Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 20
-            radius: 6
+            radius: Theme.radiusSm
             color: root.activeSection === modelData
                    ? Theme.accentSoft
                    : (sectionHover.hovered ? Theme.chipBgHover : Theme.chipBg)
@@ -245,7 +245,7 @@ Item {
               anchors.centerIn: parent
               text: modelData
               color: root.activeSection === modelData ? Theme.accent : Theme.fg4
-              font { family: Theme.fontFamily; pixelSize: 8; weight: root.activeSection === modelData ? 700 : 500 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: root.activeSection === modelData ? 700 : 500 }
               elide: Text.ElideRight
               width: parent.width - 8
               horizontalAlignment: Text.AlignHCenter
@@ -274,7 +274,7 @@ Item {
         delegate: Rectangle {
           width: list.width
           height: 30
-          radius: 7
+          radius: Theme.radiusSm
           color: index === root.selectedIndex ? Theme.chipBgHover : "transparent"
           Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -294,7 +294,7 @@ Item {
                 delegate: Rectangle {
                   height: 18
                   width: keyText.implicitWidth + 10
-                  radius: 5
+                  radius: Theme.radiusSm
                   color: Theme.bgD
                   border.width: 1
                   border.color: index === root.selectedIndex ? Theme.accent : Theme.cardBorder
@@ -304,7 +304,7 @@ Item {
                     anchors.centerIn: parent
                     text: modelData
                     color: index === root.selectedIndex ? Theme.accent : Theme.fg3
-                    font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                   }
                 }
               }
@@ -314,14 +314,14 @@ Item {
               Layout.fillWidth: true
               text: modelData.label
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
               elide: Text.ElideRight
             }
 
             Text {
               text: modelData.section
               color: Theme.fg5
-              font { family: Theme.fontFamily; pixelSize: 8 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
               elide: Text.ElideRight
             }
           }

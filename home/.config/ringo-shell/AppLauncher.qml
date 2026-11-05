@@ -416,7 +416,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: 16
+        radius: Theme.radiusXl
         color: Theme.cardBg
         border.color: Theme.cardBorder
         border.width: 1
@@ -430,7 +430,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 36
-            radius: 10
+            radius: Theme.radiusLg
             color: Theme.bgD
             border.color: searchInput.activeFocus ? Theme.accent : Theme.cardBorder
             border.width: 1
@@ -445,7 +445,7 @@ Item {
                 Text {
                     text: "\uf002"
                     color: searchInput.activeFocus ? Theme.accent : Theme.fg5
-                    font { family: Theme.nerdFontFamily; pixelSize: 13 }
+                    font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
                     Behavior on color { ColorAnimation { duration: Theme.motionBase } }
                 }
 
@@ -455,7 +455,7 @@ Item {
                     Layout.fillHeight: true
                     verticalAlignment: TextInput.AlignVCenter
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 11; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 500 }
                     clip: true
 
                     onTextChanged: {
@@ -499,7 +499,7 @@ Item {
                 }
 
                 Rectangle {
-                    radius: 5
+                    radius: Theme.radiusSm
                     color: Theme.chipBg
                     implicitHeight: 18
                     implicitWidth: countText.implicitWidth + 8
@@ -511,7 +511,7 @@ Item {
                             : (root.specialAction && root.filteredApps.length === 0 ? "Web"
                             : ((filteredApps.length === 0 ? "0" : (root.selectedIndex + 1)) + " / " + root.filteredApps.length))
                         color: root.mathResult !== null ? Theme.accent : Theme.fg4
-                        font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                     }
                 }
             }
@@ -531,7 +531,7 @@ Item {
                 delegate: Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 22
-                    radius: 6
+                    radius: Theme.radiusSm
                     color: root.activeFilter === modelData
                            ? Theme.accentSoft
                            : (catHover.hovered ? Theme.chipBgHover : Theme.chipBg)
@@ -544,7 +544,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData
                         color: root.activeFilter === modelData ? Theme.accent : Theme.fg4
-                        font { family: Theme.fontFamily; pixelSize: 9; weight: root.activeFilter === modelData ? 700 : 500 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: root.activeFilter === modelData ? 700 : 500 }
                     }
 
                     HoverHandler { id: catHover }
@@ -561,7 +561,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: root.hasSpecialCard ? 50 : 0
             visible: root.hasSpecialCard
-            radius: 10
+            radius: Theme.radiusLg
             color: root.mathResult !== null ? Theme.accentSoft : Theme.chipBgHover
             border.width: 1
             border.color: root.mathResult !== null ? Theme.accent : Theme.cardBorder
@@ -577,14 +577,14 @@ Item {
                 Rectangle {
                     Layout.preferredWidth: 30
                     Layout.preferredHeight: 30
-                    radius: 8
+                    radius: Theme.radiusMd
                     color: root.mathResult !== null ? Theme.accent : Theme.chipBg
 
                     Text {
                         anchors.centerIn: parent
                         text: root.mathResult !== null ? "\uf1ec" : (root.specialAction ? root.specialAction.icon : "\uf002")
                         color: root.mathResult !== null ? Theme.bg : Theme.accent
-                        font { family: Theme.nerdFontFamily; pixelSize: 14 }
+                        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontLg }
                     }
                 }
 
@@ -595,7 +595,7 @@ Item {
                     Text {
                         text: root.mathResult !== null ? root.mathResult.expression : (root.specialAction ? root.specialAction.title : "")
                         color: root.mathResult !== null ? Theme.fg4 : Theme.fg
-                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? 10 : 11; weight: root.mathResult !== null ? 500 : 600 }
+                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? Theme.fontXs : Theme.fontSm; weight: root.mathResult !== null ? 500 : 600 }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
@@ -603,14 +603,14 @@ Item {
                     Text {
                         text: root.mathResult !== null ? ("= " + root.mathResult.result) : (root.specialAction ? root.specialAction.subtitle : "")
                         color: root.mathResult !== null ? Theme.accent : Theme.fg5
-                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? 14 : 9; weight: root.mathResult !== null ? 700 : 400 }
+                        font { family: Theme.fontFamily; pixelSize: root.mathResult !== null ? Theme.fontLg : Theme.fontXs; weight: root.mathResult !== null ? 700 : 400 }
                         elide: Text.ElideRight
                         Layout.fillWidth: true
                     }
                 }
 
                 Rectangle {
-                    radius: 5
+                    radius: Theme.radiusSm
                     color: root.mathResult !== null ? Theme.accent : Theme.chipBg
                     border.width: root.mathResult !== null ? 0 : 1
                     border.color: Theme.cardBorder
@@ -625,7 +625,7 @@ Item {
                                 ? (root.specialAction.type === "url" ? "↵ Open" : "↵ Search")
                                 : (root.currentRow && (root.currentRow.file || root.currentRow.web) ? "↵ Open" : "↵ Launch")
                         color: root.mathResult !== null ? Theme.bg : Theme.fg
-                        font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                     }
                 }
             }
@@ -652,7 +652,7 @@ Item {
             delegate: Rectangle {
                 width: appList.width
                 height: 42
-                radius: 8
+                radius: Theme.radiusMd
                 color: index === root.selectedIndex
                        ? Theme.chipBgHover
                        : (rowHover.hovered ? Theme.chipBg : "transparent")
@@ -663,7 +663,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 3
                     height: 18
-                    radius: 2
+                    radius: Theme.radiusXs
                     color: Theme.accent
                     opacity: index === root.selectedIndex ? 1 : 0
                     Behavior on opacity { NumberAnimation { duration: Theme.motionBase } }
@@ -690,7 +690,7 @@ Item {
                         visible: !appIconImg.resolvedIcon
                         text: modelData.file ? "\uf15b" : (modelData.web ? "\uf0ac" : "󰣆")
                         color: Theme.accent
-                        font { family: Theme.nerdFontFamily; pixelSize: 20 }
+                        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXxl }
                         Layout.alignment: Qt.AlignVCenter
                         Layout.leftMargin: 3
                         Layout.rightMargin: 3
@@ -703,7 +703,7 @@ Item {
                         Text {
                             text: modelData.name
                             color: Theme.fg
-                            font { family: Theme.fontFamily; pixelSize: 11; weight: index === root.selectedIndex ? 700 : 500 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: index === root.selectedIndex ? 700 : 500 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -711,7 +711,7 @@ Item {
                             text: modelData.comment
                             visible: text.length > 0
                             color: Theme.fg5
-                            font { family: Theme.fontFamily; pixelSize: 9; weight: 400 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
                             elide: Text.ElideRight
                             Layout.fillWidth: true
                         }
@@ -722,7 +722,7 @@ Item {
                             : modelData.web ? "WEB" : "APP"
                         text: kind
                         color: Theme.fg5
-                        font { family: Theme.fontFamily; pixelSize: 7; weight: 700; letterSpacing: 0.8 }
+                        font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 700; letterSpacing: 0.8 }
                         Layout.alignment: Qt.AlignVCenter
                     }
                 }
@@ -747,7 +747,7 @@ Item {
                 visible: appList.count === 0 && !root.hasSpecialCard
                 text: root.emptyText
                 color: Theme.fg4
-                font { family: Theme.fontFamily; pixelSize: 10; weight: 500 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
             }
         }
 
@@ -760,12 +760,12 @@ Item {
             RowLayout {
                 spacing: 4
                 Rectangle {
-                    radius: 3
+                    radius: Theme.radiusXs
                     color: Theme.chipBg
                     border.width: 1
                     border.color: Theme.cardBorder
                     implicitWidth: 18; implicitHeight: 14
-                    Text { anchors.centerIn: parent; text: "↵"; color: Theme.fg4; font { pixelSize: 8; weight: 600 } }
+                    Text { anchors.centerIn: parent; text: "↵"; color: Theme.fg4; font { pixelSize: Theme.fontXs; weight: 600 } }
                 }
                 Text {
                     text: root.mathResult !== null ? "Copy"
@@ -773,34 +773,34 @@ Item {
                             ? (root.specialAction.type === "url" ? "Open" : "Search")
                             : (root.currentRow && (root.currentRow.file || root.currentRow.web) ? "Open" : "Launch")
                     color: Theme.fg5
-                    font { family: Theme.fontFamily; pixelSize: 8; weight: 500 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                 }
             }
 
             RowLayout {
                 spacing: 4
                 Rectangle {
-                    radius: 3
+                    radius: Theme.radiusXs
                     color: Theme.chipBg
                     border.width: 1
                     border.color: Theme.cardBorder
                     implicitWidth: 20; implicitHeight: 14
-                    Text { anchors.centerIn: parent; text: "Tab"; color: Theme.fg4; font { pixelSize: 8; weight: 600 } }
+                    Text { anchors.centerIn: parent; text: "Tab"; color: Theme.fg4; font { pixelSize: Theme.fontXs; weight: 600 } }
                 }
-                Text { text: "Filter"; color: Theme.fg5; font { family: Theme.fontFamily; pixelSize: 8; weight: 500 } }
+                Text { text: "Filter"; color: Theme.fg5; font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 } }
             }
 
             RowLayout {
                 spacing: 4
                 Rectangle {
-                    radius: 3
+                    radius: Theme.radiusXs
                     color: Theme.chipBg
                     border.width: 1
                     border.color: Theme.cardBorder
                     implicitWidth: 20; implicitHeight: 14
-                    Text { anchors.centerIn: parent; text: "Esc"; color: Theme.fg4; font { pixelSize: 8; weight: 600 } }
+                    Text { anchors.centerIn: parent; text: "Esc"; color: Theme.fg4; font { pixelSize: Theme.fontXs; weight: 600 } }
                 }
-                Text { text: "Close"; color: Theme.fg5; font { family: Theme.fontFamily; pixelSize: 8; weight: 500 } }
+                Text { text: "Close"; color: Theme.fg5; font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 } }
             }
 
             Item { Layout.fillWidth: true }

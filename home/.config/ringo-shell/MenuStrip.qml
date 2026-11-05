@@ -10,8 +10,8 @@ Rectangle {
   signal closeRequested
 
   anchors.fill: parent
-  color: Theme.bgD1
-  radius: 22
+  color: Theme.bg
+  radius: Theme.radiusPanel
   visible: opacity > 0
   opacity: shown ? 1 : 0
 
@@ -41,7 +41,7 @@ Rectangle {
       delegate: Rectangle {
         Layout.fillWidth: true
         Layout.fillHeight: true
-        radius: 12
+        radius: Theme.radiusLg
         color: (strip.selectedIndex === index || itemHover.containsMouse) ? Theme.bg5 : Theme.bg2
         border.width: strip.selectedIndex === index ? 2 : 0
         border.color: Theme.accent
@@ -54,14 +54,14 @@ Rectangle {
           Text {
             text: modelData.icon
             font.family: Theme.nerdFontFamily
-            font.pixelSize: 18
-            color: (strip.selectedIndex === index || itemHover.containsMouse) ? Theme.fgL : Theme.fg
+            font.pixelSize: Theme.fontXxl
+            color: (strip.selectedIndex === index || itemHover.containsMouse) ? Theme.fg : Theme.fg
             Layout.alignment: Qt.AlignHCenter
           }
 
           Text {
             text: modelData.label
-            font.pixelSize: 9
+            font.pixelSize: Theme.fontXs
             color: Theme.fg3
             Layout.alignment: Qt.AlignHCenter
           }
@@ -69,6 +69,8 @@ Rectangle {
 
         MouseArea {
           id: itemHover
+          Accessible.role: Accessible.Button
+          Accessible.name: modelData.label
           anchors.fill: parent
           hoverEnabled: true
           cursorShape: Qt.PointingHandCursor

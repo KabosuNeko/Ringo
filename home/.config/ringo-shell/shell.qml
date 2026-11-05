@@ -544,12 +544,10 @@ function doctorReport(): string {
       transformOrigin: Item.Top
 
       border.width: 1
-      border.color: Theme.pillBorder
+      border.color: Theme.chipBorder
 
       // crisp, not springy: the pill resizes on the same clock as everything else
-      color: controlCenter
-             ? Qt.rgba(Theme.bgD1.r, Theme.bgD1.g, Theme.bgD1.b, root.barSurfaceOpacity)
-             : Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, root.barSurfaceOpacity)
+      color: Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, root.barSurfaceOpacity)
 
       onMiniDashboardChanged: {
           if (!box.miniDashboard) {
@@ -670,14 +668,14 @@ function doctorReport(): string {
 
         Clock {
           id: centerClock
-          fontSize: 11.5 * Config.pillScale
+          fontSize: Theme.fontSm * Config.pillScale
           Layout.alignment: Qt.AlignVCenter
         }
 
         Rectangle {
           Layout.preferredWidth: 4
           Layout.preferredHeight: 4
-          radius: 2
+          radius: Theme.radiusXs
           color: Theme.accent
           Layout.alignment: Qt.AlignVCenter
         }
@@ -685,7 +683,7 @@ function doctorReport(): string {
         Text {
           text: Qt.formatDateTime(clock.date, "ddd MMM d")
           color: Theme.fg4
-          font { family: Theme.fontFamily; pixelSize: 10 * Config.pillScale; weight: 500 }
+          font { family: Theme.fontFamily; pixelSize: Theme.fontXs * Config.pillScale; weight: 500 }
           Layout.alignment: Qt.AlignVCenter
         }
 
@@ -710,7 +708,7 @@ function doctorReport(): string {
             Text {
               text: "\uf0f3"
               color: bellHover.hovered ? Theme.accent : Theme.fg4
-              font { family: Theme.nerdFontFamily; pixelSize: 10 * Config.pillScale }
+              font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXs * Config.pillScale }
               Behavior on color { ColorAnimation { duration: Theme.motionBase } }
             }
 
@@ -718,7 +716,7 @@ function doctorReport(): string {
               visible: notificationModule.notifications.length > 0
               text: notificationModule.notifications.length
               color: Theme.fg
-              font { family: Theme.fontFamily; pixelSize: 9 * Config.pillScale; weight: 600 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs * Config.pillScale; weight: 600 }
             }
           }
 
@@ -741,8 +739,8 @@ function doctorReport(): string {
             anchors.verticalCenterOffset: -0.5
             width: 7
             height: 7
-            radius: 4
-            color: "#ff453a"
+            radius: Theme.radiusXs
+            color: "#ff453a"  // recording dot: the one deliberate hardcoded colour (AGENTS.md)
 
             SequentialAnimation on opacity {
               running: Recorder.active
@@ -1089,24 +1087,11 @@ function doctorReport(): string {
         id: controlCenterPanel
         anchors.fill: parent
         focus: true
-        property bool contentShown: false
-        Timer {
-          id: controlContentTimer
-          interval: 60
-          onTriggered: controlCenterPanel.contentShown = true
-        }
         Keys.onEscapePressed: (event) => { box.controlCenter = false; event.accepted = true }
         Connections {
           target: box
           function onControlCenterChanged() {
-            if (box.controlCenter) {
-              controlCenterPanel.forceActiveFocus()
-              controlCenterPanel.contentShown = false
-              controlContentTimer.restart()
-            } else {
-              controlContentTimer.stop()
-              controlCenterPanel.contentShown = false
-            }
+            if (box.controlCenter) controlCenterPanel.forceActiveFocus()
           }
         }
         opacity: box.controlCenter && box.activeOsd === "" && !notificationModule.active ? 1 : 0
@@ -1123,8 +1108,14 @@ function doctorReport(): string {
           anchors.top: parent.top
           anchors.margins: 10
           spacing: 6
-          opacity: controlCenterPanel.contentShown ? 1 : 0
-          Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
+          opacity: box.controlCenter ? 1 : 0
+          // content follows the island's morph instead of fading in mid-resize
+          Behavior on opacity {
+            SequentialAnimation {
+              PauseAnimation { duration: Theme.motionInstant }
+              NumberAnimation { duration: Theme.motionSlow; easing.type: Theme.easeOut }
+            }
+          }
 
 
           MediaPlayer {
@@ -1143,7 +1134,7 @@ function doctorReport(): string {
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: sliderCol.implicitHeight + 16
-            radius: 10
+            radius: Theme.radiusLg
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1164,9 +1155,9 @@ function doctorReport(): string {
                 Text {
                   id: volIcon
                   text: volumeModule.icon
-                  color: volumeModule.muted ? "#fd2222" : Theme.fg
+                  color: volumeModule.muted ? Theme.deleting : Theme.fg
                   font.family: Theme.nerdFontFamily
-                  font.pixelSize: 13
+                  font.pixelSize: Theme.fontLg
                   Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                 }
 
@@ -1209,7 +1200,7 @@ function doctorReport(): string {
                   text: volumeModule.muted ? "muted" : volumeModule.vol + "%"
                   color: Theme.fg
                   font.family: Theme.fontFamily
-                  font.pixelSize: 10
+                  font.pixelSize: Theme.fontXs
                   font.weight: 600
                   Layout.minimumWidth: 35
                   horizontalAlignment: Text.AlignRight
@@ -1225,7 +1216,7 @@ function doctorReport(): string {
                   text: brightnessModule.icon
                   color: Theme.fg
                   font.family: Theme.nerdFontFamily
-                  font.pixelSize: 13
+                  font.pixelSize: Theme.fontLg
                 }
 
                 Rectangle {
@@ -1270,7 +1261,7 @@ function doctorReport(): string {
                   text: Math.round(brightnessModule.percent * 100) + "%"
                   color: Theme.fg
                   font.family: Theme.fontFamily
-                  font.pixelSize: 10
+                  font.pixelSize: Theme.fontXs
                   font.weight: 600
                   Layout.minimumWidth: 35
                   horizontalAlignment: Text.AlignRight
@@ -1288,7 +1279,7 @@ function doctorReport(): string {
 
           Rectangle {
             Layout.fillWidth: true
-            radius: 10
+            radius: Theme.radiusLg
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1307,8 +1298,8 @@ function doctorReport(): string {
 
               Text {
                 text: "Notifications (" + notificationModule.notifications.length + ")"
-                color: Theme.fg2
-                font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                color: Theme.fg
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                     font.letterSpacing: 0.5
                 anchors.left: parent.left
                 anchors.leftMargin: 12
@@ -1318,7 +1309,7 @@ function doctorReport(): string {
               Rectangle {
                 width: 54
                 height: 16
-                radius: 8
+                radius: Theme.radiusMd
                 color: clearAllHover.containsMouse ? Theme.focusBgL : Theme.bg1
                 Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                 anchors.right: parent.right
@@ -1328,7 +1319,7 @@ function doctorReport(): string {
                 Text {
                   text: "Clear all"
                   color: clearAllHover.containsMouse ? Theme.focusFg1 : Theme.fg3
-                  font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
                   anchors.centerIn: parent
                 }
 
@@ -1382,10 +1373,10 @@ function doctorReport(): string {
                 z: 20
                 contentItem: Rectangle {
                   implicitWidth: 6
-                  radius: 3
-                  color: notifScrollBar.pressed ? "#888"
-                       : scrollHover.hovered ? "#6f6f6f"
-                       : "#3a3a3a"
+                  radius: Theme.radiusXs
+                  color: notifScrollBar.pressed ? Theme.fg4
+                       : scrollHover.hovered ? Theme.fg5
+                       : Theme.borderBg2
                   Behavior on color { ColorAnimation { duration: Theme.motionFast } }
                   HoverHandler { id: scrollHover }
                 }
@@ -1399,7 +1390,7 @@ function doctorReport(): string {
                 Text {
                   text: String.fromCodePoint(0xf0f3)
                   color: Theme.fg
-                  font { family: Theme.nerdFontFamily; pixelSize: 16 }
+                  font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXl }
                   visible: notifIcon.status !== Image.Ready
                   anchors.left: parent.left
                   anchors.top: parent.top
@@ -1452,7 +1443,7 @@ function doctorReport(): string {
                       text: modelData.summary
                       textFormat: Text.PlainText
                       color: Theme.fg
-                      font { family: Theme.fontFamily; pixelSize: 11; weight: 600 }
+                      font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 600 }
                       elide: Text.ElideRight
                       Layout.fillWidth: true
                     }
@@ -1460,14 +1451,14 @@ function doctorReport(): string {
                     Text {
                       text: modelData.receivedTime ? Qt.formatTime(modelData.receivedTime, "hh:mm") : ""
                       color: Theme.fg5
-                      font { family: Theme.fontFamily; pixelSize: 8 }
+                      font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                       Layout.bottomMargin: 5
                     }
 
                     Rectangle {
                       Layout.preferredWidth: 22
                       Layout.preferredHeight: 22
-                      radius: 99
+                      radius: height / 2
                       color: dismissHover.containsMouse ? Theme.focusBgL : "transparent"
                       Behavior on color { ColorAnimation { duration: Theme.motionFast } }
 
@@ -1477,12 +1468,14 @@ function doctorReport(): string {
                         text: "\uf00d"
                         color: dismissHover.containsMouse ? Theme.focusFg1 : Theme.fg5
                         anchors.centerIn: parent
-                        font { family: Theme.nerdFontFamily; pixelSize: 11 }
+                        font { family: Theme.nerdFontFamily; pixelSize: Theme.fontSm }
                         Behavior on color { ColorAnimation { duration: Theme.motionBase } }
                       }
 
                       MouseArea {
                         id: dismissHover
+                        Accessible.role: Accessible.Button
+                        Accessible.name: "Dismiss notification"
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
@@ -1500,7 +1493,7 @@ function doctorReport(): string {
                     textFormat: Text.StyledText
                     linkColor: Theme.accent
                     color: Theme.fg4
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 300 }
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
                     Layout.bottomMargin: 2
@@ -1525,7 +1518,7 @@ function doctorReport(): string {
                       Rectangle {
                         implicitHeight: 20
                         implicitWidth: actionText.implicitWidth + 12
-                        radius: 6
+                        radius: Theme.radiusSm
                         color: actionHover.containsMouse ? Theme.chipBgHover : Theme.chipBg
                         border.width: 1
                         border.color: Theme.chipBorder
@@ -1535,7 +1528,7 @@ function doctorReport(): string {
                           anchors.centerIn: parent
                           text: modelData.text
                           color: Theme.fg
-                          font { family: Theme.fontFamily; pixelSize: 8; weight: 600 }
+                          font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                         }
 
                         MouseArea {
@@ -1580,12 +1573,6 @@ function doctorReport(): string {
         id: miniDashboardPanel
         anchors.fill: parent
         focus: true
-        property bool contentShown: false
-        Timer {
-          id: miniContentTimer
-          interval: 60
-          onTriggered: miniDashboardPanel.contentShown = true
-        }
         Keys.onEscapePressed: (event) => { box.miniDashboard = false; event.accepted = true }
         Binding {
           target: SystemMonitor
@@ -1595,14 +1582,7 @@ function doctorReport(): string {
         Connections {
           target: box
           function onMiniDashboardChanged() {
-            if (box.miniDashboard) {
-              miniDashboardPanel.forceActiveFocus()
-              miniDashboardPanel.contentShown = false
-              miniContentTimer.restart()
-            } else {
-              miniContentTimer.stop()
-              miniDashboardPanel.contentShown = false
-            }
+            if (box.miniDashboard) miniDashboardPanel.forceActiveFocus()
           }
         }
         opacity: box.miniDashboard
@@ -1631,8 +1611,14 @@ function doctorReport(): string {
           anchors.topMargin: 10
           anchors.bottomMargin: 10
           spacing: 8
-          opacity: miniDashboardPanel.contentShown ? 1 : 0
-          Behavior on opacity { NumberAnimation { duration: 180; easing.type: Theme.easeOut } }
+          opacity: box.miniDashboard ? 1 : 0
+          // content follows the island's morph instead of fading in mid-resize
+          Behavior on opacity {
+            SequentialAnimation {
+              PauseAnimation { duration: Theme.motionInstant }
+              NumberAnimation { duration: Theme.motionSlow; easing.type: Theme.easeOut }
+            }
+          }
 
 
           RowLayout {
@@ -1643,7 +1629,7 @@ function doctorReport(): string {
               id: avatarClip
               Layout.preferredWidth: 34
               Layout.preferredHeight: 34
-              radius: 9
+              radius: Theme.radiusMd
               property string imgPath: Config.displayPicture ? "file://" + Config.displayPicture.replace("~", Quickshell.env("HOME")) : ""
               color: (imgPath === "" || avatarImg.status !== Image.Ready) ? Theme.cardBg : "transparent"
               border.width: 1
@@ -1670,11 +1656,11 @@ function doctorReport(): string {
                 Text {
                   text: SystemMonitor.username
                   color: Theme.fg
-                  font { family: Theme.fontFamily; pixelSize: 12; weight: 700 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontMd; weight: 700 }
                 }
 
                 Rectangle {
-                  radius: 5
+                  radius: Theme.radiusSm
                   color: Theme.chipBg
                   border.width: 1
                   border.color: Theme.chipBorder
@@ -1687,7 +1673,7 @@ function doctorReport(): string {
                     anchors.centerIn: parent
                     text: "@" + SystemMonitor.hostname
                     color: Theme.accent
-                    font { family: Theme.fontFamily; pixelSize: 9; weight: 600 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 600 }
                   }
                 }
               }
@@ -1697,12 +1683,12 @@ function doctorReport(): string {
                 Text {
                   text: "\uf017"
                   color: Theme.fg5
-                  font { family: Theme.nerdFontFamily; pixelSize: 9 }
+                  font { family: Theme.nerdFontFamily; pixelSize: Theme.fontXs }
                 }
                 Text {
                   text: "up " + SystemMonitor.uptime
                   color: Theme.fg4
-                  font { family: Theme.fontFamily; pixelSize: 8; weight: 400 }
+                  font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 400 }
                 }
               }
             }
@@ -1710,7 +1696,7 @@ function doctorReport(): string {
             Item { Layout.fillWidth: true }
 
             Battery {
-              fontSize: 10
+              fontSize: Theme.fontXs
               Layout.alignment: Qt.AlignVCenter
             }
           }
@@ -1726,7 +1712,7 @@ function doctorReport(): string {
               // takes whatever is left over.
               Layout.preferredWidth: 240
               Layout.fillHeight: true
-              radius: 10
+              radius: Theme.radiusLg
               color: Theme.cardBg
               border.width: 1
               border.color: Theme.cardBorder
@@ -1758,7 +1744,7 @@ function doctorReport(): string {
           Rectangle {
             Layout.fillWidth: true
             implicitHeight: 34
-            radius: 10
+            radius: Theme.radiusLg
             color: Theme.cardBg
             border.width: 1
             border.color: Theme.cardBorder
@@ -1883,7 +1869,7 @@ function doctorReport(): string {
     id: backdrop
   }
 
-  // explicit reload: a swap that lands mid-watch would otherwise be missed
+  // the backend emits once the blurred file is fully written
   Connections {
     target: WallpaperController
     function onBackdropChanged(): void { backdrop.reloadImage() }

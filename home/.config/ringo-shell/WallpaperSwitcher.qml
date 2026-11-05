@@ -18,8 +18,8 @@ Rectangle {
     }
   }
 
-  color: Theme.bgD1
-  radius: 18
+  color: Theme.bg
+  radius: Theme.radiusXl
   visible: opacity > 0
   opacity: shown ? 1 : 0
   signal closeRequested()
@@ -34,14 +34,6 @@ Rectangle {
     wallpaperPopup.selectedWallpaper = fileUrl(path)
     // palette, blurred niri-overview backdrop and the wallpaper process are backend-owned
     WallpaperController.apply(path)
-    // foot must reload to pick up the new colors-foot-dark.ini
-    footReloadTimer.restart()
-  }
-
-  Timer {
-    id: footReloadTimer
-    interval: 500
-    onTriggered: Quickshell.execDetached(["pkill", "-USR1", "foot"])
   }
 
   function activateCurrent() {
@@ -80,7 +72,7 @@ Rectangle {
       wrapMode: Text.WordWrap
       color: Theme.warning
       text: "No wallpapers found in\n" + Config.wallpapersDir
-      font { family: Theme.fontFamily; pixelSize: 12 }
+      font { family: Theme.fontFamily; pixelSize: Theme.fontMd }
     }
 
     GridView {
@@ -129,7 +121,7 @@ Rectangle {
         Rectangle {
           anchors.fill: parent
           anchors.margins: 5
-          radius: 10
+          radius: Theme.radiusLg
           color: Theme.bg4
           border.width: cell.isCurrent ? 1 : 0
           border.color: Theme.borderBg
@@ -137,7 +129,7 @@ Rectangle {
           ClippingRectangle {
             anchors.fill: parent
             anchors.margins: 2
-            radius: 8
+            radius: Theme.radiusMd
             color: "transparent"
 
             Image {
@@ -158,7 +150,7 @@ Rectangle {
               visible: preview.status === Image.Error
               text: "\uf071  Unreadable"
               color: Theme.warning
-              font { family: Theme.fontFamily; pixelSize: 9 }
+              font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
             }
 
             Rectangle {
@@ -188,7 +180,7 @@ Rectangle {
                 text: fileBaseName
                 color: "white"
                 elide: Text.ElideMiddle
-                font { family: Theme.fontFamily; pixelSize: 9 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
               }
             }
           }

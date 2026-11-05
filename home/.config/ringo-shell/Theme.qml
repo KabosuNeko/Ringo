@@ -19,14 +19,30 @@ Singleton {
     readonly property int motionResize: 70
     readonly property int motionFast: 100
     readonly property int motionBase: 140
-    readonly property int motionOverlay: 240
     readonly property int motionSlow: 220
+    readonly property int motionOverlay: 240
     readonly property int motionProgress: 400
     readonly property int motionBlink: 800
 
     readonly property int easeOut: Easing.OutCubic
     readonly property int easeInOut: Easing.InOutCubic
     readonly property int easeLinear: Easing.Linear
+
+    // Type scale. fontXs is the floor: anything smaller is unreadable at 1080p.
+    readonly property int fontXs: 10
+    readonly property int fontSm: 11
+    readonly property int fontMd: 12
+    readonly property int fontLg: 13
+    readonly property int fontXl: 16
+    readonly property int fontXxl: 20
+
+    // Corner scale; circles and pills use height / 2 instead.
+    readonly property int radiusXs: 3
+    readonly property int radiusSm: 6
+    readonly property int radiusMd: 8
+    readonly property int radiusLg: 10
+    readonly property int radiusXl: 16
+    readonly property int radiusPanel: 22
 
     property string fallbackBg: "#161616"
     property string fallbackFg: "#dadada"
@@ -40,29 +56,18 @@ Singleton {
     property color bg: surface(root.walBg, root.surfaceOpacity)
     property color bg1: surface(Qt.lighter(root.walBg, 1.5), root.surfaceOpacity)
     property color bg2: surface(Qt.lighter(root.walBg, 1.59), root.surfaceOpacity)
-
     property color bg4: surface(Qt.lighter(root.walBg, 1.82), root.surfaceOpacity)
     property color bg5: surface(Qt.lighter(root.walBg, 2.27), root.surfaceOpacity)
-
-
     property color bgD: surface(Qt.darker(root.walBg, 1.1), root.surfaceOpacity)
-    property color bgD1: surface(Qt.darker(root.walBg, 1.02), root.surfaceOpacity)
 
     property color fg: root.walFg
-    property color fg1: Qt.lighter(root.walFg, 1.06)
-    property color fg2: Qt.lighter(root.walFg, 1.02)
     property color fg3: Qt.darker(root.walFg, 1.11)
     property color fg4: Qt.darker(root.walFg, 1.38)
     property color fg5: Qt.darker(root.walFg, 1.83)
 
-    property color fg7: Qt.darker(root.walFg, 3.03)
-
-    property color fgL: Qt.lighter(root.walFg, 1.07)
-
     property color borderBg: Qt.darker(root.walFg, 2.06)
     property color borderBg1: Qt.darker(root.walFg, 3.03)
     property color borderBg2: Qt.darker(root.walFg, 4.36)
-
     property color borderBgFocus: Qt.darker(root.walFg, 2.56)
 
     property color focusBg1: surface(Qt.lighter(root.walBg, 2.09), root.surfaceOpacity)
@@ -70,14 +75,14 @@ Singleton {
 
     property color focusFg1: Qt.darker(root.walFg, 1.16)
 
-
     property string fontFamily: Config.textFontFamily
     property string nerdFontFamily: Config.nerdFontFamily
 
     // semantic colors stay fixed
     property string warning: "#f9cb41"
     property string deleting: "#e32626"
-    property string batteryGood: "#4bd25c"
+    property string success: "#4bd25c"
+    property string batteryGood: root.success
     property string batteryWarn: root.warning
     property string batteryCritical: root.deleting
 
@@ -120,9 +125,6 @@ Singleton {
 
     Component.onCompleted: applyWal()
 
-
-
-    property color pillBorder: Qt.alpha(root.walFg, 0.08)
     property color cardBg: surface(Qt.lighter(root.walBg, 1.25), root.surfaceOpacity * 0.95)
     property color cardBorder: Qt.alpha(root.walFg, 0.09)
     property color chipBg: Qt.alpha(root.walFg, 0.06)

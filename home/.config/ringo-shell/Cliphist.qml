@@ -88,7 +88,7 @@ Item {
     Timer {
         id: removeTimer
         property string entryId: ""
-        interval: 220  // matches the collapse animation on below
+        interval: Theme.motionSlow  // the collapse animation below
         repeat: false
         onTriggered: {
             let currentIdx = root.selectedIndex
@@ -114,8 +114,8 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        radius: imgFullPreview ? 24 : 18
-        color: Theme.bgD1
+        radius: imgFullPreview ? Theme.radiusPanel : Theme.radiusXl
+        color: Theme.bg
         border.color: Theme.borderBg2
         border.width: 1
         clip: true
@@ -133,8 +133,8 @@ Item {
 
           Text {
               text: "Clipboard History"
-              color: Theme.fg2
-              font { family: Theme.fontFamily; pixelSize: 11; weight: 700 }
+              color: Theme.fg
+              font { family: Theme.fontFamily; pixelSize: Theme.fontSm; weight: 700 }
                 font.letterSpacing: 0.5
               Layout.alignment: Qt.AlignLeft
               Layout.leftMargin: 4
@@ -144,7 +144,7 @@ Item {
             text: (CliphistModel.count === 0 ? 0 : root.selectedIndex + 1)
                    + " / " + CliphistModel.count + " (" + CliphistModel.totalCount + ")"
             color: Theme.fg4
-            font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 300 }
             Layout.alignment: Qt.AlignRight
             Layout.rightMargin: 6
           }
@@ -153,7 +153,7 @@ Item {
         Rectangle {
             width: parent.width
             height: 26
-            radius: 6
+            radius: Theme.radiusSm
             color: Theme.bg4
             border.color: searchInput.activeFocus ? Theme.borderBgFocus : Theme.borderBg
             border.width: 1
@@ -166,7 +166,7 @@ Item {
                 anchors.rightMargin: 8
                 verticalAlignment: TextInput.AlignVCenter
                 color: Theme.fg
-                font { family: Theme.fontFamily; pixelSize: 10 }
+                font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                 clip: true
                 readOnly: imgFullPreview
 
@@ -289,7 +289,7 @@ Item {
                         Rectangle {
                             anchors.topMargin: 5
                             anchors.fill: previewImage
-                            radius: 15
+                            radius: Theme.radiusXl
                             color: Theme.deleting
                             opacity: currentEntryId === root.deletingId ? 0.70 : 0
                             Behavior on opacity { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
@@ -299,7 +299,7 @@ Item {
                             anchors.centerIn: previewImage
                             text: "Deleted"
                             color: "white"
-                            font { family: Theme.fontFamily; pixelSize: 14; weight: 600 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fontLg; weight: 600 }
                             opacity: currentEntryId === root.deletingId ? 1 : 0
                             Behavior on opacity { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
                         }
@@ -310,7 +310,7 @@ Item {
                             anchors.margins: 2
                             text: (root.selectedIndex + 1) + " / " + CliphistModel.count
                             color: Theme.fg4
-                            font { family: Theme.fontFamily; pixelSize: 9; weight: 300 }
+                            font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 300 }
                         }
                     }
                 }
@@ -333,7 +333,7 @@ Item {
             delegate: Rectangle {
                 width: listView.width
                 height: model.clipId === root.collapsingId ? 5 : (model.imagePath ? 55 : 30)
-                radius: 7
+                radius: Theme.radiusSm
                 color: model.clipId === root.deletingId ? Theme.deleting : (index === root.selectedIndex ? Theme.focusBg1 : "transparent")
                 clip: true
                 opacity: model.clipId === root.collapsingId ? 0 : 1
@@ -360,7 +360,7 @@ Item {
                     text: model.label
                     visible: !model.imagePath && !imgFullPreview
                     color: Theme.fg
-                    font { family: Theme.fontFamily; pixelSize: 10 }
+                    font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                     elide: Text.ElideRight
                 }
 
