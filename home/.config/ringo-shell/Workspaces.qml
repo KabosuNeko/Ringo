@@ -7,7 +7,7 @@ import Quickshell.Io
 // every change, nothing polls. The active workspace is the long dot; click a dot
 // to focus that workspace. Hidden at rest so the clock stays centred: shown while
 // the island is hovered, and briefly (an OSD's time) after a workspace switch.
-RowLayout {
+Item {
   id: root
 
   property string output: ""
@@ -24,8 +24,21 @@ RowLayout {
     return list
   }
 
-  spacing: 4 * Config.paddingScale
-  visible: shown.length > 1 && (hovered || peeking)
+  // the bar row's spacing, folded into the slide so the gap opens with the dots
+  // instead of popping in when the item turns visible
+  property real gap: 0
+  readonly property bool open: shown.length > 1 && (hovered || peeking)
+
+  implicitHeight: dots.implicitHeight
+  implicitWidth: open ? dots.implicitWidth + gap : 0
+  Layout.rightMargin: -gap
+  clip: true
+  opacity: open ? 1 : 0
+
+  // in-out, not out: an out-curve does ~80% of the slide in the first frames,
+  // which reads as a jump rather than a glide
+  Behavior on implicitWidth { NumberAnimation { duration: Theme.motionOverlay; easing.type: Theme.easeInOut } }
+  Behavior on opacity { NumberAnimation { duration: Theme.motionOverlay; easing.type: Theme.easeInOut } }
 
   function handle(line: string): void {
     // the stream also carries every window/title change; only workspace events matter
@@ -77,36 +90,45 @@ RowLayout {
     onTriggered: stream.running = true
   }
 
-  // A count model keeps the delegates alive across updates, so the dots animate.
-  Repeater {
-    model: root.shown.length
+  RowLayout {
+    id: dots
+    // pinned next to the clock, so the dots slide out with the island's edge
+    anchors.right: parent.right
+    anchors.rightMargin: root.gap
+    anchors.verticalCenter: parent.verticalCenter
+    spacing: 4 * Config.paddingScale
 
-    Rectangle {
-      required property int index
-      readonly property var workspace: root.shown[index]
+    // A count model keeps the delegates alive across updates, so the dots animate.
+    Repeater {
+      model: root.shown.length
 
-      Layout.alignment: Qt.AlignVCenter
-      Layout.preferredWidth: (workspace && workspace.is_active ? 12 : 4) * Config.pillScale
-      Layout.preferredHeight: 4 * Config.pillScale
-      radius: height / 2
-      color: !workspace ? Theme.fg5
-           : workspace.is_urgent ? Theme.warning
-           : workspace.is_active ? Theme.accent
-           : workspace.active_window_id !== null ? Theme.fg4 : Theme.fg5
+      Rectangle {
+        required property int index
+        readonly property var workspace: root.shown[index]
 
-      Behavior on Layout.preferredWidth { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
-      Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+        Layout.alignment: Qt.AlignVCenter
+        Layout.preferredWidth: (workspace && workspace.is_active ? 12 : 4) * Config.pillScale
+        Layout.preferredHeight: 4 * Config.pillScale
+        radius: height / 2
+        color: !workspace ? Theme.fg5
+             : workspace.is_urgent ? Theme.warning
+             : workspace.is_active ? Theme.accent
+             : workspace.active_window_id !== null ? Theme.fg4 : Theme.fg5
 
-      MouseArea {
-        anchors.fill: parent
-        anchors.margins: -4
-        cursorShape: Qt.PointingHandCursor
-        Accessible.role: Accessible.Button
-        Accessible.name: workspace ? "Workspace " + workspace.idx : ""
-        // shortcut: focus-workspace takes an index on the focused output, so on a
-        // multi-monitor setup a dot of the other output targets this one; upgrade
-        // to focus-monitor + focus-workspace if a second output is ever used.
-        onClicked: if (workspace) Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(workspace.idx)])
+        Behavior on Layout.preferredWidth { NumberAnimation { duration: Theme.motionBase; easing.type: Theme.easeOut } }
+        Behavior on color { ColorAnimation { duration: Theme.motionFast } }
+
+        MouseArea {
+          anchors.fill: parent
+          anchors.margins: -4
+          cursorShape: Qt.PointingHandCursor
+          Accessible.role: Accessible.Button
+          Accessible.name: workspace ? "Workspace " + workspace.idx : ""
+          // shortcut: focus-workspace takes an index on the focused output, so on a
+          // multi-monitor setup a dot of the other output targets this one; upgrade
+          // to focus-monitor + focus-workspace if a second output is ever used.
+          onClicked: if (workspace) Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(workspace.idx)])
+        }
       }
     }
   }
