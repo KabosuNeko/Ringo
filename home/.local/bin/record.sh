@@ -1,6 +1,7 @@
 #!/bin/sh
 # Screen recorder (wl-screenrec) on Mod+F11: first press opens the shell's menu,
-# second stops it. Modes: only-sound | micro | no-sound.
+# second stops it. Modes: only-sound (system audio) | micro (mic only: wl-screenrec
+# takes one audio device) | no-sound.
 
 # Notifications go through the shell's own server when it is running.
 notify() { # summary, body, icon, urgency
@@ -86,15 +87,15 @@ start_recording() {
     FILEPATH="$SAVE_DIR/recording_$(date +%Y%m%d_%H%M%S).mp4"
 
     case "$chosen" in
-        "Only Sound"|only-sound|only_sound|system|monitor)
+        only-sound)
             wl-screenrec --max-fps 60 --audio --audio-device default.monitor -f "$FILEPATH" &
             MSG="Recording: System Audio"
             ;;
-        "Micro and Sound"|micro|mic|both)
+        micro)
             wl-screenrec --max-fps 60 --audio -f "$FILEPATH" &
-            MSG="Recording: Microphone/Default"
+            MSG="Recording: Microphone"
             ;;
-        "No Sound"|no-sound|no_sound|silent|none|"")
+        no-sound)
             wl-screenrec --max-fps 60 -f "$FILEPATH" &
             MSG="Recording: No Sound"
             ;;
@@ -132,13 +133,5 @@ if [ -n "$1" ]; then
     exit 0
 fi
 
-if [ -x "$HOME/.local/bin/ringo-shell" ]; then
-    "$HOME/.local/bin/ringo-shell" call recordMenu toggle 2>/dev/null || \
-    "$HOME/.local/bin/ringo-shell" call recordMenu open 2>/dev/null || true
-elif command -v qs > /dev/null 2>&1; then
-    qs ipc -p "$HOME/.config/ringo-shell" call recordMenu toggle 2>/dev/null || \
-    qs ipc -p "$HOME/.config/ringo-shell" call recordMenu open 2>/dev/null || true
-    exit 0
-else
-    start_recording "No Sound"
-fi
+# No mode: let the shell's menu pick one; without a running shell, record silently.
+"$HOME/.local/bin/ringo-shell" call recordMenu toggle 2>/dev/null || start_recording no-sound

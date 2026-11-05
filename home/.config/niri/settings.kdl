@@ -1,7 +1,6 @@
 
 overview {
     zoom 0.5
-    backdrop-color "#262626"
 
     workspace-shadow {
         softness 40
@@ -54,9 +53,6 @@ layout {
         position "right"
         gaps-between-tabs 4
         corner-radius 16
-        active-color "#ebdbb2"
-        inactive-color "#928374"
-        urgent-color "#fb4934"
     }
 }
 

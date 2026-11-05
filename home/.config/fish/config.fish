@@ -1,4 +1,3 @@
-source ~/.config/fish/conf.d/done.fish
 
 if test -f ~/.cache/wal/colors.fish
     source ~/.cache/wal/colors.fish
@@ -95,17 +94,16 @@ function fish_prompt
 end
 
 
+set -x MANROFFOPT "-c"
 if command -v bat >/dev/null
-    set -x MANROFFOPT "-c"
     set -x MANPAGER "sh -c 'col -bx | bat -l man -p'"
 else
-    set -x MANROFFOPT "-c"
     set -x MANPAGER "less"
 end
 
 # Set settings for https://github.com/franciscolourenco/done
-set -U __done_min_cmd_duration 10000
-set -U __done_notification_urgency_level low
+set -g __done_min_cmd_duration 10000
+set -g __done_notification_urgency_level low
 
 ## Environment setup
 # Apply .profile: use this to put fish compatible .profile stuff in
@@ -114,11 +112,7 @@ if test -f ~/.fish_profile
 end
 
 # Add ~/.local/bin to PATH
-if test -d ~/.local/bin
-    if not contains -- ~/.local/bin $PATH
-        set -p PATH ~/.local/bin
-    end
-end
+fish_add_path --path ~/.local/bin
 
 
 
@@ -162,11 +156,8 @@ end
 
 # Copy DIR1 DIR2
 function copy
-    set count (count $argv | tr -d \n)
-    if test "$count" = 2; and test -d "$argv[1]"
-        set from (echo $argv[1] | trim-right /)
-        set to (echo $argv[2])
-        command cp -r $from $to
+    if test (count $argv) = 2; and test -d "$argv[1]"
+        command cp -r (string trim -r -c / -- $argv[1]) $argv[2]
     else
         command cp $argv
     end
@@ -224,23 +215,22 @@ alias jctl="journalctl -p 3 -xb"
 alias rip="expac --timefmt='%Y-%m-%d %T' '%l\t%n %v' | sort | tail -200 | nl"
 
 
-if test -z "$SSH_AUTH_SOCK"; or not ssh-add -l >/dev/null 2>&1
-    if not pgrep -u (whoami) ssh-agent >/dev/null
-        eval (ssh-agent -c) >/dev/null
-    end
-    ssh-add -l >/dev/null 2>&1; or ssh-add ~/.ssh/id_ed25519 >/dev/null 2>&1; or true
+# One agent per session on a fixed socket, so every terminal finds the same one
+# (a terminal started by niri does not inherit SSH_AUTH_SOCK).
+set -l ssh_sock $XDG_RUNTIME_DIR/ssh-agent.fish.socket
+if test -z "$SSH_AUTH_SOCK"; or not test -S "$SSH_AUTH_SOCK"
+    set -gx SSH_AUTH_SOCK $ssh_sock
 end
+ssh-add -l >/dev/null 2>&1
+if test $status -eq 2 # nothing listening on the socket
+    rm -f $ssh_sock
+    ssh-agent -a $ssh_sock >/dev/null
+    set -gx SSH_AUTH_SOCK $ssh_sock
+end
+ssh-add -l >/dev/null 2>&1; or ssh-add ~/.ssh/id_ed25519 >/dev/null 2>&1; or true
 
 alias sudachi='bash -c "$(curl -sL https://raw.githubusercontent.com/KabosuNeko/sudachi/main/sudachi.sh)"' # remote pipe — review before running
 
-if status is-login
-    set -Ux GTK_IM_MODULE fcitx
-    set -Ux QT_IM_MODULE fcitx
-    set -Ux XMODIFIERS @im=fcitx
-    set -Ux SDL_IM_MODULE fcitx
-    set -Ux GLFW_IM_MODULE ibus
-end
-
 # bun
 set --export BUN_INSTALL "$HOME/.bun"
-set --export PATH $BUN_INSTALL/bin $PATH
+fish_add_path --path $BUN_INSTALL/bin

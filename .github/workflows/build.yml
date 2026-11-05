@@ -47,10 +47,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck
+      - name: Install shellcheck and qmllint
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck
+          sudo apt-get install -y --no-install-recommends shellcheck qt6-declarative-dev-tools
+
+      - name: QML syntax
+        run: |
+          # Quickshell is not installable here, so every type/import category is
+          # off: this catches parse errors and Qt Quick layout misuse only.
+          QMLLINT=/usr/lib/qt6/bin/qmllint
+          args=""
+          for c in $("$QMLLINT" --help | grep -oE '^  --[a-z-]+ <severity>' | awk '{print $1}'); do
+            args="$args $c disable"
+          done
+          # shellcheck disable=SC2086
+          "$QMLLINT" $args home/.config/ringo-shell/*.qml
 
       - name: Parse install.sh
         run: sh -n install.sh

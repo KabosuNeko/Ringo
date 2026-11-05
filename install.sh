@@ -237,10 +237,6 @@ if ask "===> Deploy dotfiles via GNU Stow (symlinks)?"; then
 
     if run stow --restow --no-folding -t "$HOME" home; then
         report ":: Stow deployment complete."
-        for f in "$HOME/.local/bin"/*.sh; do
-            [ -f "$f" ] && run chmod +x "$f"
-        done
-        [ -f "$HOME/.local/bin/ringo-shell" ] && run chmod +x "$HOME/.local/bin/ringo-shell"
 
         # qt6ct expands ~ and $HOME in this path; warn only about a stale
         # absolute path that would break under another user.
@@ -282,7 +278,8 @@ if [ "$PROFILE" = full ]; then
         elif [ ! -d "$WALLPAPER_DIR" ] || [ -z "$(ls -A "$WALLPAPER_DIR" 2>/dev/null)" ]; then
             echo ":: Cloning from https://github.com/KabosuNeko/Wallpapers.git..."
             run git clone --depth 1 https://github.com/KabosuNeko/Wallpapers.git "$WALLPAPER_DIR"
-            run rm -rf "$WALLPAPER_DIR/.git" "$WALLPAPER_DIR/README.md"
+            # keep .git: the next run updates the collection with git pull
+            run rm -f "$WALLPAPER_DIR/README.md"
         else
             echo ":: Directory $WALLPAPER_DIR already exists and is not empty. Skipping clone."
         fi
@@ -467,8 +464,6 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
                 exit 1
             fi
         done
-        run chmod +x "$HOME/.local/bin/ringo-shell"
-
         if [ -f "$RINGO_DIR/assets/ringo.png" ]; then
             echo ":: Installing ringo-shell icon..."
             run mkdir -p "$HOME/.local/share/icons/hicolor/256x256/apps"
@@ -477,8 +472,7 @@ if [ -d "$RINGO_DIR/ringo-shell" ]; then
             run cp "$RINGO_DIR/assets/ringo.png" "$HOME/.local/share/pixmaps/ringo.png"
         fi
 
-        echo ":: Cleaning up ringo-shell build files..."
-        run rm -rf build
+        # build/ is kept (gitignored): the next run rebuilds incrementally.
         cd "$RINGO_DIR"
         report ":: ringo-shell installed. Launch with 'ringo-shell'."
     else

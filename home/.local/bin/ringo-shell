@@ -7,6 +7,7 @@ if [ "$1" = "call" ]; then
     exec qs ipc -p "$RINGO_DIR" "$@"
 fi
 
-export LD_LIBRARY_PATH="$RINGO_DIR/IslandBackend:$LD_LIBRARY_PATH"
-export QML_IMPORT_PATH="$RINGO_DIR:$QML_IMPORT_PATH"
+# ${VAR:+:$VAR}: an empty VAR must not leave a trailing ":" (= current directory)
+export LD_LIBRARY_PATH="$RINGO_DIR/IslandBackend${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+export QML_IMPORT_PATH="$RINGO_DIR${QML_IMPORT_PATH:+:$QML_IMPORT_PATH}"
 exec qs -n -d -p "$RINGO_DIR"

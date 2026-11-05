@@ -29,6 +29,7 @@ noto-fonts-cjk
 noto-fonts-emoji
 xdg-desktop-portal
 xdg-desktop-portal-gtk
+xdg-desktop-portal-gnome
 xdg-utils
 polkit-gnome
 qt6-wayland

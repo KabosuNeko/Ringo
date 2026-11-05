@@ -11,7 +11,12 @@ environment {
 
     SDL_VIDEODRIVER "wayland,x11"
 
-    DISPLAY ":0"
+    // fcitx5: here, not in fish, so apps started by niri and the launcher see them
+    GTK_IM_MODULE "fcitx"
+    QT_IM_MODULE "fcitx"
+    XMODIFIERS "@im=fcitx"
+    SDL_IM_MODULE "fcitx"
+    GLFW_IM_MODULE "ibus"
 
     _JAVA_AWT_WM_NONREPARENTING "1"
 }
