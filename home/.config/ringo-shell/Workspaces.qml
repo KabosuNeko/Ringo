@@ -5,11 +5,14 @@ import Quickshell.Io
 
 // Workspace dots for one output, fed by `niri msg -j event-stream`: niri pushes
 // every change, nothing polls. The active workspace is the long dot; click a dot
-// to focus that workspace.
+// to focus that workspace. Hidden at rest so the clock stays centred: shown while
+// the island is hovered, and briefly (an OSD's time) after a workspace switch.
 RowLayout {
   id: root
 
   property string output: ""
+  property bool hovered: false
+  property bool peeking: false
   property var all: []
   // this output's workspaces by index, minus niri's trailing empty one
   readonly property var shown: {
@@ -22,7 +25,7 @@ RowLayout {
   }
 
   spacing: 4 * Config.paddingScale
-  visible: shown.length > 1
+  visible: shown.length > 1 && (hovered || peeking)
 
   function handle(line: string): void {
     // the stream also carries every window/title change; only workspace events matter
@@ -38,6 +41,10 @@ RowLayout {
     if (activated) {
       const target = root.all.find(w => w.id === activated.id)
       if (!target) return
+      if (activated.focused) {
+        root.peeking = true
+        peekTimer.restart()
+      }
       root.all = root.all.map(w => Object.assign({}, w, {
         is_active: w.output === target.output ? w.id === activated.id : w.is_active,
         is_focused: activated.focused ? w.id === activated.id : w.is_focused
@@ -56,6 +63,12 @@ RowLayout {
     stdout: SplitParser { onRead: line => root.handle(line) }
     // niri restarted or the socket dropped: reconnect after a pause
     onExited: reconnect.start()
+  }
+
+  Timer {
+    id: peekTimer
+    interval: Config.osdDuration
+    onTriggered: root.peeking = false
   }
 
   Timer {

@@ -657,6 +657,7 @@ function doctorReport(): string {
 
         Workspaces {
           output: panelWindow.screen ? panelWindow.screen.name : ""
+          hovered: box.hovered
           Layout.alignment: Qt.AlignVCenter
         }
 
