@@ -6,5 +6,7 @@ include "animations.kdl"
 include "settings.kdl"
 include "environment.kdl"
 include "rules.kdl"
+// pywal palette for niri; optional so a session before the first `wal` run still loads
+include optional=true "~/.cache/wal/niri-colors.kdl"
 
 screenshot-path "~/Pictures/Screenshots/screenshot_%Y-%m-%d_%H-%M-%S.png"
