@@ -20,7 +20,7 @@ public:
     QStringList profiles() const { return m_profiles; }
     bool hasPowerProfiles() const { return m_hasPowerProfiles; }
 
-    Q_INVOKABLE void setProfile(const QString &profile);
+    void setProfile(const QString &profile);
     Q_INVOKABLE void cycleNext();
 
 signals:

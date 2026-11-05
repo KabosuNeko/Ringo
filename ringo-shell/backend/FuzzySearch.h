@@ -13,7 +13,7 @@ class FuzzySearch final : public QObject {
 public:
     explicit FuzzySearch(QObject *parent = nullptr);
 
-    Q_INVOKABLE int score(const QString &pattern, const QString &target) const;
+    int score(const QString &pattern, const QString &target) const;
     Q_INVOKABLE QVariantList filterAndSort(const QVariantList &apps,
                                           const QString &query,
                                           const QString &category) const;

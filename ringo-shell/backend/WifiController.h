@@ -13,8 +13,6 @@
 #include <QVariant>
 #include <QVariantMap>
 
-class IwdAgent;
-
 #include <QString>
 #include <QStringList>
 #include <QAbstractListModel>
@@ -52,7 +50,6 @@ public:
     QString unsupportedReason() const;
     QAbstractItemModel *networks();
 
-    Q_INVOKABLE void refreshState();
     Q_INVOKABLE void refreshNetworks(bool rescan = false);
     Q_INVOKABLE void setEnabled(bool enabled);
     Q_INVOKABLE void disconnectCurrent();
@@ -81,13 +78,10 @@ private slots:
     void handleAccessPointRemoved(const QDBusObjectPath &accessPointPath);
     void handleDeviceAdded(const QDBusObjectPath &devicePath);
     void handleDeviceRemoved(const QDBusObjectPath &devicePath);
-    void handleIwdInterfacesAdded(const QDBusMessage &message = {});
-    void handleIwdInterfacesRemoved(const QDBusObjectPath &objectPath, const QStringList &interfaces);
     void handleNewConnection(const QDBusObjectPath &connectionPath);
     void handleConnectionRemoved(const QDBusObjectPath &connectionPath);
 
 private:
-    friend class IwdAgent;
 
     void detectBackend();
     void refreshStateInternal();
@@ -96,11 +90,6 @@ private:
     void reloadSavedConnections();
     void reconnectDeviceSignals(const QString &devicePath);
     void disconnectDeviceSignals();
-    void ensureIwdAgentRegistered();
-    void unregisterIwdAgent();
-    void setIwdAgentRegisteredState(bool registered);
-    void setIwdAgentRegistrationError(const QString &error);
-    QString takeIwdPassphraseForNetwork(const QString &networkPath);
 
     QVariant getProperty(const QString &service, const QString &path, const QString &interfaceName, const QString &propertyName) const;
     QVariantMap getAllProperties(const QString &service, const QString &path, const QString &interfaceName) const;
@@ -145,7 +134,6 @@ private:
     bool m_actionInProgress = false;
     bool m_savedConnectionsDirty = true;
     bool m_managerSignalsConnected = false;
-    bool m_iwdSignalsConnected = false;
     bool m_settingsSignalsConnected = false;
     bool m_networkManagerServiceRegistered = false;
     bool m_iwdServiceRegistered = false;
@@ -153,11 +141,6 @@ private:
     bool m_serviceRegistrationProbed = false;
     QString m_connectedDeviceSignalPath;
     QString m_connectedDeviceSignalBackend;
-    IwdAgent *m_iwdAgent = nullptr;
-    bool m_iwdAgentRegistered = false;
-    bool m_iwdAgentObjectExported = false;
-    QString m_iwdAgentRegistrationError;
-    QHash<QString, QString> m_iwdPendingPassphrases;
     bool m_stateRefreshInProgress = false;
     bool m_stateRefreshPending = false;
     bool m_networkRefreshInProgress = false;

@@ -1,7 +1,8 @@
 #include "MprisController.h"
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
-#include <QDBusInterface>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #include <QDBusReply>
 #include <QDBusMessage>
 #include <QVariantMap>
@@ -16,17 +17,18 @@ static inline QVariant unwrapDVariant(const QVariant &v) {
     return v;
 }
 
-static QVariantMap getAllProperties(const QString &service, const QString &path, const QString &interfaceName) {
-    QDBusInterface iface(service, path, QStringLiteral("org.freedesktop.DBus.Properties"), QDBusConnection::sessionBus());
-    if (!iface.isValid()) return {};
-    const QDBusMessage reply = iface.call(QStringLiteral("GetAll"), interfaceName);
-    if (reply.type() == QDBusMessage::ErrorMessage || reply.arguments().isEmpty()) return {};
-    const QVariant value = reply.arguments().constFirst();
-    if (value.userType() == qMetaTypeId<QDBusArgument>()) {
-        const QVariantMap map = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(value));
-        if (!map.isEmpty()) return map;
-    }
-    return value.toMap();
+// Every call to a player is async: a hung player (a busy browser) must never
+// freeze the shell's GUI thread.
+static QDBusMessage playerMessage(const QString &service, const QString &interfaceName, const QString &method) {
+    return QDBusMessage::createMethodCall(service, QStringLiteral("/org/mpris/MediaPlayer2"), interfaceName, method);
+}
+
+static QVariantMap toVariantMap(const QVariant &value) {
+    const QVariant inner = value.userType() == qMetaTypeId<QDBusVariant>()
+        ? qvariant_cast<QDBusVariant>(value).variant() : value;
+    if (inner.userType() == qMetaTypeId<QDBusArgument>())
+        return qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
+    return inner.toMap();
 }
 
 void MprisController::setActive(bool v) {
@@ -129,48 +131,15 @@ void MprisController::handlePropertiesChanged(const QString &interface, const QV
         }
     }
 
-    auto applyDelta = [&](const QString &name) {
-        auto it = m_players.find(name);
-        if (it == m_players.end()) return;
-        if (changed.contains(QStringLiteral("PlaybackStatus")))
-            it->playbackStatus = unwrapDVariant(changed.value(QStringLiteral("PlaybackStatus"))).toString();
-        if (changed.contains(QStringLiteral("Metadata"))) {
-            QVariant vMeta = changed.value(QStringLiteral("Metadata"));
-            QVariant inner = unwrapDVariant(vMeta);
-            QVariantMap md;
-            if (inner.userType() == qMetaTypeId<QDBusArgument>())
-                md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
-            else
-                md = qdbus_cast<QVariantMap>(inner);
-            if (md.isEmpty()) md = inner.toMap();
-            if (!md.isEmpty()) {
-                it->track = trackFromMetadata(md);
-                it->artist = artistFromMetadata(md);
-                it->artUrl = artUrlFromMetadata(md);
-                qint64 len = lengthFromMetadata(md);
-                if (len > 0) it->lengthUs = len;
-            }
-        }
-        if (changed.contains(QStringLiteral("Position")))
-            it->positionUs = unwrapDVariant(changed.value(QStringLiteral("Position"))).toLongLong();
-        if (changed.contains(QStringLiteral("CanPlay")))
-            it->canPlay = unwrapDVariant(changed.value(QStringLiteral("CanPlay"))).toBool();
-        if (changed.contains(QStringLiteral("CanPause")))
-            it->canPause = unwrapDVariant(changed.value(QStringLiteral("CanPause"))).toBool();
-        if (changed.contains(QStringLiteral("CanGoNext")))
-            it->canGoNext = unwrapDVariant(changed.value(QStringLiteral("CanGoNext"))).toBool();
-        if (changed.contains(QStringLiteral("CanGoPrevious")))
-            it->canGoPrevious = unwrapDVariant(changed.value(QStringLiteral("CanGoPrevious"))).toBool();
-        if (changed.contains(QStringLiteral("CanSeek")))
-            it->canSeek = unwrapDVariant(changed.value(QStringLiteral("CanSeek"))).toBool();
-    };
 
     if (target.isEmpty()) {
         // Never broadcast one player's delta to every player: a stale or
         // unknown unique name would corrupt the other players' state.
         return;
     }
-    applyDelta(target);
+    auto it = m_players.find(target);
+    if (it == m_players.end()) return;
+    applyProperties(*it, changed);
     updateActivePlayer();
 }
 
@@ -187,41 +156,43 @@ void MprisController::handleSeeked(qint64 position) {
 }
 
 void MprisController::fetchPlayerState(const QString &name) {
-    auto it = m_players.find(name);
-    if (it == m_players.end()) return;
-    const QVariantMap properties = getAllProperties(name, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"));
-    if (properties.isEmpty()) return;
+    QDBusMessage msg = playerMessage(name, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("GetAll"));
+    msg << QStringLiteral("org.mpris.MediaPlayer2.Player");
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(msg), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, name](QDBusPendingCallWatcher *w) {
+        w->deleteLater();
+        const QDBusPendingReply<QVariantMap> reply = *w;
+        auto it = m_players.find(name); // the player may have left while we waited
+        if (reply.isError() || it == m_players.end()) return;
+        applyProperties(*it, reply.value());
+        updateActivePlayer();
+    });
+}
 
-    const QVariant vStatus = unwrapDVariant(properties.value(QStringLiteral("PlaybackStatus")));
-    if (vStatus.isValid()) it->playbackStatus = vStatus.toString();
-    const QVariant vMeta = properties.value(QStringLiteral("Metadata"));
-    QVariantMap md;
-    if (vMeta.isValid()) {
-        QVariant inner = unwrapDVariant(vMeta);
-        if (inner.userType() == qMetaTypeId<QDBusArgument>()) md = qdbus_cast<QVariantMap>(qvariant_cast<QDBusArgument>(inner));
-        else md = qdbus_cast<QVariantMap>(inner);
-        if (md.isEmpty()) md = inner.toMap();
+// Shared by GetAll and PropertiesChanged: only the keys present are applied.
+void MprisController::applyProperties(PlayerInfo &info, const QVariantMap &properties) {
+    auto value = [&](const char *key) { return unwrapDVariant(properties.value(QLatin1String(key))); };
+    if (properties.contains(QStringLiteral("PlaybackStatus"))) info.playbackStatus = value("PlaybackStatus").toString();
+    if (properties.contains(QStringLiteral("Metadata"))) {
+        const QVariantMap md = toVariantMap(properties.value(QStringLiteral("Metadata")));
+        if (!md.isEmpty()) {
+            info.track = trackFromMetadata(md);
+            info.artist = artistFromMetadata(md);
+            info.artUrl = artUrlFromMetadata(md);
+            const qint64 len = lengthFromMetadata(md);
+            if (len > 0) info.lengthUs = len;
+            const QVariant tid = unwrapDVariant(md.value(QStringLiteral("mpris:trackid")));
+            if (tid.userType() == qMetaTypeId<QDBusObjectPath>()) info.trackId = qvariant_cast<QDBusObjectPath>(tid).path();
+            else if (tid.userType() == qMetaTypeId<QDBusArgument>()) info.trackId = qdbus_cast<QDBusObjectPath>(qvariant_cast<QDBusArgument>(tid)).path();
+            else info.trackId = tid.toString();
+        }
     }
-    if (!md.isEmpty()) {
-        it->track = trackFromMetadata(md);
-        it->artist = artistFromMetadata(md);
-        it->artUrl = artUrlFromMetadata(md);
-        qint64 len = lengthFromMetadata(md);
-        if (len > 0) it->lengthUs = len;
-    }
-    const QVariant vPos = unwrapDVariant(properties.value(QStringLiteral("Position")));
-    if (vPos.isValid())
-        it->positionUs = vPos.toLongLong();
-    const QVariant vCanPlay = unwrapDVariant(properties.value(QStringLiteral("CanPlay")));
-    if (vCanPlay.isValid()) it->canPlay = vCanPlay.toBool();
-    const QVariant vCanPause = unwrapDVariant(properties.value(QStringLiteral("CanPause")));
-    if (vCanPause.isValid()) it->canPause = vCanPause.toBool();
-    const QVariant vCanNext = unwrapDVariant(properties.value(QStringLiteral("CanGoNext")));
-    if (vCanNext.isValid()) it->canGoNext = vCanNext.toBool();
-    const QVariant vCanPrev = unwrapDVariant(properties.value(QStringLiteral("CanGoPrevious")));
-    if (vCanPrev.isValid()) it->canGoPrevious = vCanPrev.toBool();
-    const QVariant vCanSeek = unwrapDVariant(properties.value(QStringLiteral("CanSeek")));
-    if (vCanSeek.isValid()) it->canSeek = vCanSeek.toBool();
+    if (properties.contains(QStringLiteral("Position"))) info.positionUs = value("Position").toLongLong();
+    if (properties.contains(QStringLiteral("CanPlay"))) info.canPlay = value("CanPlay").toBool();
+    if (properties.contains(QStringLiteral("CanPause"))) info.canPause = value("CanPause").toBool();
+    if (properties.contains(QStringLiteral("CanGoNext"))) info.canGoNext = value("CanGoNext").toBool();
+    if (properties.contains(QStringLiteral("CanGoPrevious"))) info.canGoPrevious = value("CanGoPrevious").toBool();
+    if (properties.contains(QStringLiteral("CanSeek"))) info.canSeek = value("CanSeek").toBool();
 }
 
 QString MprisController::trackFromMetadata(const QVariantMap &md) {
@@ -355,50 +326,24 @@ void MprisController::setPolledPosition(double v) { if (qFuzzyCompare(m_polledPo
 void MprisController::setPolledLength(double v) { if (qFuzzyCompare(m_polledLength+1, v+1)) return; m_polledLength=v; emit polledLengthChanged(); emit progressChanged(); }
 void MprisController::setActivePlayerDbusName(const QString &v) { if (m_activePlayerDbusName==v) return; m_activePlayerDbusName=v; }
 
-void MprisController::playPause() {
+void MprisController::callPlayer(const QString &method, const QVariantList &args) {
     if (m_activePlayerDbusName.isEmpty()) return;
-    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
-    iface.call(QStringLiteral("PlayPause"));
+    QDBusMessage msg = playerMessage(m_activePlayerDbusName, QStringLiteral("org.mpris.MediaPlayer2.Player"), method);
+    msg.setArguments(args);
+    QDBusConnection::sessionBus().send(msg); // fire and forget: state comes back via PropertiesChanged
 }
-void MprisController::next() {
-    if (m_activePlayerDbusName.isEmpty()) return;
-    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
-    iface.call(QStringLiteral("Next"));
-}
-void MprisController::prev() {
-    if (m_activePlayerDbusName.isEmpty()) return;
-    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
-    iface.call(QStringLiteral("Previous"));
-}
-void MprisController::stop() {
-    if (m_activePlayerDbusName.isEmpty()) return;
-    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
-    iface.call(QStringLiteral("Stop"));
-}
+
+void MprisController::playPause() { callPlayer(QStringLiteral("PlayPause")); }
+void MprisController::next() { callPlayer(QStringLiteral("Next")); }
+void MprisController::prev() { callPlayer(QStringLiteral("Previous")); }
+void MprisController::stop() { callPlayer(QStringLiteral("Stop")); }
 void MprisController::seek(double positionSeconds) {
-    if (m_activePlayerDbusName.isEmpty()) return;
     auto it = m_players.find(m_activePlayerDbusName);
     if (it == m_players.end() || !it->canSeek) return;
-    qint64 us = qint64(positionSeconds * 1e6);
-    // SetPosition needs TrackId
-    QDBusInterface propIface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.freedesktop.DBus.Properties"), QDBusConnection::sessionBus());
-    QDBusReply<QVariant> r = propIface.call(QStringLiteral("Get"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QStringLiteral("Metadata"));
-    QString trackId = QStringLiteral("/org/mpris/MediaPlayer2/TrackList/NoTrack");
-    if (r.isValid()) {
-        QVariantMap md;
-        QVariant v = unwrapDVariant(r.value());
-        md = qdbus_cast<QVariantMap>(v);
-        if (md.isEmpty()) md = v.toMap();
-        QVariant tid = unwrapDVariant(md.value(QStringLiteral("mpris:trackid")));
-        if (tid.canConvert<QDBusObjectPath>()) trackId = qvariant_cast<QDBusObjectPath>(tid).path();
-        else if (tid.userType() == qMetaTypeId<QDBusArgument>()) {
-            QDBusObjectPath op = qdbus_cast<QDBusObjectPath>(qvariant_cast<QDBusArgument>(tid));
-            trackId = op.path();
-        } else if (tid.isValid()) trackId = tid.toString();
-    }
-    QDBusInterface iface(m_activePlayerDbusName, QStringLiteral("/org/mpris/MediaPlayer2"), QStringLiteral("org.mpris.MediaPlayer2.Player"), QDBusConnection::sessionBus());
-    iface.call(QStringLiteral("SetPosition"), QVariant::fromValue(QDBusObjectPath(trackId)), us);
-    // also try Seek offset as fallback
+    const qint64 us = qint64(positionSeconds * 1e6);
+    const QString trackId = it->trackId.isEmpty()
+        ? QStringLiteral("/org/mpris/MediaPlayer2/TrackList/NoTrack") : it->trackId;
+    callPlayer(QStringLiteral("SetPosition"), {QVariant::fromValue(QDBusObjectPath(trackId)), us});
     m_positionBaseUs = us; m_positionBaseSec = positionSeconds; m_elapsed.restart();
     updatePolledValues();
 }

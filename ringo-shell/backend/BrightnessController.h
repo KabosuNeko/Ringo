@@ -20,7 +20,7 @@ public:
         return m_maxBrightness > 0 ? static_cast<double>(m_brightness) / m_maxBrightness : 0.0;
     }
 
-    Q_INVOKABLE void setBrightness(int value);
+    void setBrightness(int value);
     Q_INVOKABLE void setPercent(double pct);
     // Mirrors `brightnessctl -e4 -n2 set N%+-`.
     Q_INVOKABLE void step(double deltaPercent);

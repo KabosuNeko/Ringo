@@ -72,16 +72,18 @@ protected:
 
         // The engine reads m_image for the whole run, so it must outlive
         // ringo_wallpaper_run().
-        const QImage decoded = reader.read();
-        if (decoded.isNull()) {
+        m_image = reader.read();
+        if (m_image.isNull()) {
             m_error = QStringLiteral("cannot decode %1: %2")
                           .arg(m_path, reader.errorString());
             return;
         }
-        m_image = decoded.convertToFormat(QImage::Format_RGBA8888);
-        if (m_image.isNull()) {
+        // convertTo() drops the decoded buffer, so no second full-size copy lives through the run
+        m_image.convertTo(QImage::Format_RGBA8888);
+        if (m_image.format() != QImage::Format_RGBA8888) {
             m_error = QStringLiteral("cannot convert %1 to RGBA8888")
                           .arg(m_path);
+            m_image = QImage();
             return;
         }
 
@@ -326,6 +328,9 @@ void WallpaperController::runWal(const QString &path) {
                 ? QStringLiteral("could not start")
                 : QStringLiteral("exit code %1").arg(code);
             setError(QStringLiteral("wal -i %1 -q -n -e failed (%2): %3").arg(path, reason, stderrTail(output)));
+        } else {
+            // wal has written colors-foot-dark.ini; foot re-reads it on SIGUSR1.
+            QProcess::startDetached(QStringLiteral("pkill"), {QStringLiteral("-USR1"), QStringLiteral("foot")});
         }
         runBlur(path);
     };

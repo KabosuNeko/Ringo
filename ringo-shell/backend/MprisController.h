@@ -13,6 +13,7 @@ struct PlayerInfo {
     QString artist;
     QString artUrl;
     QString playbackStatus; // Playing/Paused/Stopped
+    QString trackId; // mpris:trackid, needed by SetPosition
     qint64 lengthUs = 0; // microseconds
     qint64 positionUs = 0;
     bool canPlay = false;
@@ -84,6 +85,8 @@ private:
     void updateActivePlayer();
     void setActivePlayer(const QString &name);
     void fetchPlayerState(const QString &name);
+    static void applyProperties(PlayerInfo &info, const QVariantMap &properties);
+    void callPlayer(const QString &method, const QVariantList &args = {});
     void updatePolledValues();
     static QString artistFromMetadata(const QVariantMap &md);
     static QString trackFromMetadata(const QVariantMap &md);
