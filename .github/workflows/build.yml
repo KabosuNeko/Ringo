@@ -47,22 +47,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install shellcheck and qmllint
+      - name: Install shellcheck
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends shellcheck qt6-declarative-dev-tools
-
-      - name: QML syntax
-        run: |
-          # Quickshell is not installable here, so every type/import category is
-          # off: this catches parse errors and Qt Quick layout misuse only.
-          QMLLINT=/usr/lib/qt6/bin/qmllint
-          args=""
-          for c in $("$QMLLINT" --help | grep -oE '^  --[a-z-]+ <severity>' | awk '{print $1}'); do
-            args="$args $c disable"
-          done
-          # shellcheck disable=SC2086
-          "$QMLLINT" $args home/.config/ringo-shell/*.qml
+          sudo apt-get install -y --no-install-recommends shellcheck
 
       - name: Parse install.sh
         run: sh -n install.sh
@@ -81,7 +69,7 @@ jobs:
           fi
 
   config:
-    name: config loader (Quickshell)
+    name: QML syntax and config loader (Arch)
     runs-on: ubuntu-latest
     container: archlinux:latest
     steps:
@@ -89,6 +77,16 @@ jobs:
 
       - name: Install Quickshell
         run: pacman -Syu --noconfirm --needed quickshell
+
+      - name: QML syntax
+        # qmlformat only parses: no Quickshell types needed, and the same Qt as
+        # the desktop (qmllint's category flags differ between Qt releases)
+        run: |
+          status=0
+          for f in home/.config/ringo-shell/*.qml; do
+            /usr/lib/qt6/bin/qmlformat "$f" > /dev/null || { echo "syntax error: $f"; status=1; }
+          done
+          exit $status
 
       - name: JSONC load and serialized writes
         env:
