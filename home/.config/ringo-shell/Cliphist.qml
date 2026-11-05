@@ -21,14 +21,16 @@ Item {
     visible: opacity > 0
     opacity: shown ? 1 : 0
 
-    onShownChanged: {
-        if (shown) {
-            CliphistModel.refresh()
-            searchQuery = ""
-            searchInput.text = ""
-            selectedIndex = 0
-            searchInput.forceActiveFocus()
-        }
+    // Hosted in a Loader: it is created already shown, so open from onCompleted too.
+    Component.onCompleted: if (shown) Qt.callLater(root.opened)
+    onShownChanged: if (shown) root.opened()
+
+    function opened(): void {
+        CliphistModel.refresh()
+        searchQuery = ""
+        searchInput.text = ""
+        selectedIndex = 0
+        searchInput.forceActiveFocus()
     }
 
     onSearchQueryChanged: {

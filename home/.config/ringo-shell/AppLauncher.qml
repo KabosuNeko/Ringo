@@ -194,21 +194,23 @@ Item {
         }
     }
 
-    Component.onCompleted: {
+    // Hosted in a Loader: it is created already shown, so open from onCompleted too.
+    Component.onCompleted: if (shown) Qt.callLater(root.opened)
+
+    function opened(): void {
         loadApps()
+        searchQuery = initialQuery
+        activeCategory = "All"
+        resultType = "All"
+        searchInput.text = initialQuery
+        searchDebounce.triggered()
+        selectedIndex = 0
+        searchInput.forceActiveFocus()
     }
 
     onShownChanged: {
         if (shown) {
-            loadApps()
-            searchQuery = initialQuery
-            activeCategory = "All"
-            resultType = "All"
-            searchInput.text = initialQuery
-            initialQuery = ""
-            searchDebounce.triggered()
-            selectedIndex = 0
-            searchInput.forceActiveFocus()
+            root.opened()
         } else {
             // A file search can outlive the launcher; stop it so a broad fd
             // scan does not keep consuming CPU/IO after the UI is gone.

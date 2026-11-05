@@ -59,14 +59,11 @@ ShellRoot {
       root.closeOverlays()
       box.pendingLauncherQuery = text
       box.appLauncher = true
-      if (appLauncherPanel) {
-        appLauncherPanel.setSearchText(text)
-      }
+      // an open launcher takes the text now; a new one reads pendingLauncherQuery
+      if (appLauncherLoader.item) appLauncherLoader.item.setSearchText(text)
     }
     function launch(): void {
-      if (appLauncherPanel) {
-        appLauncherPanel.launchSelected()
-      }
+      if (appLauncherLoader.item) appLauncherLoader.item.launchSelected()
     }
   }
 
@@ -484,6 +481,9 @@ function doctorReport(): string {
       readonly property real dpi: Config.dpiScale * Math.max(1, (panelWindow.screen ? panelWindow.screen.height : 1080) / 1080)
 
       property bool cliphistPreviewing: false
+      // both overlays are Loader-hosted: reset what outlives a closed instance
+      onCliphistOpenChanged: if (!cliphistOpen) cliphistPreviewing = false
+      onAppLauncherChanged: if (!appLauncher) pendingLauncherQuery = ""
 
       readonly property bool slotOpenActive: cliphistOpen || appLauncher
           || wallpaperSwitcherOpen || powerMenuOpen || recordMenuOpen
@@ -835,11 +835,15 @@ function doctorReport(): string {
                  || box.activeOsd !== ""
                  || box.controlCenter
 
-        Cliphist {
-          shown: box.cliphistOpen || cliphistSlot.closing
+        Loader {
           anchors.fill: parent
-          onCloseRequested: box.cliphistOpen = false
-          onPreviewToggled: (active) => box.cliphistPreviewing = active
+          active: box.cliphistOpen || cliphistSlot.closing
+
+          sourceComponent: Cliphist {
+            shown: box.cliphistOpen || cliphistSlot.closing
+            onCloseRequested: box.cliphistOpen = false
+            onPreviewToggled: (active) => box.cliphistPreviewing = active
+          }
         }
       }
 
@@ -1028,12 +1032,16 @@ function doctorReport(): string {
                  || box.miniDashboard
                  || box.cliphistOpen
 
-        AppLauncher {
-          id: appLauncherPanel
+        Loader {
+          id: appLauncherLoader
           anchors.fill: parent
-          shown: box.appLauncher || appLauncherSlot.closing
-          initialQuery: box.pendingLauncherQuery
-          onCloseRequested: box.appLauncher = false
+          active: box.appLauncher || appLauncherSlot.closing
+
+          sourceComponent: AppLauncher {
+            shown: box.appLauncher || appLauncherSlot.closing
+            initialQuery: box.pendingLauncherQuery
+            onCloseRequested: box.appLauncher = false
+          }
         }
       }
 
