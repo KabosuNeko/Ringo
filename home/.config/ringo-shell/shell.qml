@@ -498,42 +498,31 @@ function doctorReport(): string {
 
       readonly property real barContentOpacity: !popoverActive && !notificationModule.active && !box.controlCenter && !box.miniDashboard && box.activeOsd === "" ? 1 : 0
 
-      readonly property real barWidth: activeOsd !== "" ? 220
-                     : notificationModule.active ? 320
-                     : barRow.implicitWidth + (hovered && !popoverActive ? 68 : 58) * Config.paddingScale
+      // Island size per surface, highest priority first: [shown, width, height].
+      // The first shown entry wins; with none, the island hugs the bar row.
+      readonly property var surfaceSize: {
+        const sizes = [
+          [activeOsd !== "", 220, 40],
+          [notificationModule.active, 320, notificationModule.currentHasActions ? 78 : 52],
+          [controlCenter, 410, ccColumn.implicitHeight + 20],
+          [cliphistOpen && cliphistPreviewing, 400, 380],
+          [cliphistOpen, 460, 270],
+          [miniDashboard, 460, 188],
+          [appLauncher, 420, 410],
+          [keybindViewer, 560, 400],
+          [wallpaperSwitcherOpen, 600, 308],
+          [settingsOpen, 460, 584],
+          [powerMenuOpen, 400, 90],
+          [recordMenuOpen, 360, 90]
+        ]
+        const hit = sizes.find(entry => entry[0])
+        return hit ? { width: hit[1], height: hit[2] } : null
+      }
 
-      readonly property real barHeight: activeOsd !== "" ? 40
-                  : notificationModule.active ? (notificationModule.currentHasActions ? 78 : 52)
-                  : (Math.max(barRow.implicitHeight, centerClock.implicitHeight) * Config.pillScale) + 10
-
-      readonly property real baseWidth: activeOsd !== "" ? 220
-                     : notificationModule.active ? 320
-                     : controlCenter ? 410
-                     : appLauncher ? 420
-                     : keybindViewer ? 560
-                     : wallpaperSwitcherOpen ? 600
-                     : settingsOpen ? 460
-                     : powerMenuOpen ? 400
-                     : recordMenuOpen ? 360
-                     : miniDashboard ? 460
-                      : (cliphistOpen && cliphistPreviewing) ? 400
-                      : cliphistOpen ? 460
-                        : barWidth
-
-      readonly property real baseHeight: activeOsd !== "" ? 40
-                  : notificationModule.active ? (notificationModule.currentHasActions ? 78 : 52)
-                  : controlCenter
-                      ? (ccColumn.implicitHeight + 20)
-                  : (cliphistOpen && cliphistPreviewing) ? 380
-                   : cliphistOpen ? 270
-                   : miniDashboard ? 188
-                   : appLauncher ? 410
-                    : keybindViewer ? 400
-                    : wallpaperSwitcherOpen ? 308
-                    : settingsOpen ? 584
-                    : powerMenuOpen ? 90
-                    : recordMenuOpen ? 90
-                    : barHeight
+      readonly property real baseWidth: surfaceSize ? surfaceSize.width
+          : barRow.implicitWidth + (hovered && !popoverActive ? 68 : 58) * Config.paddingScale
+      readonly property real baseHeight: surfaceSize ? surfaceSize.height
+          : Math.max(barRow.implicitHeight, centerClock.implicitHeight) * Config.pillScale + 10
 
       readonly property real baseRadius: 20 * Config.pillScale
 

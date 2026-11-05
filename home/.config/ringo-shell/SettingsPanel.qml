@@ -37,6 +37,8 @@ Rectangle {
   MouseArea { anchors.fill: parent }
 
   WiredVpnModel { id: wired }
+  AudioModel { id: audioModel }
+  DefaultAppsModel { id: appsModel }
 
   onVisibleChanged: {
     if (visible) wired.refreshNetwork()
@@ -69,14 +71,6 @@ Rectangle {
   property string selectedKey: ""
 
   readonly property int subRowCount: page === "nightlight" ? 5 : listHeaderRows + listCount()
-
-  // Audio devices. Pipewire objects are untracked unless asked, so every node is
-  // tracked to keep descriptions and volumes live.
-  readonly property var trackedNodes: Pipewire.nodes.values
-  readonly property var outputNodes: trackedNodes.filter(n => panel.isAudioNode(n) && n.isSink)
-  readonly property var inputNodes: trackedNodes.filter(n => panel.isAudioNode(n) && !n.isSink)
-  readonly property var streamNodes: trackedNodes.filter(n => panel.isStreamNode(n))
-  property string audioError: ""
 
   readonly property var lightSliders: [
     { key: "low", label: "Night colour", from: 2500, to: 5000, step: 100, unit: "K" },
@@ -187,7 +181,7 @@ Rectangle {
       return
     }
     if (panel.page === "streams") {
-      panel.adjustStreamVolume(panel.selectedStreamNode(), direction)
+      audioModel.adjustStreamVolume(panel.selectedStreamNode(), direction)
       return
     }
     if (panel.page === "main") {
@@ -196,12 +190,6 @@ Rectangle {
     }
     panel.toggleSelected()
   }
-
-  // Default apps: filled from `gio mime` when the page is opened.
-  property var appRows: panel.blankAppRows()
-  property var mimeQueue: []
-  property int mimeIndex: 0
-  property string appsError: ""
 
   function firstSelectable(): int {
     for (let i = 0; i < rows.length; i++)
@@ -353,195 +341,9 @@ Rectangle {
     }
   }
 
-  // ------------------------------------------------------------------- audio
-  function mediaClass(node): string {
-    const props = node && node.properties ? node.properties : {}
-    return String(props["media.class"] || "")
-  }
-
-  // An audio device: not a video node and not an application stream.
-  function isAudioNode(node): bool {
-    return node !== null && node !== undefined && node.audio && !node.isStream
-           && panel.mediaClass(node).startsWith("Audio/")
-  }
-
-  function audioLabel(node): string {
-    if (!node) return ""
-    return node.description && node.description.length > 0 ? node.description : node.name
-  }
-
-  function audioVolume(node): string {
-    if (!node || !node.audio) return ""
-    return Math.round(node.audio.volume * 100) + "%"
-  }
-
-  // Playback streams only: capture streams belong to the input-device page.
-  function isStreamNode(node): bool {
-    return node !== null && node !== undefined && node.audio && node.isStream
-           && panel.mediaClass(node).startsWith("Stream/Output/Audio")
-  }
-
-  function streamLabel(node): string {
-    if (!node) return ""
-    const props = node.properties || {}
-    const app = String(props["application.name"] || "")
-    const media = String(props["media.name"] || "")
-    if (app.length > 0 && media.length > 0 && media !== app)
-      return app + " · " + media
-    return app.length > 0 ? app
-         : (node.description && node.description.length > 0 ? node.description : node.name)
-  }
-
   function selectedStreamNode(): var {
     const index = panel.listIndexOfKey(panel.selectedKey)
-    return index >= 0 ? panel.streamNodes[index] : null
-  }
-
-  function toggleStreamMute(node): void {
-    if (node && node.audio) node.audio.muted = !node.audio.muted
-  }
-
-  function adjustStreamVolume(node, direction: int): void {
-    if (!node || !node.audio) return
-    node.audio.volume = Math.max(0, Math.min(1.5, node.audio.volume + direction * 0.05))
-  }
-
-  // Pipewire.defaultAudioSink / defaultAudioSource are read-only: the writable
-  // knob is the configured (preferred) default, which WirePlumber then selects.
-  function setAudioDefault(node): void {
-    if (!node) return
-    panel.audioError = ""
-    try {
-      if (node.isSink) Pipewire.preferredDefaultAudioSink = node
-      else Pipewire.preferredDefaultAudioSource = node
-    } catch (e) {
-      panel.audioError = "Could not switch the default device: " + e
-    }
-  }
-
-  function defaultOutputLabel(): string {
-    const node = Pipewire.defaultAudioSink
-    return node ? panel.audioLabel(node) : "None"
-  }
-
-  function defaultInputLabel(): string {
-    const node = Pipewire.defaultAudioSource
-    return node ? panel.audioLabel(node) : "None"
-  }
-
-  // ------------------------------------------------------------ default apps
-  // gio is the only thing that knows both the current default and the installed
-  // candidates for a mimetype, so the rows are answers to `gio mime <type>`.
-  function appRoleTemplate(): var {
-    return [
-      { icon: "\uf0ac", label: "Browser", mime: "x-scheme-handler/http" },
-      { icon: "\uf07b", label: "File manager", mime: "inode/directory" },
-      { icon: "\uf120", label: "Terminal", mime: "x-scheme-handler/terminal" },
-      { icon: "\uf03e", label: "Image viewer", mime: "image/png" },
-      { icon: "\uf03d", label: "Video player", mime: "video/mp4" },
-      { icon: "\uf1c1", label: "PDF viewer", mime: "application/pdf" },
-      { icon: "\uf044", label: "Text editor", mime: "text/plain" }
-    ]
-  }
-
-  function appValue(row): string {
-    if (!row) return ""
-    if (row.loading) return "…"
-    if (row.def && row.def.length > 0) return row.def
-    return row.candidates && row.candidates.length > 0 ? "Not set" : "None"
-  }
-
-  function blankAppRows(): var {
-    const rows = panel.appRoleTemplate()
-    for (let i = 0; i < rows.length; i++) {
-      rows[i].def = ""
-      rows[i].candidates = []
-      rows[i].loading = true
-    }
-    return rows
-  }
-
-  function refreshApps(): void {
-    panel.appsError = ""
-    panel.appRows = panel.blankAppRows()
-    panel.queryMimes([0, 1, 2, 3, 4, 5, 6])
-  }
-
-  // one gio call at a time, in order
-  function queryMimes(indices): void {
-    panel.mimeQueue = indices.slice()
-    panel.queryNextMime()
-  }
-
-  function queryNextMime(): void {
-    if (panel.mimeQueue.length === 0) return
-    const index = panel.mimeQueue[0]
-    const row = panel.appRows[index]
-    if (!row) { panel.mimeQueue = panel.mimeQueue.slice(1); panel.queryNextMime(); return }
-    panel.mimeIndex = index
-    mimeQuery.command = ["gio", "mime", row.mime]
-    mimeQuery.running = true
-  }
-
-  function parseMimeOutput(text: string): var {
-    const lines = String(text).split("\n")
-    const registered = []
-    const recommended = []
-    let def = ""
-    let bucket = null
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
-      if (line.length === 0) continue
-      if (line.startsWith("Default application for")) {
-        def = line.substring(line.lastIndexOf(":") + 1).trim()
-        bucket = null
-        continue
-      }
-      if (line.startsWith("No default applications")) { def = ""; bucket = null; continue }
-      if (line.startsWith("Registered applications")) { bucket = registered; continue }
-      if (line.startsWith("Recommended applications")) { bucket = recommended; continue }
-      if (bucket) bucket.push(line)
-    }
-    const candidates = []
-    for (let i = 0; i < registered.length; i++)
-      if (candidates.indexOf(registered[i]) < 0) candidates.push(registered[i])
-    for (let i = 0; i < recommended.length; i++)
-      if (candidates.indexOf(recommended[i]) < 0) candidates.push(recommended[i])
-    return { def: def, candidates: candidates }
-  }
-
-  function applyMimeQuery(text: string): void {
-    const index = panel.mimeIndex
-    const rows = panel.appRows.slice()
-    const row = rows[index]
-    if (row) {
-      const parsed = panel.parseMimeOutput(text)
-      row.def = parsed.def
-      row.candidates = parsed.candidates
-      row.loading = false
-      panel.appRows = rows
-    }
-    panel.mimeQueue = panel.mimeQueue.slice(1)
-    panel.queryNextMime()
-  }
-
-  // Cycle to the next installed candidate and let gio write it, then re-read the
-  // row so the value is what gio reports rather than what we asked for.
-  function cycleDefaultApp(index: int): void {
-    const row = panel.appRows[index]
-    if (!row || !row.candidates || row.candidates.length === 0) return
-    if (mimeSet.running || mimeQuery.running) return
-    const at = row.candidates.indexOf(row.def)
-    const next = row.candidates[(at + 1) % row.candidates.length]
-    if (next === row.def) return
-    panel.appsError = ""
-    // the row reads "…" until the write and the re-read are done
-    const rows = panel.appRows.slice()
-    rows[index].loading = true
-    panel.appRows = rows
-    panel.mimeIndex = index
-    mimeSet.command = ["gio", "mime", row.mime, next]
-    mimeSet.running = true
+    return index >= 0 ? audioModel.streamNodes[index] : null
   }
 
   function pageTitle(): string {
@@ -647,7 +449,7 @@ Rectangle {
     if (panel.page !== "bluetooth") BluetoothController.stopScan()
     if (panel.page === "wifi" && WifiController.enabled) WifiController.refreshNetworks(true)
     else if (panel.page === "bluetooth" && BluetoothController.enabled) BluetoothController.refreshDevices(true)
-    else if (panel.page === "apps") panel.refreshApps()
+    else if (panel.page === "apps") appsModel.refreshApps()
     panel.forceActiveFocus()
   }
 
@@ -655,7 +457,7 @@ Rectangle {
     wired.refreshNetwork()
     if (panel.page === "wifi" && WifiController.enabled) WifiController.refreshNetworks(true)
     else if (panel.page === "bluetooth" && BluetoothController.enabled) BluetoothController.refreshDevices(true)
-    else if (panel.page === "apps") panel.refreshApps()
+    else if (panel.page === "apps") appsModel.refreshApps()
   }
 
   // Both models reset wholesale (a rescan re-sorts by signal, a device drops out,
@@ -701,56 +503,6 @@ Rectangle {
       btSecretField.forceActiveFocus()
   }
 
-  // Keeps every node the audio pages can list live (descriptions, volumes).
-  PwObjectTracker {
-    objects: panel.trackedNodes
-  }
-
-  // `gio mime <type>` — one query at a time, LC_ALL=C so the output parses the
-  // same whatever the session locale is.
-  Process {
-    id: mimeQuery
-    environment: ({ LC_ALL: "C" })
-
-    stdout: StdioCollector {
-      id: mimeQueryOut
-      waitForEnd: true
-    }
-
-    stderr: StdioCollector {
-      id: mimeQueryErr
-      waitForEnd: true
-    }
-
-    onExited: (code, status) => {
-      if (code !== 0)
-        panel.appsError = mimeQueryErr.text.trim() || ("gio mime exited with " + code)
-      panel.applyMimeQuery(code === 0 ? mimeQueryOut.text : "")
-    }
-  }
-
-  // `gio mime <type> <app.desktop>` — cycles a default app
-  Process {
-    id: mimeSet
-    environment: ({ LC_ALL: "C" })
-
-    stdout: StdioCollector { waitForEnd: true }
-
-    stderr: StdioCollector {
-      id: mimeSetErr
-      waitForEnd: true
-    }
-
-    onExited: (code, status) => {
-      const index = panel.mimeIndex
-      if (code !== 0) {
-        panel.appsError = mimeSetErr.text.trim() || ("gio mime exited with " + code)
-        return
-      }
-      panel.queryMimes([index])
-    }
-  }
-
   // value: live text for the right side, on: switch state, activate: row click,
   // toggle: switch click and Left/Right, cycle: click on the value text,
   // page: the name of the sub-page the row opens — that is what earns the chevron.
@@ -787,15 +539,15 @@ Rectangle {
     { section: "Audio" },
     { icon: "\uf028", label: "Output device",
       page: "audioout",
-      value: () => panel.defaultOutputLabel(),
+      value: () => audioModel.defaultOutputLabel(),
       activate: () => panel.pageRequested("audioout") },
     { icon: "\uf130", label: "Input device",
       page: "audioin",
-      value: () => panel.defaultInputLabel(),
+      value: () => audioModel.defaultInputLabel(),
       activate: () => panel.pageRequested("audioin") },
     { icon: "\uf001", label: "App streams",
       page: "streams",
-      value: () => panel.streamNodes.length + " active",
+      value: () => audioModel.streamNodes.length + " active",
       activate: () => panel.pageRequested("streams") },
 
     { section: "Display" },
@@ -1925,7 +1677,7 @@ Rectangle {
 
             Repeater {
               id: audioRepeater
-              model: panel.page === "audioin" ? panel.inputNodes : panel.outputNodes
+              model: panel.page === "audioin" ? audioModel.inputNodes : audioModel.outputNodes
 
               delegate: Rectangle {
                 id: audioRow
@@ -1953,7 +1705,7 @@ Rectangle {
 
                 function activate(): void {
                   panel.selectRow(audioRow.rowIndex)
-                  panel.setAudioDefault(modelData)
+                  audioModel.setAudioDefault(modelData)
                 }
 
                 HoverHandler { id: audioHover }
@@ -1978,14 +1730,14 @@ Rectangle {
 
                   Text {
                     Layout.fillWidth: true
-                    text: panel.audioLabel(modelData)
+                    text: audioModel.audioLabel(modelData)
                     color: Theme.fg
                     font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: audioRow.isDefault ? 600 : 500 }
                     elide: Text.ElideRight
                   }
 
                   Text {
-                    text: audioRow.isDefault ? "Default" : panel.audioVolume(modelData)
+                    text: audioRow.isDefault ? "Default" : audioModel.audioVolume(modelData)
                     color: audioRow.isDefault ? Theme.accent : Theme.fg4
                     font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                   }
@@ -2011,10 +1763,10 @@ Rectangle {
         }
 
         Text {
-          visible: panel.audioError.length > 0
+          visible: audioModel.audioError.length > 0
           Layout.fillWidth: true
           Layout.leftMargin: 10
-          text: panel.audioError
+          text: audioModel.audioError
           color: Theme.deleting
           font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
@@ -2055,7 +1807,7 @@ Rectangle {
 
             Repeater {
               id: streamsRepeater
-              model: panel.streamNodes
+              model: audioModel.streamNodes
 
               delegate: Rectangle {
                 id: streamRow
@@ -2076,7 +1828,7 @@ Rectangle {
 
                 function activate(): void {
                   panel.selectRow(streamRow.rowIndex)
-                  panel.toggleStreamMute(modelData)
+                  audioModel.toggleStreamMute(modelData)
                 }
 
                 HoverHandler { id: streamHover }
@@ -2102,7 +1854,7 @@ Rectangle {
 
                   Text {
                     Layout.fillWidth: true
-                    text: panel.streamLabel(modelData)
+                    text: audioModel.streamLabel(modelData)
                     color: Theme.fg
                     font { family: Theme.fontFamily; pixelSize: Theme.fontXs; weight: 500 }
                     elide: Text.ElideRight
@@ -2127,7 +1879,7 @@ Rectangle {
                       cursorShape: Qt.PointingHandCursor
                       onClicked: {
                         panel.selectRow(streamRow.rowIndex)
-                        panel.adjustStreamVolume(modelData, -1)
+                        audioModel.adjustStreamVolume(modelData, -1)
                       }
                     }
                   }
@@ -2151,14 +1903,14 @@ Rectangle {
                       cursorShape: Qt.PointingHandCursor
                       onClicked: {
                         panel.selectRow(streamRow.rowIndex)
-                        panel.adjustStreamVolume(modelData, 1)
+                        audioModel.adjustStreamVolume(modelData, 1)
                       }
                     }
                   }
 
                   Text {
                     Layout.preferredWidth: 34
-                    text: panel.audioVolume(modelData)
+                    text: audioModel.audioVolume(modelData)
                     color: streamRow.isSelected ? Theme.accent : Theme.fg4
                     horizontalAlignment: Text.AlignRight
                     font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
@@ -2208,7 +1960,7 @@ Rectangle {
 
             Repeater {
               id: appsRepeater
-              model: panel.appRows
+              model: appsModel.appRows
 
               delegate: Rectangle {
                 id: appRow
@@ -2236,7 +1988,7 @@ Rectangle {
                 function activate(): void {
                   if (!appRow.rowEnabled) return
                   panel.selectRow(appRow.rowIndex)
-                  panel.cycleDefaultApp(index)
+                  appsModel.cycleDefaultApp(index)
                 }
 
                 HoverHandler { id: appHover }
@@ -2270,7 +2022,7 @@ Rectangle {
 
                   Text {
                     Layout.maximumWidth: 190
-                    text: panel.appValue(modelData)
+                    text: appsModel.appValue(modelData)
                     color: Theme.fg4
                     font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
                     elide: Text.ElideMiddle
@@ -2282,10 +2034,10 @@ Rectangle {
         }
 
         Text {
-          visible: panel.appsError.length > 0
+          visible: appsModel.appsError.length > 0
           Layout.fillWidth: true
           Layout.leftMargin: 10
-          text: panel.appsError
+          text: appsModel.appsError
           color: Theme.deleting
           font { family: Theme.fontFamily; pixelSize: Theme.fontXs }
           wrapMode: Text.WordWrap
