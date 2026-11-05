@@ -145,8 +145,8 @@ target_include_directories(test_bluetooth_model PRIVATE
 target_link_libraries(test_bluetooth_model PRIVATE Qt6::Core)
 add_test(NAME bluetooth_model COMMAND test_bluetooth_model)
 
-# The config loader needs a running Quickshell/Wayland session. Keep it
-# optional so the CI builder (which has no qs) still runs the pure C test.
+# The config loader needs qs (no compositor: QT_QPA_PLATFORM=offscreen works).
+# Optional here; CI runs it in its own Arch job.
 find_program(QS_EXECUTABLE qs)
 if(QS_EXECUTABLE)
     add_test(NAME config_jsonc

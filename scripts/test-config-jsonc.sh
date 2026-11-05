@@ -1,6 +1,6 @@
 #!/bin/sh
 # Headless check for the JSONC loader and serialized config writes.
-# Runs only where Quickshell is installed; CI skips it when qs is absent.
+# Needs Quickshell, not a compositor: CI runs it with QT_QPA_PLATFORM=offscreen.
 set -eu
 
 QS=${1:-qs}

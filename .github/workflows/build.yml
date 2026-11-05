@@ -79,3 +79,18 @@ jobs:
           if [ -x scripts/gen-keybinds-doc.sh ]; then
             scripts/gen-keybinds-doc.sh --check
           fi
+
+  config:
+    name: config loader (Quickshell)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Quickshell
+        run: pacman -Syu --noconfirm --needed quickshell
+
+      - name: JSONC load and serialized writes
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: sh scripts/test-config-jsonc.sh
