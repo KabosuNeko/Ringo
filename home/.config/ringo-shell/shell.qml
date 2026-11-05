@@ -547,16 +547,20 @@ function doctorReport(): string {
 
       Behavior on implicitHeight {
         enabled: !(notificationModule.active || box.activeOsd !== "")
+        // one length for every island resize; bar-only changes (hover padding,
+        // a wider clock) glide in-out instead of snapping in 70 ms
         NumberAnimation {
-          duration: box.popoverActive ? Theme.motionOverlay : Theme.motionResize
-          easing.type: Theme.easeOut
+          duration: Theme.motionOverlay
+          easing.type: box.popoverActive ? Theme.easeOut : Theme.easeInOut
         }
       }
       Behavior on implicitWidth {
         enabled: !(notificationModule.active || box.activeOsd !== "")
+        // one length for every island resize; bar-only changes (hover padding,
+        // a wider clock) glide in-out instead of snapping in 70 ms
         NumberAnimation {
-          duration: box.popoverActive ? Theme.motionOverlay : Theme.motionResize
-          easing.type: Theme.easeOut
+          duration: Theme.motionOverlay
+          easing.type: box.popoverActive ? Theme.easeOut : Theme.easeInOut
         }
       }
 

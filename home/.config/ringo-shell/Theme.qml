@@ -16,7 +16,6 @@ Singleton {
 
     // Motion tokens: one timing scale for every transition in the shell.
     readonly property int motionInstant: 60
-    readonly property int motionResize: 70
     readonly property int motionFast: 100
     readonly property int motionBase: 140
     readonly property int motionSlow: 220
